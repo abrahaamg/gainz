@@ -1,0 +1,11 @@
+{
+  "name": "gainz",
+  "version": "1.0.0",
+  "description": "TFG Fitness Routine Manager — Monorepo",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && pnpm dev",
+    "dev:frontend": "cd frontend && pnpm dev",
+    "install:all": "cd backend && pnpm install && cd ../frontend && pnpm install"
+  }
+}
