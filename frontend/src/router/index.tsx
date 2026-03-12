@@ -3,6 +3,9 @@ import Layout from '../components/layout/Layout'
 import ExercisesPage from '../pages/ExercisesPage'
 import ExerciseDetailPage from '../pages/ExerciseDetailPage'
 import ExerciseFormPage from '../pages/ExerciseFormPage'
+import RoutinesPage from '../pages/RoutinesPage'
+import RoutineDetailPage from '../pages/RoutineDetailPage'
+import RoutineBuilderPage from '../pages/RoutineBuilderPage'
 
 // Placeholder pages para módulos futuros
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -25,10 +28,11 @@ const router = createBrowserRouter([
       { path: 'exercises/:id',      element: <ExerciseDetailPage /> },
       { path: 'exercises/:id/edit', element: <ExerciseFormPage /> },
 
-      // Módulo 2 — Rutinas (placeholder)
-      { path: 'routines',     element: <PlaceholderPage title="📋 Rutinas" /> },
-      { path: 'routines/new', element: <PlaceholderPage title="Constructor de rutinas" /> },
-      { path: 'routines/:id', element: <PlaceholderPage title="Detalle de rutina" /> },
+      // Módulo 2 — Rutinas
+      { path: 'routines',              element: <RoutinesPage /> },
+      { path: 'routines/new',          element: <RoutineBuilderPage /> },
+      { path: 'routines/:id',          element: <RoutineDetailPage /> },
+      { path: 'routines/:id/edit',     element: <RoutineBuilderPage /> },
 
       // Módulo 3 — Sesión (placeholder)
       { path: 'session/:routineId',         element: <PlaceholderPage title="⚡ Sesión en vivo" /> },
