@@ -3,6 +3,7 @@ import { checkDatabaseConnection } from './config'
 import { authMiddleware } from './middlewares'
 import exerciseRouter from './routes/exercise'
 import routineRouter from './routes/routine'
+import sessionRouter from './routes/session'
 
 const router: IRouter = Router()
 
@@ -18,7 +19,7 @@ router.get('/health', async (_req: Request, res: Response) => {
 
 // ─── API v1 ──────────────────────────────────────────────────
 router.use('/api/v1/exercises', authMiddleware, exerciseRouter)
-router.use('/api/v1/routines', authMiddleware, routineRouter)
-// Módulo 3: router.use('/api/v1/sessions', authMiddleware, sessionRouter)
+router.use('/api/v1/routines',  authMiddleware, routineRouter)
+router.use('/api/v1/sessions',  authMiddleware, sessionRouter)
 
 export default router

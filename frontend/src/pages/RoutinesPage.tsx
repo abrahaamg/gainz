@@ -99,19 +99,27 @@ export default function RoutinesPage() {
                 <span>✅ {routine.times_completed} veces</span>
               </div>
 
-              <div className="flex justify-end gap-2 mt-auto pt-2 border-t border-gray-50">
+              <div className="flex justify-between items-center mt-auto pt-2 border-t border-gray-50">
                 <button
-                  onClick={e => { e.preventDefault(); navigate(`/routines/${routine.id}/edit`) }}
-                  className="text-xs text-indigo-600 hover:underline"
+                  onClick={e => { e.preventDefault(); navigate(`/session/${routine.id}`) }}
+                  className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg font-semibold"
                 >
-                  Editar
+                  ▶ Empezar
                 </button>
-                <button
-                  onClick={e => handleDelete(routine.id, e)}
-                  className="text-xs text-red-500 hover:underline"
-                >
-                  Eliminar
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={e => { e.preventDefault(); navigate(`/routines/${routine.id}/edit`) }}
+                    className="text-xs text-indigo-600 hover:underline"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={e => handleDelete(routine.id, e)}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </div>
             </Link>
           ))}
