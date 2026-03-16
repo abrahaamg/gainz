@@ -5,6 +5,7 @@ import exerciseRouter from './routes/exercise'
 import routineRouter from './routes/routine'
 import sessionRouter from './routes/session'
 import equipmentRouter from './routes/equipment'
+import progressRouter from './routes/progress'
 import { EquipmentController } from './controllers/EquipmentController'
 
 const router: IRouter = Router()
@@ -25,5 +26,6 @@ router.use('/api/v1/routines',    authMiddleware, routineRouter)
 router.use('/api/v1/sessions',    authMiddleware, sessionRouter)
 router.use('/api/v1/equipment',   authMiddleware, equipmentRouter)
 router.get('/api/v1/recommendations', authMiddleware, EquipmentController.getRecommendations)
+router.use('/api/v1/progress',    authMiddleware, progressRouter)
 
 export default router

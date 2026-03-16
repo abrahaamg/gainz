@@ -6,8 +6,13 @@ import ExerciseFormPage from '../pages/ExerciseFormPage'
 import RoutinesPage from '../pages/RoutinesPage'
 import RoutineDetailPage from '../pages/RoutineDetailPage'
 import RoutineBuilderPage from '../pages/RoutineBuilderPage'
+import LiveSessionPage from '../pages/LiveSessionPage'
+import SessionSummaryPage from '../pages/SessionSummaryPage'
+import EquipmentPage from '../pages/EquipmentPage'
+import RecommendationsPage from '../pages/RecommendationsPage'
+import ProgressPage from '../pages/ProgressPage'
+import DashboardPage from '../pages/DashboardPage'
 
-// Placeholder pages para módulos futuros
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="max-w-7xl mx-auto px-4 py-16 text-center">
     <h1 className="text-2xl font-bold text-gray-700">{title}</h1>
@@ -20,32 +25,26 @@ const router = createBrowserRouter([
     path: '/',
     element: <Layout />,
     children: [
-      { index: true, element: <PlaceholderPage title="🏠 Dashboard" /> },
+      { index: true, element: <DashboardPage /> },
 
-      // Módulo 1 — Ejercicios
       { path: 'exercises',          element: <ExercisesPage /> },
       { path: 'exercises/new',      element: <ExerciseFormPage /> },
       { path: 'exercises/:id',      element: <ExerciseDetailPage /> },
       { path: 'exercises/:id/edit', element: <ExerciseFormPage /> },
 
-      // Módulo 2 — Rutinas
-      { path: 'routines',              element: <RoutinesPage /> },
-      { path: 'routines/new',          element: <RoutineBuilderPage /> },
-      { path: 'routines/:id',          element: <RoutineDetailPage /> },
-      { path: 'routines/:id/edit',     element: <RoutineBuilderPage /> },
+      { path: 'routines',          element: <RoutinesPage /> },
+      { path: 'routines/new',      element: <RoutineBuilderPage /> },
+      { path: 'routines/:id',      element: <RoutineDetailPage /> },
+      { path: 'routines/:id/edit', element: <RoutineBuilderPage /> },
 
-      // Módulo 3 — Sesión (placeholder)
-      { path: 'session/:routineId',         element: <PlaceholderPage title="⚡ Sesión en vivo" /> },
-      { path: 'session/:routineId/summary', element: <PlaceholderPage title="Resumen de sesión" /> },
+      { path: 'session/:routineId',         element: <LiveSessionPage /> },
+      { path: 'session/:routineId/summary', element: <SessionSummaryPage /> },
 
-      // Módulo 4 — Equipamiento (placeholder)
-      { path: 'equipment',       element: <PlaceholderPage title="🏋️ Equipamiento" /> },
-      { path: 'recommendations', element: <PlaceholderPage title="⭐ Recomendaciones" /> },
+      { path: 'equipment',       element: <EquipmentPage /> },
+      { path: 'recommendations', element: <RecommendationsPage /> },
 
-      // Módulo 5 — Progreso (placeholder)
-      { path: 'progress', element: <PlaceholderPage title="📈 Progreso" /> },
+      { path: 'progress', element: <ProgressPage /> },
 
-      // 404
       { path: '*', element: <PlaceholderPage title="404 — Página no encontrada" /> },
     ],
   },
