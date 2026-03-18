@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { exerciseService } from '../services/exerciseService'
 import { Exercise, ExerciseCategory, Difficulty } from '../types/exercise'
+import OneRMCalculator from '../components/exercises/OneRMCalculator'
 
 const CATEGORY_COLORS: Record<ExerciseCategory, string> = {
   strength: 'bg-blue-100 text-blue-800',
@@ -189,10 +190,8 @@ export default function ExerciseDetailPage() {
         </div>
       )}
 
-      {/* Calculadora 1RM — se implementa en Módulo 6 */}
-      <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-4 text-center text-gray-400 text-sm">
-        📊 Calculadora 1RM — disponible en Módulo 6
-      </div>
+      {/* Calculadora 1RM — Módulo 6 */}
+      <OneRMCalculator />
     </div>
   )
 }
