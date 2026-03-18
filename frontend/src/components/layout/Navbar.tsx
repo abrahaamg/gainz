@@ -1,4 +1,7 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { signOut } from 'firebase/auth'
+import { auth } from '../../config/firebase'
+import { useAuthStore } from '../../store/useAuthStore'
 
 const NAV_ITEMS = [
   { to: '/',               label: '🏠 Inicio' },
@@ -9,6 +12,15 @@ const NAV_ITEMS = [
 ]
 
 export default function Navbar() {
+  const navigate   = useNavigate()
+  const { clear }  = useAuthStore()
+
+  const handleLogout = async () => {
+    await signOut(auth)
+    clear()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
@@ -30,6 +42,12 @@ export default function Navbar() {
               {label}
             </NavLink>
           ))}
+          <button
+            onClick={handleLogout}
+            className="ml-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+          >
+            Salir
+          </button>
         </div>
       </div>
     </nav>

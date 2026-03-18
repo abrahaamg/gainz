@@ -1,5 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom'
 import Layout from '../components/layout/Layout'
+import ProtectedRoute from '../components/auth/ProtectedRoute'
+import LoginPage from '../pages/LoginPage'
+import RegisterPage from '../pages/RegisterPage'
 import ExercisesPage from '../pages/ExercisesPage'
 import ExerciseDetailPage from '../pages/ExerciseDetailPage'
 import ExerciseFormPage from '../pages/ExerciseFormPage'
@@ -20,30 +23,37 @@ const PlaceholderPage = ({ title }: { title: string }) => (
   </div>
 )
 
+const P = (element: React.ReactNode) => (
+  <ProtectedRoute>{element}</ProtectedRoute>
+)
+
 const router = createBrowserRouter([
+  { path: '/login',    element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
+
   {
     path: '/',
     element: <Layout />,
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: P(<DashboardPage />) },
 
-      { path: 'exercises',          element: <ExercisesPage /> },
-      { path: 'exercises/new',      element: <ExerciseFormPage /> },
-      { path: 'exercises/:id',      element: <ExerciseDetailPage /> },
-      { path: 'exercises/:id/edit', element: <ExerciseFormPage /> },
+      { path: 'exercises',          element: P(<ExercisesPage />) },
+      { path: 'exercises/new',      element: P(<ExerciseFormPage />) },
+      { path: 'exercises/:id',      element: P(<ExerciseDetailPage />) },
+      { path: 'exercises/:id/edit', element: P(<ExerciseFormPage />) },
 
-      { path: 'routines',          element: <RoutinesPage /> },
-      { path: 'routines/new',      element: <RoutineBuilderPage /> },
-      { path: 'routines/:id',      element: <RoutineDetailPage /> },
-      { path: 'routines/:id/edit', element: <RoutineBuilderPage /> },
+      { path: 'routines',          element: P(<RoutinesPage />) },
+      { path: 'routines/new',      element: P(<RoutineBuilderPage />) },
+      { path: 'routines/:id',      element: P(<RoutineDetailPage />) },
+      { path: 'routines/:id/edit', element: P(<RoutineBuilderPage />) },
 
-      { path: 'session/:routineId',         element: <LiveSessionPage /> },
-      { path: 'session/:routineId/summary', element: <SessionSummaryPage /> },
+      { path: 'session/:routineId',         element: P(<LiveSessionPage />) },
+      { path: 'session/:routineId/summary', element: P(<SessionSummaryPage />) },
 
-      { path: 'equipment',       element: <EquipmentPage /> },
-      { path: 'recommendations', element: <RecommendationsPage /> },
+      { path: 'equipment',       element: P(<EquipmentPage />) },
+      { path: 'recommendations', element: P(<RecommendationsPage />) },
 
-      { path: 'progress', element: <ProgressPage /> },
+      { path: 'progress', element: P(<ProgressPage />) },
 
       { path: '*', element: <PlaceholderPage title="404 — Página no encontrada" /> },
     ],

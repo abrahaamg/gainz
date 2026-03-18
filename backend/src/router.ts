@@ -6,6 +6,7 @@ import routineRouter from './routes/routine'
 import sessionRouter from './routes/session'
 import equipmentRouter from './routes/equipment'
 import progressRouter from './routes/progress'
+import authRouter from './routes/auth'
 import { EquipmentController } from './controllers/EquipmentController'
 
 const router: IRouter = Router()
@@ -21,6 +22,7 @@ router.get('/health', async (_req: Request, res: Response) => {
 })
 
 // ─── API v1 ──────────────────────────────────────────────────
+router.use('/api/v1/auth',        authMiddleware, authRouter)
 router.use('/api/v1/exercises',   authMiddleware, exerciseRouter)
 router.use('/api/v1/routines',    authMiddleware, routineRouter)
 router.use('/api/v1/sessions',    authMiddleware, sessionRouter)

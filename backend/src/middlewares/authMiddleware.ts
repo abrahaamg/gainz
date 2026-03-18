@@ -1,10 +1,46 @@
 import { Request, Response, NextFunction } from 'express'
+import { RowDataPacket, ResultSetHeader } from 'mysql2'
+import { pool } from '../config'
+import { verifyIdToken } from '../services/firebaseService'
 
-/**
- * DEV MODE — always injects a fake user without validating any token.
- * This will be replaced in Module 7 with real Firebase Auth validation.
- */
-export const authMiddleware = (req: Request, _res: Response, next: NextFunction): void => {
-  req.user = { id: 1, email: 'dev@test.com' }
-  next()
+export const authMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  // DEV fallback — si Firebase no está configurado, usar usuario fijo
+  if (!process.env.FIREBASE_PROJECT_ID) {
+    req.user = { id: 1, email: 'dev@test.com' }
+    return next()
+  }
+
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Token no proporcionado' })
+    return
+  }
+
+  try {
+    const token   = authHeader.split(' ')[1]
+    const decoded = await verifyIdToken(token)
+
+    // Upsert user en MySQL (crea si no existe, actualiza email si cambió)
+    const username = (decoded.email?.split('@')[0] ?? decoded.uid).slice(0, 100)
+    await pool.query<ResultSetHeader>(
+      `INSERT INTO users (firebase_uid, email, username)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE email = VALUES(email), updated_at = NOW()`,
+      [decoded.uid, decoded.email ?? '', username]
+    )
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT id, email FROM users WHERE firebase_uid = ?',
+      [decoded.uid]
+    )
+
+    req.user = { id: rows[0].id, email: rows[0].email }
+    next()
+  } catch {
+    res.status(401).json({ error: 'Token inválido o expirado' })
+  }
 }
