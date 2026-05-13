@@ -1,157 +1,246 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { equipmentService } from '../services/equipmentService'
-import { CreateEquipmentPayload, Equipment } from '../types/equipment'
+import { exerciseService } from '../services/exerciseService'
+import { CatalogItem, Equipment } from '../types/equipment'
+import type { Exercise } from '../types/exercise'
+import { MUSCLE_LABELS, EQUIPMENT_CATEGORY_LABELS as CATEGORY_LABELS } from '../utils/labels'
+import GlowCard from '../components/ui/GlowCard'
 
-const CATEGORIES = [
-  { value: 'free_weights', label: 'Pesos libres' },
-  { value: 'machines',     label: 'Máquinas' },
-  { value: 'cardio',       label: 'Cardio' },
-  { value: 'bodyweight',   label: 'Peso corporal' },
-  { value: 'accessories',  label: 'Accesorios' },
-]
-
-const LOCATIONS = [
-  { value: 'home', label: '🏠 Casa' },
-  { value: 'gym',  label: '🏋️ Gimnasio' },
-  { value: 'outdoor', label: '🌳 Exterior' },
-]
-
-const CAT_COLORS: Record<string, string> = {
-  free_weights: 'bg-blue-100 text-blue-800',
-  machines:     'bg-purple-100 text-purple-800',
-  cardio:       'bg-red-100 text-red-800',
-  bodyweight:   'bg-green-100 text-green-800',
-  accessories:  'bg-orange-100 text-orange-800',
-}
-
-const emptyForm = (): CreateEquipmentPayload => ({
-  name: '', category: null, quantity: 1, weight_kg: null, location: 'home', notes: null,
-})
+const LOCATION_KEYS = ['home', 'gym', 'outdoor'] as const
 
 export default function EquipmentPage() {
-  const [items, setItems]             = useState<Equipment[]>([])
-  const [accessible, setAccessible]   = useState(0)
-  const [loading, setLoading]         = useState(true)
-  const [showModal, setShowModal]     = useState(false)
-  const [editing, setEditing]         = useState<Equipment | null>(null)
-  const [form, setForm]               = useState<CreateEquipmentPayload>(emptyForm())
-  const [saving, setSaving]           = useState(false)
-  const [error, setError]             = useState<string | null>(null)
+  const { t } = useTranslation()
+  const [items, setItems]               = useState<Equipment[]>([])
+  const [catalog, setCatalog]           = useState<CatalogItem[]>([])
+  const [accessible, setAccessible]     = useState(0)
+  const [bodyweight, setBodyweight]     = useState(0)
+  const [showBodyweightList, setShowBodyweightList] = useState(false)
+  const [bodyweightExercises, setBodyweightExercises] = useState<Exercise[]>([])
+  const [loadingBW, setLoadingBW]       = useState(false)
+  const [showEquipmentList, setShowEquipmentList] = useState(false)
+  const [equipmentExercises, setEquipmentExercises] = useState<{ id: number; name: string; muscle_group: string }[]>([])
+  const [loadingEQ, setLoadingEQ]       = useState(false)
+  const [loading, setLoading]           = useState(true)
+  const [showModal, setShowModal]       = useState(false)
+  const [saving, setSaving]             = useState(false)
+  const [error, setError]               = useState<string | null>(null)
 
-  const load = () => {
+  // Modal state
+  const [selectedCatalogId, setSelectedCatalogId] = useState<number | null>(null)
+  const [customName, setCustomName]     = useState('')
+  const [isCustom, setIsCustom]         = useState(false)
+  const [catalogLink, setCatalogLink]   = useState<string | null>(null) // catalog_name for custom equipment
+  const [location, setLocation]         = useState('gym')
+  const [quantity, setQuantity]         = useState(1)
+  const [weightKg, setWeightKg]         = useState<number | null>(null)
+  const [notes, setNotes]               = useState('')
+
+  const load = async () => {
     setLoading(true)
-    equipmentService.getAll()
-      .then(({ items, accessible_exercises }) => {
-        setItems(items)
-        setAccessible(accessible_exercises)
-      })
-      .finally(() => setLoading(false))
+    try {
+      const [eqData, cat] = await Promise.all([
+        equipmentService.getAll(),
+        equipmentService.getCatalog(),
+      ])
+      setItems(eqData.items)
+      setAccessible(eqData.accessible_exercises)
+      setBodyweight(eqData.bodyweight_exercises)
+      setCatalog(cat)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm()); setShowModal(true) }
-  const openEdit   = (item: Equipment) => {
-    setEditing(item)
-    setForm({ name: item.name, category: item.category, quantity: item.quantity, weight_kg: item.weight_kg, location: item.location, notes: item.notes })
-    setShowModal(true)
+  const ownedNames = new Set(items.map(i => i.name))
+  const availableCatalog = catalog.filter(c => !ownedNames.has(c.name))
+  const catalogGrouped = availableCatalog.reduce<Record<string, CatalogItem[]>>((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = []
+    acc[item.category].push(item)
+    return acc
+  }, {})
+
+  const resetModal = () => {
+    setSelectedCatalogId(null)
+    setCustomName('')
+    setIsCustom(false)
+    setCatalogLink(null)
+    setLocation('gym')
+    setQuantity(1)
+    setWeightKg(null)
+    setNotes('')
+    setError(null)
   }
 
+  const openCreate = () => { resetModal(); setShowModal(true) }
+
   const handleSave = async () => {
-    if (!form.name.trim()) { setError('El nombre es obligatorio'); return }
+    const catItem = catalog.find(c => c.id === selectedCatalogId)
+    const name = isCustom ? customName.trim() : catItem?.name
+    if (!name) { setError(isCustom ? t('equipment.writeNameError') : t('equipment.selectEquipError')); return }
+
     setSaving(true); setError(null)
     try {
-      if (editing) {
-        const updated = await equipmentService.update(editing.id, form)
-        setItems(prev => prev.map(i => i.id === editing.id ? updated : i))
-      } else {
-        const created = await equipmentService.create(form)
-        setItems(prev => [...prev, created])
-      }
-      // Refresh accessible count
-      equipmentService.getAll().then(({ accessible_exercises }) => setAccessible(accessible_exercises))
+      await equipmentService.create({
+        name,
+        catalog_name: isCustom ? (catalogLink || null) : catItem?.name ?? null,
+        category: isCustom ? (catalogLink ? catalog.find(c => c.name === catalogLink)?.category ?? 'accessories' : 'accessories') : (catItem?.category ?? null),
+        quantity,
+        weight_kg: weightKg,
+        location,
+        notes: notes || null,
+      })
+      await load()
       setShowModal(false)
     } catch {
-      setError('Error al guardar')
+      setError(t('equipment.saveError'))
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('¿Eliminar este equipo?')) return
+    if (!confirm(t('equipment.deleteConfirm'))) return
     await equipmentService.delete(id)
-    setItems(prev => prev.filter(i => i.id !== id))
-    equipmentService.getAll().then(({ accessible_exercises }) => setAccessible(accessible_exercises))
+    await load()
   }
 
-  // Group by category
   const grouped = items.reduce<Record<string, Equipment[]>>((acc, item) => {
-    const key = item.category ?? 'sin categoría'
+    const key = item.category ?? t('equipment.noCategory')
     if (!acc[key]) acc[key] = []
     acc[key].push(item)
     return acc
   }, {})
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Mi Equipamiento</h1>
-        <button
-          onClick={openCreate}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm"
-        >
-          + Añadir equipo
+    <div className="max-w-3xl mx-auto px-6 py-10">
+      <div className="card header-gradient px-8 py-8 mb-8 flex items-center justify-between border-none">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t('equipment.title')}</h1>
+          <p className="text-neutral-500 text-xs mt-1">{items.length} {t('equipment.elements')}</p>
+        </div>
+        <button onClick={openCreate} className="btn-primary">
+          {t('equipment.addNew')}
         </button>
       </div>
 
-      {/* Access indicator */}
-      <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-5 py-3 mb-6 flex items-center gap-3">
-        <span className="text-2xl">⚡</span>
-        <p className="text-indigo-800 font-medium">
-          Con este equipo tienes acceso a{' '}
-          <strong className="text-indigo-600">{accessible} ejercicios</strong>
-        </p>
-      </div>
+      {!loading && (
+        <div className="flex flex-col sm:flex-row items-start gap-3 mb-8">
+          {/* Peso corporal */}
+          <GlowCard className="flex-1 w-full">
+            <button
+              onClick={async () => {
+                if (!showBodyweightList && bodyweightExercises.length === 0) {
+                  setLoadingBW(true)
+                  const res = await exerciseService.getAll({ requires_equipment: false, limit: 50 })
+                  setBodyweightExercises(res.data)
+                  setLoadingBW(false)
+                }
+                setShowBodyweightList(v => !v)
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 text-left"
+            >
+              <span className="text-[11px] font-black uppercase tracking-wider text-white flex-1">
+                {t('equipment.bodyweight')} <span className="text-accent">{bodyweight} {t('common.exercises')}</span>
+              </span>
+              <i className={`bi bi-chevron-down text-neutral-500 text-xs transition-transform duration-300 ${showBodyweightList ? 'rotate-180' : ''}`} />
+            </button>
+            <div className={`dropdown-panel ${showBodyweightList ? 'open' : ''}`}>
+              <div>
+                <div className="border-t border-white/10 px-4 py-3 max-h-52 overflow-y-auto">
+                  {loadingBW ? (
+                    <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{t('common.loading')}</p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {bodyweightExercises.map(ex => (
+                        <li key={ex.id} className="text-xs flex justify-between">
+                          <span className="text-neutral-300 font-medium">{ex.name}</span>
+                          <span className="text-neutral-500 uppercase tracking-wider text-[11px] font-semibold">{MUSCLE_LABELS[ex.muscle_group] ?? ex.muscle_group}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+          </GlowCard>
+
+          {/* Con equipo */}
+          {items.length > 0 && (
+            <GlowCard className="flex-1 w-full">
+              <button
+                onClick={async () => {
+                  if (!showEquipmentList && equipmentExercises.length === 0) {
+                    setLoadingEQ(true)
+                    const exs = await equipmentService.getAccessibleExercises()
+                    setEquipmentExercises(exs)
+                    setLoadingEQ(false)
+                  }
+                  setShowEquipmentList(v => !v)
+                }}
+                className="w-full px-4 py-3 flex items-center gap-3 text-left"
+              >
+                <span className="text-[11px] font-black uppercase tracking-wider text-white flex-1">
+                  {t('equipment.withEquipment')} <span className="text-accent">{accessible} {t('common.exercises')}</span>
+                </span>
+                <i className={`bi bi-chevron-down text-neutral-500 text-xs transition-transform duration-300 ${showEquipmentList ? 'rotate-180' : ''}`} />
+              </button>
+              <div className={`dropdown-panel ${showEquipmentList ? 'open' : ''}`}>
+                <div>
+                  <div className="border-t border-white/10 px-4 py-3 max-h-52 overflow-y-auto">
+                    {loadingEQ ? (
+                      <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{t('common.loading')}</p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {equipmentExercises.map(ex => (
+                          <li key={ex.id} className="text-xs flex justify-between">
+                            <span className="text-neutral-300 font-medium">{ex.name}</span>
+                            <span className="text-neutral-500 uppercase tracking-wider text-[11px] font-semibold">{MUSCLE_LABELS[ex.muscle_group] ?? ex.muscle_group}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </GlowCard>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+          <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
       ) : items.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-4xl mb-3">🏋️</p>
-          <p className="font-medium">No tienes equipo registrado</p>
-          <p className="text-sm mt-1">Añade tu equipamiento para obtener recomendaciones personalizadas</p>
+        <div className="text-center py-16 card border-dashed">
+          <p className="text-neutral-400 text-sm font-medium mb-1">{t('equipment.noEquipment')}</p>
+          <p className="text-neutral-300 text-[11px] font-semibold uppercase tracking-wider">{t('equipment.noEquipmentHint')}</p>
         </div>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([cat, catItems]) => {
-            const catLabel = CATEGORIES.find(c => c.value === cat)?.label ?? cat
+            const catLabel = CATEGORY_LABELS[cat] ?? cat
             return (
               <div key={cat}>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">{catLabel}</h2>
+                <h2 className="section-title">{catLabel}</h2>
                 <div className="space-y-2">
                   {catItems.map(item => (
-                    <div key={item.id} className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <GlowCard key={item.id}>
+                      <div className="px-4 py-3 flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-gray-900">{item.name}</p>
-                          <div className="flex gap-2 mt-0.5 text-xs text-gray-400">
-                            <span>{LOCATIONS.find(l => l.value === item.location)?.label ?? item.location}</span>
-                            {item.quantity > 1 && <span>· ×{item.quantity}</span>}
-                            {item.weight_kg && <span>· {item.weight_kg}kg</span>}
+                          <p className="font-black text-white">{item.name}</p>
+                          <div className="flex gap-3 mt-0.5 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                            <span>{t(`equipment.${item.location}`, { defaultValue: item.location })}</span>
+                            {item.quantity > 1 && <span>x{item.quantity}</span>}
+                            {item.weight_kg && <span>{item.weight_kg} kg</span>}
                           </div>
                         </div>
+                        <button onClick={() => handleDelete(item.id)} className="btn-danger py-1.5 px-3">{t('common.delete')}</button>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${CAT_COLORS[item.category ?? ''] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {catLabel}
-                        </span>
-                        <button onClick={() => openEdit(item)} className="text-sm text-indigo-600 hover:underline">Editar</button>
-                        <button onClick={() => handleDelete(item.id)} className="text-sm text-red-500 hover:underline">Eliminar</button>
-                      </div>
-                    </div>
+                    </GlowCard>
                   ))}
                 </div>
               </div>
@@ -162,96 +251,148 @@ export default function EquipmentPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
-              {editing ? 'Editar equipo' : 'Añadir equipo'}
-            </h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-md max-h-[85vh] overflow-y-auto">
+            <GlowCard>
+              <div className="p-6">
+            <h2 className="text-xl font-bold text-white tracking-tight mb-6">{t('equipment.addEquipment')}</h2>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Nombre *</label>
-                <input
-                  value={form.name}
-                  onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder='ej. "Barra olímpica"'
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                />
+            {/* Catalog selector */}
+            {!isCustom && (
+              <div className="space-y-4 mb-4">
+                {Object.entries(catalogGrouped).map(([cat, catItems]) => (
+                  <div key={cat}>
+                    <p className="section-title mb-2">
+                      {CATEGORY_LABELS[cat] ?? cat}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {catItems.map(item => (
+                        <button
+                          key={item.id}
+                          onClick={() => setSelectedCatalogId(prev => prev === item.id ? null : item.id)}
+                          className={`chip text-left ${selectedCatalogId === item.id ? 'chip-accent' : ''}`}
+                        >
+                          {item.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {availableCatalog.length === 0 && (
+                  <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider text-center py-4">
+                    {t('equipment.allCatalog')}
+                  </p>
+                )}
               </div>
+            )}
 
-              <div className="grid grid-cols-2 gap-3">
+            {/* Custom toggle */}
+            <button
+              onClick={() => { setIsCustom(v => !v); setSelectedCatalogId(null) }}
+              className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-accent transition-colors mb-4"
+            >
+              {isCustom ? <><i className="bi bi-arrow-left mr-1" />{t('equipment.backToCatalog')}</> : <><i className="bi bi-plus mr-1" />{t('equipment.customEquipment')}</>}
+            </button>
+
+            {isCustom && (
+              <div className="mb-4 space-y-3">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Categoría</label>
-                  <select
-                    value={form.category ?? ''}
-                    onChange={e => setForm(p => ({ ...p, category: e.target.value || null }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value="">Sin categoría</option>
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  <label className="form-label">{t('equipment.nameRequired')}</label>
+                  <input
+                    value={customName}
+                    onChange={e => setCustomName(e.target.value)}
+                    placeholder={t('equipment.customNamePlaceholder')}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">{t('equipment.catalogLink')}</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => setCatalogLink(null)}
+                      className={`chip text-[10px] py-1.5 ${catalogLink === null ? 'chip-active' : ''}`}
+                    >
+                      {t('common.none')}
+                    </button>
+                    {catalog.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setCatalogLink(c.name)}
+                        className={`chip text-[10px] py-1.5 ${catalogLink === c.name ? 'chip-accent' : ''}`}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-medium text-neutral-500 mt-2 leading-relaxed">
+                    <i className="bi bi-info-circle mr-1" />
+                    {catalogLink
+                      ? t('equipment.linkedTo', { name: catalogLink })
+                      : t('equipment.noLink')}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Common fields */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="form-label">{t('equipment.location')}</label>
+                  <select value={location} onChange={e => setLocation(e.target.value)} className="form-input">
+                    {LOCATION_KEYS.map(k => <option key={k} value={k}>{t(`equipment.${k}`)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Ubicación</label>
-                  <select
-                    value={form.location ?? 'home'}
-                    onChange={e => setForm(p => ({ ...p, location: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                  >
-                    {LOCATIONS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Cantidad</label>
+                  <label className="form-label">{t('equipment.quantity')}</label>
                   <input
                     type="number" min={1}
-                    value={form.quantity ?? 1}
-                    onChange={e => setForm(p => ({ ...p, quantity: Number(e.target.value) }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    value={quantity}
+                    onChange={e => setQuantity(Number(e.target.value))}
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Peso (kg, si aplica)</label>
+                  <label className="form-label">{t('equipment.weight')}</label>
                   <input
                     type="number" min={0} step={0.5}
-                    value={form.weight_kg ?? ''}
-                    onChange={e => setForm(p => ({ ...p, weight_kg: e.target.value ? Number(e.target.value) : null }))}
+                    value={weightKg ?? ''}
+                    onChange={e => setWeightKg(e.target.value ? Number(e.target.value) : null)}
                     placeholder="—"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    className="form-input"
                   />
                 </div>
               </div>
-
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Notas</label>
+                <label className="form-label">{t('equipment.notes')}</label>
                 <input
-                  value={form.notes ?? ''}
-                  onChange={e => setForm(p => ({ ...p, notes: e.target.value || null }))}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  className="form-input"
                 />
               </div>
             </div>
 
-            {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+            {error && <p className="text-xs text-red-400 font-semibold mt-3 uppercase tracking-wider">{error}</p>}
 
-            <div className="flex gap-3 mt-5">
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 border border-gray-200 text-gray-600 py-2 rounded-lg text-sm"
+                className="flex-1 border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-full transition-all"
               >
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-bold disabled:opacity-60"
+                className="flex-1 btn-primary py-2.5 disabled:opacity-50"
               >
-                {saving ? 'Guardando...' : 'Guardar'}
+                {saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
+              </div>
+            </GlowCard>
           </div>
         </div>
       )}

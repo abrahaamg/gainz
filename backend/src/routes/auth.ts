@@ -1,7 +1,7 @@
-import { Router } from 'express'
+import { Router, IRouter } from 'express'
 import { AuthController } from '../controllers/AuthController'
 
-const router = Router()
+const router: IRouter = Router()
 
 router.get('/',    AuthController.me)
 router.patch('/me', AuthController.updateMe)

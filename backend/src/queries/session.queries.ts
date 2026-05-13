@@ -82,6 +82,16 @@ export const addSet = async (
 
     let newPR = false
 
+    // Save 1RM history (Epley formula) if we have weight and reps
+    if (data.weight_kg && data.weight_kg > 0 && data.reps_done && data.reps_done > 0) {
+      const estimated1rm = Math.round(data.weight_kg * (1 + data.reps_done / 30) * 100) / 100
+      await conn.query(
+        `INSERT INTO exercise_1rm_history (user_id, exercise_id, estimated_1rm, weight_used, reps_done, session_id)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [userId, data.exercise_id, estimated1rm, data.weight_kg, data.reps_done, sessionId]
+      )
+    }
+
     // Check PR for max_weight
     if (data.weight_kg && data.weight_kg > 0) {
       const [prResult] = await conn.query<ResultSetHeader>(
@@ -135,6 +145,43 @@ export const addSet = async (
   }
 }
 
+// ─── Last performance for Smart Fill ─────────────────────────
+export const getLastPerformance = async (
+  userId: number,
+  exerciseId: number
+): Promise<{ weight_kg: number | null; reps_done: number | null; rpe: number | null } | null> => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT se.weight_kg, se.reps_done, se.rpe
+     FROM session_exercises se
+     JOIN sessions s ON s.id = se.session_id
+     WHERE s.user_id = ? AND se.exercise_id = ? AND se.completed = true
+     ORDER BY se.completed_at DESC
+     LIMIT 1`,
+    [userId, exerciseId]
+  )
+  if (!rows.length) return null
+  return rows[0] as { weight_kg: number | null; reps_done: number | null; rpe: number | null }
+}
+
+// ─── Plateau detection: last 3 session volumes for exercise ──
+export const getExerciseVolumes = async (
+  userId: number,
+  exerciseId: number
+): Promise<{ volume: number }[]> => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT ROUND(COALESCE(SUM(se.reps_done * se.weight_kg), 0)) AS volume
+     FROM session_exercises se
+     JOIN sessions s ON s.id = se.session_id
+     WHERE s.user_id = ? AND se.exercise_id = ? AND s.status = 'completed'
+       AND se.reps_done IS NOT NULL AND se.weight_kg IS NOT NULL
+     GROUP BY s.id
+     ORDER BY s.started_at DESC
+     LIMIT 3`,
+    [userId, exerciseId]
+  )
+  return rows as { volume: number }[]
+}
+
 // ─── Finish session: update + streak + calories ───────────────
 export const finishSession = async (
   sessionId: number,
@@ -179,10 +226,13 @@ export const finishSession = async (
         'SELECT * FROM streaks WHERE user_id = ?',
         [userId]
       )
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const addMinutes = Math.round(data.duration_seconds / 60)
+
       if (streakRows.length) {
+        // Usuario ya tiene fila de streak → actualizar
         const streak = streakRows[0]
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
 
         let newStreak = streak.current_streak
         const lastDate = streak.last_workout_date ? new Date(streak.last_workout_date) : null
@@ -203,7 +253,6 @@ export const finishSession = async (
         }
 
         const longestStreak = Math.max(newStreak, streak.longest_streak)
-        const addMinutes = Math.round(data.duration_seconds / 60)
         const lastWasToday = lastDate
           ? Math.floor((today.getTime() - new Date(lastDate).setHours(0, 0, 0, 0)) / 86400000) === 0
           : false
@@ -225,6 +274,14 @@ export const finishSession = async (
             addMinutes,
             userId,
           ]
+        )
+      } else {
+        // Usuario nuevo (registrado vía Firebase real) → crear fila de streak
+        await conn.query(
+          `INSERT INTO streaks (user_id, current_streak, longest_streak, last_workout_date,
+                                total_workouts, total_minutes, updated_at)
+           VALUES (?, 1, 1, ?, 1, ?, NOW())`,
+          [userId, today.toISOString().split('T')[0], addMinutes]
         )
       }
     }

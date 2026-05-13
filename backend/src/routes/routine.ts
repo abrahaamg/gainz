@@ -1,7 +1,7 @@
-import { Router } from 'express'
+import { Router, IRouter } from 'express'
 import { RoutineController } from '../controllers/RoutineController'
 
-const routineRouter = Router()
+const routineRouter: IRouter = Router()
 
 routineRouter.get('/',     RoutineController.getAll)
 routineRouter.get('/:id',  RoutineController.getById)

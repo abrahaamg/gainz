@@ -4,6 +4,7 @@
   "description": "TFG Fitness Routine Manager — Monorepo",
   "private": true,
   "scripts": {
+    "dev": "pnpm run dev:backend & pnpm run dev:frontend",
     "dev:backend": "cd backend && pnpm dev",
     "dev:frontend": "cd frontend && pnpm dev",
     "install:all": "cd backend && pnpm install && cd ../frontend && pnpm install"

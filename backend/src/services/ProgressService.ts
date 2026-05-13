@@ -49,6 +49,9 @@ export const ProgressService = {
 
   getRecords: (userId: number) => ProgressModel.getPersonalRecords(userId),
 
+  get1RMProgression: (userId: number, exerciseId: number) =>
+    ProgressModel.get1RMProgression(userId, exerciseId),
+
   getStats: async (userId: number) => {
     const [stats, records] = await Promise.all([
       ProgressModel.getStreakStats(userId),

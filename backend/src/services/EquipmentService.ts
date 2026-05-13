@@ -1,5 +1,5 @@
 import { EquipmentModel } from '../models/EquipmentModel'
-import { CreateEquipmentDTO, Equipment, Recommendation } from '../types/entities/Equipment'
+import { CreateEquipmentDTO, Equipment, CatalogItem, Recommendation } from '../types/entities/Equipment'
 import { BadRequestError, NotFoundError } from '../utils/customErrors'
 
 export const EquipmentService = {
@@ -9,9 +9,31 @@ export const EquipmentService = {
   countAccessible: (userId: number): Promise<number> =>
     EquipmentModel.countAccess(userId),
 
+  countBodyweight: (): Promise<number> =>
+    EquipmentModel.countBodyweight(),
+
+  findAccessible: (userId: number) =>
+    EquipmentModel.findAccessible(userId),
+
+  getCatalog: (): Promise<CatalogItem[]> =>
+    EquipmentModel.getCatalog(),
+
   create: async (userId: number, data: CreateEquipmentDTO): Promise<Equipment> => {
     if (!data.name?.trim()) throw new BadRequestError('El nombre del equipo es obligatorio')
     return EquipmentModel.create(userId, data)
+  },
+
+  createWithExercises: async (
+    userId: number,
+    data: CreateEquipmentDTO,
+    exerciseIds: number[]
+  ): Promise<Equipment> => {
+    if (!data.name?.trim()) throw new BadRequestError('El nombre del equipo es obligatorio')
+    const item = await EquipmentModel.create(userId, data)
+    if (exerciseIds.length > 0) {
+      await EquipmentModel.linkCustom(item.name, exerciseIds)
+    }
+    return item
   },
 
   update: async (id: number, userId: number, data: Partial<CreateEquipmentDTO>): Promise<Equipment> => {

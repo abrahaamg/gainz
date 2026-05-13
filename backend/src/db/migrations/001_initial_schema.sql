@@ -77,8 +77,7 @@ CREATE TABLE IF NOT EXISTS routines (
 );
 
 -- ─────────────────────────────────────────────────────────────
--- 4. ROUTINE_EXERCISES  ⭐ tabla intermedia clave
--- Equivale a recipe_ingredients en el proyecto base
+-- 4. ROUTINE_EXERCISES  — tabla intermedia clave
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS routine_exercises (
   id                INT AUTO_INCREMENT PRIMARY KEY,

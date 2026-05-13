@@ -1,52 +1,75 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
+import { useTranslation } from 'react-i18next'
 import { auth } from '../../config/firebase'
 import { useAuthStore } from '../../store/useAuthStore'
 
-const NAV_ITEMS = [
-  { to: '/',               label: '🏠 Inicio' },
-  { to: '/exercises',      label: '💪 Ejercicios' },
-  { to: '/routines',       label: '📋 Rutinas' },
-  { to: '/progress',       label: '📈 Progreso' },
-  { to: '/equipment',      label: '🏋️ Equipamiento' },
-]
+const NAV_KEYS = [
+  { to: '/exercises',      key: 'exercises' },
+  { to: '/routines',       key: 'routines' },
+  { to: '/progress',       key: 'progress' },
+  { to: '/history',        key: 'history' },
+  { to: '/equipment',      key: 'equipment' },
+  { to: '/recommendations',key: 'recommendations' },
+  { to: '/glossary',       key: 'glossary' },
+] as const
 
 export default function Navbar() {
-  const navigate   = useNavigate()
-  const { clear }  = useAuthStore()
+  const { t } = useTranslation()
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const { clear } = useAuthStore()
+  const isHome = location.pathname === '/'
 
   const handleLogout = async () => {
-    await signOut(auth)
+    try {
+      if (auth.currentUser) await signOut(auth)
+    } catch { /* DEV mode — no Firebase */ }
     clear()
     navigate('/login', { replace: true })
   }
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
-        <span className="font-bold text-lg text-blue-600">Gainz 💪</span>
+    <nav className="bg-neutral-900 sticky top-0 z-50 border-b border-neutral-800">
+      <div className="max-w-7xl mx-auto px-6 flex items-center justify-center h-12 gap-8">
+        <NavLink to="/" className={`font-display italic tracking-tight text-xl transition-colors mr-auto ${isHome ? 'text-accent' : 'text-white hover:text-accent'}`}>
+          Gainz
+        </NavLink>
+
         <div className="flex items-center gap-1">
-          {NAV_ITEMS.map(({ to, label }) => (
+          {NAV_KEYS.map(({ to, key }) => (
             <NavLink
               key={to}
               to={to}
-              end={to === '/'}
               className={({ isActive }) =>
-                `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                `px-3 py-1.5 text-[12px] font-medium tracking-wide transition-colors rounded-full ${
                   isActive
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'text-accent'
+                    : 'text-neutral-400 hover:text-accent'
                 }`
               }
             >
-              {label}
+              {t(`nav.${key}`)}
             </NavLink>
           ))}
+        </div>
+
+        <div className="ml-auto flex items-center gap-3">
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              `px-3 py-1.5 text-[12px] font-medium tracking-wide transition-colors rounded-full ${
+                isActive ? 'text-accent' : 'text-neutral-400 hover:text-accent'
+              }`
+            }
+          >
+            {t('nav.profile')}
+          </NavLink>
           <button
             onClick={handleLogout}
-            className="ml-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+            className="px-3 py-1.5 text-[12px] font-medium tracking-wide text-neutral-500 hover:text-accent transition-colors"
           >
-            Salir
+            {t('nav.logout')}
           </button>
         </div>
       </div>

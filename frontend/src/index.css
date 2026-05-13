@@ -1,3 +1,907 @@
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-neutral-50 text-neutral-900 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  * {
+    @apply border-neutral-200;
+  }
+
+  /* ─── Premium input styles ─── */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  select {
+    @apply border border-neutral-200 bg-white/80 shadow-input rounded-2xl transition-all duration-200;
+  }
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  input[type="search"]:focus,
+  textarea:focus,
+  select:focus {
+    @apply outline-none border-accent ring-2 ring-accent/10;
+  }
+}
+
+@layer components {
+  /* ── Card container — Apple style ── */
+  .card {
+    @apply bg-white border border-neutral-100 shadow-soft rounded-apple;
+  }
+
+  /* ── Hover card effect — lift + glow ── */
+  .card-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(245, 196, 0, 0.08);
+  }
+
+  /* ── Accent glow on hover — lift + glow + outline dorado ── */
+  .glow-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+  .glow-hover:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 0 0 1px rgba(245, 196, 0, 0.3), 0 0 20px rgba(245, 196, 0, 0.10), 0 8px 30px rgba(245, 196, 0, 0.12);
+    outline: 2px solid rgba(245, 196, 0, 0.15);
+    outline-offset: 2px;
+  }
+
+  /* ── Smooth expand/collapse for dropdowns ── */
+  .dropdown-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease-out, opacity 0.25s ease-out;
+    opacity: 0;
+  }
+  .dropdown-panel.open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  .dropdown-panel > div {
+    overflow: hidden;
+  }
+
+  /* ── Gradient dark header ── */
+  .header-gradient {
+    background: linear-gradient(135deg, #171717 0%, #1a1a1a 40%, #1f1a0f 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .header-gradient::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(245, 196, 0, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Scale button effect ── */
+  .btn-press {
+    @apply transition-all duration-150;
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+
+  /* ── Primary button — gradient glow pill + translateY + glow ── */
+  .btn-primary {
+    @apply text-neutral-900 font-bold text-xs uppercase tracking-wider
+           px-6 py-2.5 rounded-full transition-all duration-300;
+    background: linear-gradient(135deg, #F5C400 0%, #E0B200 50%, #C9A200 100%);
+    box-shadow: 0 2px 10px rgba(245, 196, 0, 0.25), 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #FFD633 0%, #F5C400 50%, #C9A200 100%);
+    box-shadow: 0 0 25px rgba(245, 196, 0, 0.5), 0 4px 20px rgba(245, 196, 0, 0.3);
+    transform: translateY(-3px) scale(1.03);
+  }
+  .btn-primary:active {
+    transform: scale(0.96) translateY(0);
+    box-shadow: 0 0 10px rgba(245, 196, 0, 0.3);
+  }
+
+  /* ── Secondary button — pill outline + scale ── */
+  .btn-secondary {
+    @apply border border-neutral-200 bg-white text-neutral-600 font-semibold text-xs uppercase tracking-wider
+           px-6 py-2.5 rounded-full transition-all duration-300 hover:border-neutral-400 hover:text-neutral-900;
+  }
+  .btn-secondary:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+  }
+  .btn-secondary:active {
+    transform: scale(0.97);
+  }
+
+  /* ── Danger button — pill + skew sutil ── */
+  .btn-danger {
+    @apply border border-red-200 text-red-500 font-semibold text-xs uppercase tracking-wider
+           px-5 py-2 rounded-full transition-all duration-300 hover:bg-red-50 hover:border-red-400;
+  }
+  .btn-danger:hover {
+    transform: translateY(-2px) skewX(-2deg);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
+  }
+  .btn-danger:active {
+    transform: scale(0.97) skewX(0);
+  }
+
+  /* ── Section title ── */
+  .section-title {
+    @apply text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-4;
+  }
+
+  /* ── Page heading ── */
+  .page-title {
+    @apply text-3xl font-bold text-neutral-900 tracking-tight;
+  }
+  .page-subtitle {
+    @apply text-neutral-400 text-xs uppercase tracking-widest mt-1;
+  }
+
+  /* ── Form label ── */
+  .form-label {
+    @apply block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5;
+  }
+
+  /* ── Form input (add on top of base styles) ── */
+  .form-input {
+    @apply w-full px-4 py-3 text-sm rounded-2xl;
+  }
+
+  /* ── Styled select (custom arrow) ── */
+  select.form-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 2.5rem;
+  }
+
+  /* ── Chip / pill tag + scale ── */
+  .chip {
+    @apply border border-neutral-200 px-4 py-2 text-xs font-semibold uppercase tracking-wider
+           rounded-full transition-all duration-300 cursor-pointer text-neutral-500 hover:border-neutral-300;
+  }
+  .chip:hover {
+    transform: translateY(-2px) scale(1.04);
+  }
+  .chip:active {
+    transform: scale(0.96);
+  }
+  .chip-active {
+    @apply border-accent text-neutral-900 font-bold;
+    background: linear-gradient(135deg, #F5C400 0%, #E0B200 50%, #C9A200 100%) !important;
+    box-shadow: 0 2px 10px rgba(245, 196, 0, 0.25), 0 0 12px rgba(245, 196, 0, 0.2);
+  }
+  .chip-accent {
+    @apply border-accent/30 bg-accent/10 font-bold text-neutral-900;
+  }
+
+  /* ── Glassmorphism modal ── */
+  .glass-modal {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-modal rounded-apple;
+  }
+
+  /* ── Bento grid ── */
+  .bento-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .bento-2x2 { grid-column: span 2; grid-row: span 2; }
+  .bento-2x1 { grid-column: span 2; }
+  .bento-1x1 { grid-column: span 1; }
+
+  @media (max-width: 768px) {
+    .bento-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* ── Difficulty dots ── */
+  .difficulty-dots {
+    @apply flex gap-1 items-center;
+  }
+  .difficulty-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  /* ── GlowCard — GPU-accelerated, zero re-renders ── */
+  .glow-card {
+    background-color: #0e100f;
+    box-shadow: 0 -8px 80px 8px rgba(245, 196, 0, 0.12), 0 0 8px 0 rgba(0, 0, 0, 0.4);
+    will-change: transform;
+    transition: transform 0.25s cubic-bezier(0.33, 1, 0.68, 1);
+    /* CSS variable defaults */
+    --glow-opacity: 0.7;
+    --glow-center-opacity: 0.6;
+    --glass-opacity: 0.4;
+    --line-opacity: 0.8;
+    --line-shadow: 0 0 15px 3px rgba(245,196,0,0.5), 0 0 25px 5px rgba(201,162,0,0.3);
+    --edge-shadow: 0 0 10px 2px rgba(245,196,0,0.3);
+  }
+  .glow-card__glass {
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 40%, transparent 80%, rgba(255,255,255,0.03) 100%);
+    opacity: var(--glass-opacity);
+    transition: opacity 0.35s ease;
+  }
+  .glow-card__glow {
+    background:
+      radial-gradient(ellipse at bottom right, rgba(245, 196, 0, 0.5) -10%, transparent 70%),
+      radial-gradient(ellipse at bottom left, rgba(201, 162, 0, 0.4) -10%, transparent 70%);
+    filter: blur(40px);
+    opacity: var(--glow-opacity);
+    transition: opacity 0.35s ease;
+  }
+  .glow-card__glow-center {
+    background: radial-gradient(circle at bottom center, rgba(200, 160, 0, 0.5) -20%, transparent 60%);
+    filter: blur(45px);
+    opacity: var(--glow-center-opacity);
+    transition: opacity 0.35s ease;
+  }
+  .glow-card__line {
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.05) 100%);
+    opacity: var(--line-opacity);
+    box-shadow: var(--line-shadow);
+    transition: opacity 0.35s ease, box-shadow 0.35s ease;
+  }
+  .glow-card__edge {
+    background: linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.2) 40%, transparent 80%);
+    box-shadow: var(--edge-shadow);
+    transition: box-shadow 0.35s ease;
+  }
+
+  /* ── Card action links (Editar / Eliminar dentro de GlowCard) ── */
+  .card-action {
+    @apply text-[11px] font-semibold uppercase tracking-wider
+           px-3 py-1.5 rounded-full transition-all duration-200;
+  }
+  .card-action-edit {
+    @apply text-neutral-500;
+  }
+  .card-action-edit:hover {
+    @apply text-accent bg-accent/10;
+    transform: translateY(-1px);
+  }
+  .card-action-delete {
+    @apply text-red-400/70;
+  }
+  .card-action-delete:hover {
+    @apply text-red-400 bg-red-500/10;
+    transform: translateY(-1px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE
+   ═══════════════════════════════════════════════════════════════ */
+html.dark body {
+  background-color: #0a0a0a !important;
+  color: #f5f5f5 !important;
+}
+html.dark * {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark .bg-neutral-50,
+html.dark .bg-neutral-100,
+html.dark .bg-white {
+  background-color: #0a0a0a !important;
+}
+html.dark .card,
+html.dark .bg-white.border {
+  background-color: #141414 !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 2px 15px rgba(0,0,0,0.3) !important;
+}
+html.dark .card-hover:hover {
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(245, 196, 0, 0.1) !important;
+}
+html.dark .glow-hover:hover {
+  box-shadow: 0 0 0 1px rgba(245, 196, 0, 0.3), 0 8px 30px rgba(245, 196, 0, 0.15), 0 0 20px rgba(245, 196, 0, 0.08) !important;
+}
+/* Text colors */
+html.dark .text-neutral-900,
+html.dark .font-bold.text-neutral-900,
+html.dark .font-black.text-neutral-900,
+html.dark .page-title {
+  color: #ffffff !important;
+}
+html.dark .text-neutral-800 {
+  color: #e5e5e5 !important;
+}
+html.dark .text-neutral-700 {
+  color: #d4d4d4 !important;
+}
+html.dark .text-neutral-600 {
+  color: #a3a3a3 !important;
+}
+html.dark .text-neutral-500,
+html.dark .page-subtitle,
+html.dark .section-title,
+html.dark .form-label {
+  color: #737373 !important;
+}
+html.dark .text-neutral-400 {
+  color: #525252 !important;
+}
+html.dark .text-neutral-300 {
+  color: #404040 !important;
+}
+/* Nav — already dark by default, no overrides needed in dark mode */
+html.dark nav {
+  background-color: #0a0a0a !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+/* Inputs */
+html.dark input[type="text"],
+html.dark input[type="email"],
+html.dark input[type="password"],
+html.dark input[type="number"],
+html.dark input[type="search"],
+html.dark textarea,
+html.dark select {
+  background-color: #1a1a1a !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f5f5f5 !important;
+  box-shadow: none !important;
+}
+html.dark input:focus,
+html.dark textarea:focus,
+html.dark select:focus {
+  border-color: #F5C400 !important;
+  box-shadow: 0 0 0 2px rgba(245,196,0,0.15) !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #525252 !important;
+}
+/* Buttons */
+html.dark .btn-secondary {
+  background-color: #1a1a1a !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #a3a3a3 !important;
+}
+html.dark .btn-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+html.dark .btn-danger {
+  border-color: #7f1d1d !important;
+  color: #f87171 !important;
+}
+html.dark .btn-danger:hover {
+  background-color: rgba(127, 29, 29, 0.2) !important;
+}
+/* Chips */
+html.dark .chip {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #a3a3a3 !important;
+}
+html.dark .chip:hover {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+html.dark .chip-active {
+  border-color: #F5C400 !important;
+  background-color: #F5C400 !important;
+  color: #0a0a0a !important;
+}
+html.dark .chip-accent {
+  border-color: rgba(245, 196, 0, 0.3) !important;
+  background-color: rgba(245,196,0,0.08) !important;
+  color: #F5C400 !important;
+}
+/* Backgrounds */
+html.dark .bg-neutral-900 {
+  background-color: #0a0a0a !important;
+}
+html.dark .bg-neutral-50,
+html.dark .bg-neutral-100 {
+  background-color: #141414 !important;
+}
+html.dark .bg-accent\/5,
+html.dark .bg-accent\/10 {
+  background-color: rgba(245,196,0,0.06) !important;
+}
+/* Glass modal */
+html.dark .glass-modal {
+  background-color: rgba(20, 20, 20, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+/* Modal overlay */
+html.dark .bg-black\/60 {
+  background-color: rgba(0,0,0,0.8) !important;
+}
+html.dark .shadow-modal {
+  box-shadow: 0 25px 60px rgba(0,0,0,0.5) !important;
+}
+/* Tables */
+html.dark thead {
+  background-color: #141414 !important;
+}
+html.dark tbody tr:hover {
+  background-color: #1a1a1a !important;
+}
+html.dark .divide-neutral-100 > :not(:last-child) {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HIGH CONTRAST — Modo alto contraste completo
+   Fondo blanco, texto negro, bordes gruesos, sin decoraciones
+   ═══════════════════════════════════════════════════════════════ */
+
+/* --- Base: fondo blanco puro, texto negro --- */
+html.high-contrast body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* --- Todos los textos oscuros --- */
+html.high-contrast .text-neutral-900,
+html.high-contrast .text-neutral-800,
+html.high-contrast .text-neutral-700,
+html.high-contrast .text-white,
+html.high-contrast .text-accent,
+html.high-contrast [class*="text-neutral-9"],
+html.high-contrast [class*="text-neutral-8"],
+html.high-contrast [class*="text-neutral-7"] {
+  color: #000000 !important;
+}
+html.high-contrast .text-neutral-600,
+html.high-contrast .text-neutral-500,
+html.high-contrast .text-neutral-400,
+html.high-contrast .text-neutral-300,
+html.high-contrast [class*="text-neutral-6"],
+html.high-contrast [class*="text-neutral-5"],
+html.high-contrast [class*="text-neutral-4"],
+html.high-contrast [class*="text-neutral-3"] {
+  color: #222222 !important;
+}
+
+/* --- Navbar: fondo blanco, texto negro, borde inferior --- */
+html.high-contrast nav,
+html.high-contrast nav.bg-neutral-900,
+html.high-contrast [class*="bg-neutral-900"],
+html.high-contrast [class*="bg-neutral-800"] {
+  background-color: #ffffff !important;
+  border-color: #000000 !important;
+}
+html.high-contrast nav a,
+html.high-contrast nav button {
+  color: #000000 !important;
+}
+html.high-contrast nav a[aria-current="page"],
+html.high-contrast nav a.active {
+  color: #000000 !important;
+  font-weight: 900 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+}
+html.high-contrast nav .border-neutral-800,
+html.high-contrast .border-neutral-800,
+html.high-contrast .border-neutral-200,
+html.high-contrast .border-neutral-100 {
+  border-color: #000000 !important;
+}
+
+/* --- Fondos oscuros → blanco --- */
+html.high-contrast [class*="bg-neutral-"],
+html.high-contrast [class*="bg-white/5"],
+html.high-contrast [class*="bg-white/10"],
+html.high-contrast [class*="bg-white/80"],
+html.high-contrast [class*="bg-accent/"] {
+  background-color: #ffffff !important;
+}
+
+/* --- Cards: borde negro grueso, sin sombra, sin glow --- */
+html.high-contrast .card,
+html.high-contrast .glow-card {
+  background-color: #ffffff !important;
+  border: 3px solid #000000 !important;
+  box-shadow: none !important;
+}
+html.high-contrast .glow-card__glow,
+html.high-contrast .glow-card__glow-center,
+html.high-contrast .glow-card__glass,
+html.high-contrast .glow-card__line,
+html.high-contrast .glow-card__edge {
+  display: none !important;
+}
+html.high-contrast .glow-card * {
+  color: #000000 !important;
+}
+
+/* --- Header gradient → blanco con borde inferior negro --- */
+html.high-contrast .header-gradient {
+  background: #ffffff !important;
+  border-bottom: 3px solid #000000 !important;
+}
+html.high-contrast .header-gradient::after {
+  display: none !important;
+}
+html.high-contrast .header-gradient * {
+  color: #000000 !important;
+}
+
+/* --- Botones --- */
+html.high-contrast .btn-primary {
+  border: 3px solid #000000 !important;
+  background: #F5C400 !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+}
+html.high-contrast .btn-secondary {
+  border: 3px solid #000000 !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+}
+html.high-contrast .btn-danger {
+  border: 3px solid #dc2626 !important;
+  background: #ffffff !important;
+  color: #dc2626 !important;
+  box-shadow: none !important;
+}
+
+/* --- Chips --- */
+html.high-contrast .chip {
+  border: 2px solid #555555 !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+html.high-contrast .chip-active {
+  border-color: #000000 !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* --- Inputs --- */
+html.high-contrast input,
+html.high-contrast textarea,
+html.high-contrast select {
+  border: 2px solid #000000 !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+}
+html.high-contrast input::placeholder,
+html.high-contrast textarea::placeholder {
+  color: #555555 !important;
+}
+
+/* --- Focus rings: muy visibles --- */
+html.high-contrast a:focus-visible,
+html.high-contrast button:focus-visible,
+html.high-contrast input:focus-visible,
+html.high-contrast textarea:focus-visible,
+html.high-contrast select:focus-visible {
+  outline: 3px solid #000000 !important;
+  outline-offset: 2px !important;
+}
+
+/* --- Links subrayados --- */
+html.high-contrast a {
+  text-decoration: underline !important;
+  color: #000000 !important;
+}
+html.high-contrast nav a {
+  text-decoration: none !important;
+}
+
+/* --- Eliminar sombras, glows y decoraciones --- */
+html.high-contrast .card-hover:hover,
+html.high-contrast .glow-hover:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  outline: 3px solid #000000 !important;
+}
+html.high-contrast [class*="shadow-"] {
+  box-shadow: none !important;
+}
+
+/* --- Badges y etiquetas con fondo accent → borde negro --- */
+html.high-contrast [class*="bg-accent"] {
+  background-color: #F5C400 !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+}
+html.high-contrast [class*="bg-green"],
+html.high-contrast [class*="bg-emerald"] {
+  background-color: #22c55e !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+}
+html.high-contrast [class*="bg-red"] {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+}
+
+/* --- Tablas y bordes de separación --- */
+html.high-contrast tr,
+html.high-contrast td,
+html.high-contrast th {
+  border-color: #000000 !important;
+}
+
+/* --- Inline styles oscuros (login, register, session pages) --- */
+html.high-contrast [style*="background: linear-gradient"],
+html.high-contrast [style*="background-color"] {
+  background: #ffffff !important;
+}
+
+/* --- DifficultyDots: asegurar visibilidad --- */
+html.high-contrast .difficulty-dot {
+  border: 2px solid #000000 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INPUTS DENTRO DE GLOWCARD
+   El GlowCard tiene fondo oscuro hardcoded (linear-gradient). En
+   modo CLARO los inputs con bg-white/5 quedan casi invisibles y
+   se ven "lavados" por el glow dorado del card. Forzamos un fondo
+   oscuro sólido para que destaquen consistentemente.
+   No aplicamos en alto contraste (que tiene sus propias reglas).
+   ═══════════════════════════════════════════════════════════════ */
+html:not(.high-contrast) .glow-card input,
+html:not(.high-contrast) .glow-card textarea,
+html:not(.high-contrast) .glow-card select,
+html:not(.high-contrast) .glow-card div[class*="bg-white/3"],
+html:not(.high-contrast) .glow-card div[class*="bg-white/5"] {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #f5f5f5 !important;
+}
+html:not(.high-contrast) .glow-card input::placeholder,
+html:not(.high-contrast) .glow-card textarea::placeholder {
+  color: #737373 !important;
+}
+html:not(.high-contrast) .glow-card input:focus,
+html:not(.high-contrast) .glow-card textarea:focus,
+html:not(.high-contrast) .glow-card select:focus {
+  border-color: #F5C400 !important;
+  box-shadow: 0 0 0 2px rgba(245,196,0,0.15) !important;
+}
+/* Inputs disabled mantienen aspecto pero más apagados */
+html:not(.high-contrast) .glow-card input:disabled {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+  color: #737373 !important;
+  cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ALTO CONTRASTE + MODO OSCURO
+   Invierte las reglas anteriores: fondo negro puro, texto blanco
+   puro. Mantiene alto contraste WCAG AAA en el tema oscuro.
+   Los selectores con doble clase tienen mayor especificidad que
+   los de una sola clase (.dark o .high-contrast) y por eso
+   sobrescriben las reglas de arriba.
+   ═══════════════════════════════════════════════════════════════ */
+html.dark.high-contrast body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Textos: todos blancos */
+html.dark.high-contrast .text-neutral-900,
+html.dark.high-contrast .text-neutral-800,
+html.dark.high-contrast .text-neutral-700,
+html.dark.high-contrast .text-neutral-600,
+html.dark.high-contrast .text-neutral-500,
+html.dark.high-contrast .text-neutral-400,
+html.dark.high-contrast .text-neutral-300,
+html.dark.high-contrast [class*="text-neutral-"] {
+  color: #ffffff !important;
+}
+html.dark.high-contrast .text-accent {
+  color: #FFE066 !important;  /* amarillo más claro para mejor contraste sobre negro */
+}
+
+/* Navbar: fondo negro, texto blanco, borde inferior blanco */
+html.dark.high-contrast nav,
+html.dark.high-contrast nav.bg-neutral-900,
+html.dark.high-contrast [class*="bg-neutral-900"],
+html.dark.high-contrast [class*="bg-neutral-800"] {
+  background-color: #000000 !important;
+  border-color: #ffffff !important;
+}
+html.dark.high-contrast nav a,
+html.dark.high-contrast nav button {
+  color: #ffffff !important;
+}
+html.dark.high-contrast nav a[aria-current="page"],
+html.dark.high-contrast nav a.active {
+  color: #FFE066 !important;
+  font-weight: 900 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+}
+
+/* Bordes: blancos */
+html.dark.high-contrast nav .border-neutral-800,
+html.dark.high-contrast .border-neutral-800,
+html.dark.high-contrast .border-neutral-200,
+html.dark.high-contrast .border-neutral-100 {
+  border-color: #ffffff !important;
+}
+
+/* Fondos: todos negros */
+html.dark.high-contrast [class*="bg-neutral-"],
+html.dark.high-contrast [class*="bg-white/5"],
+html.dark.high-contrast [class*="bg-white/10"],
+html.dark.high-contrast [class*="bg-white/80"],
+html.dark.high-contrast [class*="bg-accent/"] {
+  background-color: #000000 !important;
+}
+
+/* Cards: borde blanco grueso, fondo negro */
+html.dark.high-contrast .card,
+html.dark.high-contrast .glow-card {
+  background-color: #000000 !important;
+  border: 3px solid #ffffff !important;
+  box-shadow: none !important;
+}
+html.dark.high-contrast .glow-card__glow,
+html.dark.high-contrast .glow-card__glow-center,
+html.dark.high-contrast .glow-card__glass,
+html.dark.high-contrast .glow-card__line,
+html.dark.high-contrast .glow-card__edge {
+  display: none !important;
+}
+html.dark.high-contrast .glow-card * {
+  color: #ffffff !important;
+}
+
+/* Header gradient → negro con borde inferior blanco */
+html.dark.high-contrast .header-gradient {
+  background: #000000 !important;
+  border-bottom: 3px solid #ffffff !important;
+}
+html.dark.high-contrast .header-gradient::after {
+  display: none !important;
+}
+html.dark.high-contrast .header-gradient * {
+  color: #ffffff !important;
+}
+
+/* Botones */
+html.dark.high-contrast .btn-primary {
+  border: 3px solid #ffffff !important;
+  background: #F5C400 !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+}
+html.dark.high-contrast .btn-secondary {
+  border: 3px solid #ffffff !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+html.dark.high-contrast .btn-danger {
+  border: 3px solid #f87171 !important;
+  background: #000000 !important;
+  color: #f87171 !important;
+  box-shadow: none !important;
+}
+
+/* Chips */
+html.dark.high-contrast .chip {
+  border: 2px solid #ffffff !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+html.dark.high-contrast .chip-active {
+  border-color: #FFE066 !important;
+  background: #FFE066 !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Inputs */
+html.dark.high-contrast input,
+html.dark.high-contrast textarea,
+html.dark.high-contrast select {
+  border: 2px solid #ffffff !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+html.dark.high-contrast input::placeholder,
+html.dark.high-contrast textarea::placeholder {
+  color: #aaaaaa !important;
+}
+
+/* Focus rings: muy visibles */
+html.dark.high-contrast a:focus-visible,
+html.dark.high-contrast button:focus-visible,
+html.dark.high-contrast input:focus-visible,
+html.dark.high-contrast textarea:focus-visible,
+html.dark.high-contrast select:focus-visible {
+  outline: 3px solid #FFE066 !important;
+  outline-offset: 2px !important;
+}
+
+/* Links subrayados */
+html.dark.high-contrast a {
+  text-decoration: underline !important;
+  color: #FFE066 !important;
+}
+html.dark.high-contrast nav a {
+  text-decoration: none !important;
+}
+
+/* Eliminar sombras y glow en hover */
+html.dark.high-contrast .card-hover:hover,
+html.dark.high-contrast .glow-hover:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  outline: 3px solid #FFE066 !important;
+}
+html.dark.high-contrast [class*="shadow-"] {
+  box-shadow: none !important;
+}
+
+/* Badges accent: amarillo sobre negro con borde blanco */
+html.dark.high-contrast [class*="bg-accent"] {
+  background-color: #FFE066 !important;
+  color: #000000 !important;
+  border: 2px solid #ffffff !important;
+}
+html.dark.high-contrast [class*="bg-green"],
+html.dark.high-contrast [class*="bg-emerald"] {
+  background-color: #4ade80 !important;
+  color: #000000 !important;
+  border: 2px solid #ffffff !important;
+}
+html.dark.high-contrast [class*="bg-red"] {
+  background-color: #f87171 !important;
+  color: #000000 !important;
+  border: 2px solid #ffffff !important;
+}
+
+/* Tablas */
+html.dark.high-contrast tr,
+html.dark.high-contrast td,
+html.dark.high-contrast th {
+  border-color: #ffffff !important;
+}
+
+/* Inline styles oscuros (login, register, session pages) → negro */
+html.dark.high-contrast [style*="background: linear-gradient"],
+html.dark.high-contrast [style*="background-color"] {
+  background: #000000 !important;
+}
+
+/* DifficultyDots */
+html.dark.high-contrast .difficulty-dot {
+  border: 2px solid #ffffff !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════════════════════ */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

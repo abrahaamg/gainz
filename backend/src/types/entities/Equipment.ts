@@ -2,20 +2,29 @@ export interface Equipment {
   id: number
   user_id: number
   name: string
-  category: string | null   // free_weights | machines | cardio | bodyweight | accessories
+  catalog_name: string | null  // nombre del catálogo para matching de ejercicios
+  category: string | null      // free_weights | machines | cardio | bodyweight | accessories
   quantity: number
   weight_kg: number | null
-  location: string           // home | gym | outdoor
+  location: string             // home | gym | outdoor
   notes: string | null
 }
 
 export interface CreateEquipmentDTO {
   name: string
+  catalog_name?: string | null
   category?: string | null
   quantity?: number
   weight_kg?: number | null
   location?: string
   notes?: string | null
+}
+
+export interface CatalogItem {
+  id: number
+  name: string
+  category: string
+  icon: string | null
 }
 
 export interface Recommendation {

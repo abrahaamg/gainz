@@ -24,6 +24,11 @@ export const progressService = {
     return res.data.data
   },
 
+  get1RMProgression: async (exerciseId: number): Promise<ProgressionPoint[]> => {
+    const res = await api.get<{ data: ProgressionPoint[] }>(`/progress/1rm/${exerciseId}`)
+    return res.data.data
+  },
+
   getRecords: async (): Promise<PersonalRecord[]> => {
     const res = await api.get<{ data: PersonalRecord[] }>('/progress/records')
     return res.data.data

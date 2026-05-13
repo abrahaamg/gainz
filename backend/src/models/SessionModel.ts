@@ -23,4 +23,10 @@ export const SessionModel = {
 
   finish: (sessionId: number, userId: number, data: FinishSessionDTO): Promise<void> =>
     q.finishSession(sessionId, userId, data),
+
+  getLastPerformance: (userId: number, exerciseId: number) =>
+    q.getLastPerformance(userId, exerciseId),
+
+  getExerciseVolumes: (userId: number, exerciseId: number) =>
+    q.getExerciseVolumes(userId, exerciseId),
 }

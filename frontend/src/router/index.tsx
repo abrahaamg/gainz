@@ -15,6 +15,10 @@ import EquipmentPage from '../pages/EquipmentPage'
 import RecommendationsPage from '../pages/RecommendationsPage'
 import ProgressPage from '../pages/ProgressPage'
 import DashboardPage from '../pages/DashboardPage'
+import OnboardingPage from '../pages/OnboardingPage'
+import ProfilePage from '../pages/ProfilePage'
+import HistoryPage from '../pages/HistoryPage'
+import GlossaryPage from '../pages/GlossaryPage'
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="max-w-7xl mx-auto px-4 py-16 text-center">
@@ -28,8 +32,9 @@ const P = (element: React.ReactNode) => (
 )
 
 const router = createBrowserRouter([
-  { path: '/login',    element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
+  { path: '/login',      element: <LoginPage /> },
+  { path: '/register',   element: <RegisterPage /> },
+  { path: '/onboarding', element: <OnboardingPage /> },
 
   {
     path: '/',
@@ -54,6 +59,9 @@ const router = createBrowserRouter([
       { path: 'recommendations', element: P(<RecommendationsPage />) },
 
       { path: 'progress', element: P(<ProgressPage />) },
+      { path: 'history',  element: P(<HistoryPage />) },
+      { path: 'profile',  element: P(<ProfilePage />) },
+      { path: 'glossary', element: P(<GlossaryPage />) },
 
       { path: '*', element: <PlaceholderPage title="404 — Página no encontrada" /> },
     ],

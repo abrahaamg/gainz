@@ -12,9 +12,12 @@ export function useAuthInit() {
   const { setFirebaseUser, setMysqlUser } = useAuthStore()
 
   useEffect(() => {
-    // Sin Firebase configurado → modo DEV, no hay listener
     if (DEV_MODE) {
-      setLoading(false)
+      // En DEV cargamos el usuario de MySQL directamente (id=1 en backend)
+      api.get('/auth/')
+        .then(res => setMysqlUser(res.data.data))
+        .catch(() => {})
+        .finally(() => setLoading(false))
       return
     }
 
@@ -22,10 +25,9 @@ export function useAuthInit() {
       if (firebaseUser) {
         setFirebaseUser(firebaseUser)
         try {
-          const res = await api.get('/auth')
+          const res = await api.get('/auth/')
           setMysqlUser(res.data.data)
         } catch {
-          // token inválido — cerrar sesión
           await fbSignOut(auth)
           clear()
           return

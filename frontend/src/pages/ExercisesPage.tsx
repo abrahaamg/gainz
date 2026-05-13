@@ -1,209 +1,169 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
 import { useDebounce } from '../hooks/useDebounce'
 import { Exercise, ExerciseCategory, Difficulty } from '../types/exercise'
-
-const CATEGORY_COLORS: Record<ExerciseCategory, string> = {
-  strength:    'bg-blue-100 text-blue-800',
-  cardio:      'bg-red-100 text-red-800',
-  flexibility: 'bg-green-100 text-green-800',
-  hiit:        'bg-orange-100 text-orange-800',
-  balance:     'bg-purple-100 text-purple-800',
-}
-
-const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
-  strength: 'Fuerza', cardio: 'Cardio', flexibility: 'Flexibilidad',
-  hiit: 'HIIT', balance: 'Equilibrio',
-}
-
-const DIFFICULTY_LABELS: Record<Difficulty, string> = {
-  easy: 'Fácil', medium: 'Media', hard: 'Difícil',
-}
-
-const DIFFICULTY_COLORS: Record<Difficulty, string> = {
-  easy: 'text-green-600', medium: 'text-yellow-600', hard: 'text-red-600',
-}
+import { CATEGORY_LABELS, DIFFICULTY_LABELS, translateMuscle } from '../utils/labels'
+import DifficultyDots from '../components/ui/DifficultyDots'
+import GlowCard from '../components/ui/GlowCard'
 
 const CATEGORIES: ExerciseCategory[] = ['strength', 'cardio', 'flexibility', 'hiit', 'balance']
 
 export default function ExercisesPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [exercises, setExercises] = useState<Exercise[]>([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [total, setTotal]         = useState(0)
+  const [page, setPage]           = useState(1)
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState<string | null>(null)
 
-  const [search, setSearch] = useState('')
-  const [category, setCategory] = useState<ExerciseCategory | ''>('')
+  const [search, setSearch]       = useState('')
+  const [category, setCategory]   = useState<ExerciseCategory | ''>('')
   const [difficulty, setDifficulty] = useState<Difficulty | ''>('')
 
   const debouncedSearch = useDebounce(search, 300)
-
   const LIMIT = 12
 
-  useEffect(() => {
-    setPage(1)
-  }, [debouncedSearch, category, difficulty])
+  useEffect(() => { setPage(1) }, [debouncedSearch, category, difficulty])
 
   useEffect(() => {
-    const fetchExercises = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const result = await exerciseService.getAll({
-          q: debouncedSearch || undefined,
-          category: category || undefined,
-          difficulty: difficulty || undefined,
-          page,
-          limit: LIMIT,
-        })
-        setExercises(result.data)
-        setTotal(result.pagination.total)
-      } catch {
-        setError('Error al cargar los ejercicios')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchExercises()
+    setLoading(true)
+    setError(null)
+    exerciseService.getAll({
+      q: debouncedSearch || undefined,
+      category: category || undefined,
+      difficulty: difficulty || undefined,
+      page,
+      limit: LIMIT,
+    }).then(result => {
+      setExercises(result.data)
+      setTotal(result.pagination.total)
+    }).catch(() => setError(t('exercises.loadError')))
+    .finally(() => setLoading(false))
   }, [debouncedSearch, category, difficulty, page])
 
   const totalPages = Math.ceil(total / LIMIT)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-6 py-10">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="card header-gradient px-8 py-8 mb-8 flex items-center justify-between border-none">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ejercicios</h1>
-          <p className="text-gray-500 text-sm">{total} ejercicios en el catálogo</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t('exercises.title')}</h1>
+          <p className="text-neutral-500 text-xs mt-1">{total} {t('exercises.inCatalog')}</p>
         </div>
         <button
           onClick={() => navigate('/exercises/new')}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+          className="btn-primary"
         >
-          + Nuevo ejercicio
+          {t('exercises.new')}
         </button>
       </div>
 
-      {/* Buscador */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Buscar ejercicio..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      {/* Search */}
+      <input
+        type="text"
+        placeholder={t('exercises.searchPlaceholder')}
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        className="w-full form-input mb-4"
+      />
 
-      {/* Filtros por categoría */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      {/* Category filter */}
+      <div className="flex flex-wrap gap-2 mb-3">
         <button
           onClick={() => setCategory('')}
-          className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
-            category === '' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
-          }`}
+          className={`chip ${category === '' ? 'chip-active' : ''}`}
         >
-          Todos
+          {t('common.allMasc')}
         </button>
-        {CATEGORIES.map((cat) => (
+        {CATEGORIES.map(cat => (
           <button
             key={cat}
             onClick={() => setCategory(cat === category ? '' : cat)}
-            className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
-              category === cat
-                ? CATEGORY_COLORS[cat] + ' border-transparent'
-                : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
-            }`}
+            className={`chip ${category === cat ? 'chip-active' : ''}`}
           >
-            {CATEGORY_LABELS[cat]}
+            {t(`categories.${cat}`)}
           </button>
         ))}
       </div>
 
-      {/* Filtro dificultad */}
-      <div className="flex gap-2 mb-6">
-        {(['', 'easy', 'medium', 'hard'] as const).map((d) => (
+      {/* Difficulty filter */}
+      <div className="flex gap-2 mb-8">
+        {(['', 'easy', 'medium', 'hard'] as const).map(d => (
           <button
             key={d}
             onClick={() => setDifficulty(d)}
-            className={`px-3 py-1 rounded text-sm border transition-colors ${
-              difficulty === d
-                ? 'bg-gray-800 text-white border-gray-800'
-                : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
-            }`}
+            className={`chip ${difficulty === d ? 'chip-active' : ''}`}
           >
-            {d === '' ? 'Todas' : DIFFICULTY_LABELS[d]}
+            {d === '' ? t('common.all') : t(`difficulty.${d}`)}
           </button>
         ))}
       </div>
 
-      {/* Estado de carga / error */}
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-gray-100 rounded-xl h-40 animate-pulse" />
+            <div key={i} className="bg-neutral-100 h-32 rounded-apple animate-pulse" />
           ))}
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>
-      )}
+      {error && <div className="border border-red-200 bg-red-50 text-red-600 p-4 text-sm font-medium rounded-2xl">{error}</div>}
 
-      {/* Grid de ejercicios */}
       {!loading && !error && exercises.length === 0 && (
-        <div className="text-center py-16 text-gray-400">No se encontraron ejercicios</div>
+        <div className="text-center py-16 text-neutral-400 text-sm font-medium">{t('exercises.notFound')}</div>
       )}
 
       {!loading && !error && exercises.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {exercises.map((exercise) => (
-            <div
-              key={exercise.id}
-              onClick={() => navigate(`/exercises/${exercise.id}`)}
-              className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-blue-300 cursor-pointer transition-all"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[exercise.category]}`}>
-                  {CATEGORY_LABELS[exercise.category]}
-                </span>
-                <span className={`text-xs font-medium ${DIFFICULTY_COLORS[exercise.difficulty]}`}>
-                  {DIFFICULTY_LABELS[exercise.difficulty]}
-                </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {exercises.map(exercise => (
+            <GlowCard key={exercise.id} className="cursor-pointer">
+              <div
+                onClick={() => navigate(`/exercises/${exercise.id}`)}
+                className="p-5"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 bg-white/5 px-2.5 py-1 rounded-full">
+                    {t(`categories.${exercise.category}`)}
+                  </span>
+                  <DifficultyDots level={exercise.difficulty} />
+                </div>
+                <h3 className="font-bold text-white mb-1 leading-tight">{exercise.name}</h3>
+                <p className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider">
+                  {translateMuscle(exercise.muscle_group)}
+                </p>
+                {exercise.requires_equipment && (
+                  <p className="mt-2 text-[11px] font-medium text-neutral-500">
+                    <i className="bi bi-tools mr-1" />{t('exercises.requiresEquipment')}
+                  </p>
+                )}
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1 leading-tight">{exercise.name}</h3>
-              <p className="text-sm text-gray-500 capitalize">{exercise.muscle_group.replace('_', ' ')}</p>
-              {exercise.requires_equipment && (
-                <span className="mt-2 inline-block text-xs text-gray-400">🏋️ Requiere equipo</span>
-              )}
-            </div>
+            </GlowCard>
           ))}
         </div>
       )}
 
-      {/* Paginación */}
       {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-8">
+        <div className="flex items-center justify-center gap-4 mt-10">
           <button
             disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="px-4 py-2 border rounded-lg disabled:opacity-40 hover:bg-gray-50"
+            onClick={() => setPage(p => p - 1)}
+            className="btn-secondary disabled:opacity-30"
           >
-            ← Anterior
+            {t('common.previous')}
           </button>
-          <span className="text-sm text-gray-600">
-            Página {page} de {totalPages}
+          <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+            {page} / {totalPages}
           </span>
           <button
             disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="px-4 py-2 border rounded-lg disabled:opacity-40 hover:bg-gray-50"
+            onClick={() => setPage(p => p + 1)}
+            className="btn-secondary disabled:opacity-30"
           >
-            Siguiente →
+            {t('common.next')}
           </button>
         </div>
       )}

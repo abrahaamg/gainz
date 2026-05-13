@@ -38,6 +38,13 @@ export const authMiddleware = async (
       [decoded.uid]
     )
 
+    // Asegurar que el usuario tiene fila en streaks (crea si no existe)
+    await pool.query<ResultSetHeader>(
+      `INSERT IGNORE INTO streaks (user_id, current_streak, longest_streak, total_workouts, total_minutes)
+       VALUES (?, 0, 0, 0, 0)`,
+      [rows[0].id]
+    )
+
     req.user = { id: rows[0].id, email: rows[0].email }
     next()
   } catch {

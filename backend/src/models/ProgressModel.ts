@@ -19,4 +19,5 @@ export const ProgressModel = {
   getExerciseProgression: (userId: number, exerciseId: number): Promise<ProgressionPoint[]> => q.getExerciseProgression(userId, exerciseId),
   getPersonalRecords:     (userId: number):               Promise<PersonalRecord[]>     => q.getPersonalRecords(userId),
   getStreakStats:         (userId: number):               Promise<StreakStats | null>   => q.getStreakStats(userId),
+  get1RMProgression:     (userId: number, exerciseId: number): Promise<ProgressionPoint[]> => q.get1RMProgression(userId, exerciseId),
 }

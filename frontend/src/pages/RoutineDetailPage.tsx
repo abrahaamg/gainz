@@ -1,183 +1,248 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
 import { Routine, RoutineExercise } from '../types/routine'
-
-const CATEGORY_COLORS: Record<string, string> = {
-  strength:    'bg-blue-100 text-blue-800',
-  cardio:      'bg-red-100 text-red-800',
-  hiit:        'bg-orange-100 text-orange-800',
-  flexibility: 'bg-green-100 text-green-800',
-  balance:     'bg-purple-100 text-purple-800',
-}
-
-const GOAL_LABELS: Record<string, string> = {
-  strength:    'Fuerza',
-  cardio:      'Cardio',
-  weight_loss: 'Pérdida de peso',
-  flexibility: 'Flexibilidad',
-  general:     'General',
-}
+import { CATEGORY_LABELS, DIFFICULTY_LABELS, GOAL_LABELS, translateMuscle } from '../utils/labels'
+import DifficultyDots from '../components/ui/DifficultyDots'
+import GlowCard from '../components/ui/GlowCard'
 
 export default function RoutineDetailPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [routine, setRoutine]   = useState<Routine | null>(null)
+  const [routine, setRoutine]     = useState<Routine | null>(null)
   const [exercises, setExercises] = useState<RoutineExercise[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState<string | null>(null)
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
 
   useEffect(() => {
     routineService.getById(Number(id))
-      .then(r => {
-        setRoutine(r)
-        setExercises(r.exercises ?? [])
-      })
-      .catch(() => setError('Rutina no encontrada'))
+      .then(r => { setRoutine(r); setExercises(r.exercises ?? []) })
+      .catch(() => setError(t('routines.routineNotFound')))
       .finally(() => setLoading(false))
   }, [id])
 
   const handleDelete = async () => {
-    if (!confirm('¿Eliminar esta rutina?')) return
+    if (!confirm(t('routines.deleteConfirm'))) return
     await routineService.delete(Number(id))
     navigate('/routines')
   }
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
   if (error || !routine) return (
-    <div className="text-center py-16 text-red-500">{error ?? 'Error'}</div>
+    <div className="text-center py-16 text-red-500 text-sm font-medium">{error ?? 'Error'}</div>
   )
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <Link to="/routines" className="text-sm text-indigo-600 hover:underline mb-2 block">
-            ← Volver a rutinas
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">{routine.name}</h1>
-          {routine.description && (
-            <p className="text-gray-500 mt-1">{routine.description}</p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => navigate(`/session/${routine.id}`)}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors"
-          >
-            ▶ Empezar
-          </button>
-          <Link
-            to={`/routines/${routine.id}/edit`}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            Editar
-          </Link>
-          <button
-            onClick={handleDelete}
-            className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            Eliminar
-          </button>
-        </div>
-      </div>
+    <div className="max-w-3xl mx-auto px-6 py-10">
+      <Link to="/routines" className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
+        <i className="bi bi-arrow-left mr-1" />{t('nav.routines')}
+      </Link>
 
-      {/* Meta */}
-      <div className="flex flex-wrap gap-3 mb-6 text-sm">
-        {routine.goal && (
-          <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-medium">
-            🎯 {GOAL_LABELS[routine.goal] ?? routine.goal}
-          </span>
-        )}
-        {routine.estimated_duration_min && (
-          <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-            ⏱ {routine.estimated_duration_min} min estimados
-          </span>
-        )}
-        <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-          💪 {exercises.length} ejercicios
-        </span>
-        <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-          ✅ Completada {routine.times_completed} veces
-        </span>
-      </div>
-
-      {/* Warmup notes */}
-      {routine.warmup_notes && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <p className="text-sm font-semibold text-yellow-800 mb-1">🔥 Calentamiento</p>
-          <p className="text-sm text-yellow-700">{routine.warmup_notes}</p>
-        </div>
-      )}
-
-      {/* Exercises list */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-800">Ejercicios</h2>
-        {exercises.length === 0 ? (
-          <p className="text-gray-400 text-sm">Esta rutina no tiene ejercicios.</p>
-        ) : (
-          exercises.map((ex, i) => (
-            <div key={ex.re_id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-400 font-mono text-sm w-5">{i + 1}</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">{ex.exercise_name}</p>
-                    <div className="flex gap-2 mt-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${CATEGORY_COLORS[ex.category] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {ex.category}
-                      </span>
-                      <span className="text-xs text-gray-500">{ex.muscle_group}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-right text-sm text-gray-700 space-y-0.5">
-                  <p className="font-medium">
-                    {ex.sets} series ×{' '}
-                    {ex.reps ? `${ex.reps} reps` : `${ex.duration_seconds}s`}
-                  </p>
-                  <p className="text-xs text-gray-400">Descanso: {ex.rest_seconds}s</p>
-                  {ex.weight_suggestion && (
-                    <p className="text-xs text-indigo-600">Peso sugerido: {ex.weight_suggestion} kg</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Nota NIVEL 2: creador de la rutina para este ejercicio */}
-              {ex.notes && (
-                <div className="mt-3 bg-indigo-50 rounded-lg px-3 py-2">
-                  <p className="text-xs text-indigo-700">
-                    <span className="font-semibold">Nota de rutina:</span> {ex.notes}
-                  </p>
-                </div>
-              )}
-
-              {/* Nota NIVEL 1: creador del ejercicio */}
-              {ex.exercise_notes && (
-                <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2">
-                  <p className="text-xs text-gray-600">
-                    <span className="font-semibold">Nota del ejercicio:</span> {ex.exercise_notes}
-                  </p>
-                </div>
+      <GlowCard className="mb-6">
+        <div className="p-6">
+          <div className="flex justify-between items-start mb-4 gap-4 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-black text-white tracking-tight">{routine.name}</h1>
+              {routine.description && (
+                <p className="text-neutral-400 text-sm mt-2">{routine.description}</p>
               )}
             </div>
-          ))
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => navigate(`/session/${routine.id}`)}
+                className="btn-primary"
+              >
+                {t('routines.start')}
+              </button>
+              <Link
+                to={`/routines/${routine.id}/edit`}
+                className="border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all"
+              >
+                {t('common.edit')}
+              </Link>
+              <button
+                onClick={handleDelete}
+                className="border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all"
+              >
+                {t('common.delete')}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {routine.goal && (
+              <span className="border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-neutral-300 uppercase tracking-wider rounded-full">
+                {GOAL_LABELS[routine.goal] ?? routine.goal}
+              </span>
+            )}
+            {routine.estimated_duration_min && (
+              <span className="border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-neutral-300 uppercase tracking-wider rounded-full">
+                {routine.estimated_duration_min} min
+              </span>
+            )}
+            <span className="border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-neutral-300 uppercase tracking-wider rounded-full">
+              {exercises.length} {t('common.exercises')}
+            </span>
+            <span className="border border-accent/30 bg-accent/10 px-3 py-1.5 text-[11px] font-semibold text-accent uppercase tracking-wider rounded-full">
+              {routine.times_completed}{t('routines.timesCompleted')}
+            </span>
+          </div>
+        </div>
+      </GlowCard>
+
+      {routine.warmup_notes && (
+        <GlowCard className="mb-6">
+          <div className="px-5 py-4">
+            <p className="text-[11px] font-bold text-accent uppercase tracking-[0.12em] mb-2">{t('routines.warmup')}</p>
+            <p className="text-sm text-neutral-300">{routine.warmup_notes}</p>
+          </div>
+        </GlowCard>
+      )}
+
+      <div className="space-y-2">
+        <h2 className="section-title">{t('nav.exercises')}</h2>
+        {exercises.length === 0 ? (
+          <p className="text-neutral-400 text-sm font-medium">{t('routines.noExercises')}</p>
+        ) : (
+          exercises.map((ex, i) => {
+            const isOpen = expandedId === ex.re_id
+            const secondaryMuscles: string[] = Array.isArray(ex.secondary_muscles)
+              ? ex.secondary_muscles
+              : typeof ex.secondary_muscles === 'string'
+                ? JSON.parse(ex.secondary_muscles || '[]')
+                : []
+
+            return (
+              <GlowCard key={ex.re_id}>
+                <div className="p-4">
+                  <div
+                    className="flex justify-between items-start cursor-pointer"
+                    onClick={() => setExpandedId(isOpen ? null : ex.re_id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-accent font-mono text-sm w-5 shrink-0 font-bold">{i + 1}</span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-white">{ex.exercise_name}</p>
+                          <i className={`bi bi-chevron-${isOpen ? 'up' : 'down'} text-neutral-500 text-xs transition-transform`} />
+                        </div>
+                        <div className="flex gap-2 mt-1">
+                          <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                            {CATEGORY_LABELS[ex.category] ?? ex.category}
+                          </span>
+                          <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                            {translateMuscle(ex.muscle_group)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right text-sm shrink-0">
+                      <p className="font-black text-white">
+                        {ex.sets}×{ex.reps ? `${ex.reps}` : `${ex.duration_seconds}s`}
+                      </p>
+                      <p className="text-[11px] font-semibold text-neutral-500">{ex.rest_seconds}s {t('routines.rest')}</p>
+                      {ex.weight_suggestion && (
+                        <p className="text-[11px] font-black text-accent">{ex.weight_suggestion} {t('common.kg')}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Desplegable con info del ejercicio */}
+                  <div className={`dropdown-panel ${isOpen ? 'open' : ''}`}>
+                    <div className="mt-4 border-t border-white/10 pt-4 space-y-3">
+                      {/* Descripción */}
+                      {ex.description && (
+                        <p className="text-sm text-neutral-300 leading-relaxed">{ex.description}</p>
+                      )}
+
+                      {/* Músculos + Dificultad */}
+                      <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
+                        <div>
+                          <span className="text-neutral-500 font-semibold uppercase tracking-wider">{t('exercises.muscle')}: </span>
+                          <span className="text-white font-bold">{translateMuscle(ex.muscle_group)}</span>
+                        </div>
+                        {secondaryMuscles.length > 0 && (
+                          <div>
+                            <span className="text-neutral-500 font-semibold uppercase tracking-wider">{t('exercises.secondaryMuscles')}: </span>
+                            <span className="text-neutral-300 font-medium">{secondaryMuscles.map(m => translateMuscle(m)).join(', ')}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-neutral-500 font-semibold uppercase tracking-wider">{t('exercises.difficulty')}: </span>
+                          <DifficultyDots level={ex.difficulty} />
+                          <span className="text-neutral-300 font-medium">{DIFFICULTY_LABELS[ex.difficulty] ?? ex.difficulty}</span>
+                        </div>
+                      </div>
+
+                      {/* Badges */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {ex.requires_equipment && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-neutral-400 px-2 py-1 rounded-full">
+                            <i className="bi bi-wrench mr-1" />{t('exercises.requiresEquipment')}
+                          </span>
+                        )}
+                        {ex.is_unilateral && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-neutral-400 px-2 py-1 rounded-full">
+                            <i className="bi bi-arrow-left-right mr-1" />{t('exercises.unilateral')}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Instrucciones */}
+                      {ex.instructions && (
+                        <div>
+                          <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">{t('exercises.instructions')}</p>
+                          <div className="text-sm text-neutral-400 leading-relaxed space-y-1">
+                            {ex.instructions.split('\n').map((line, j) => (
+                              <p key={j}>{line}</p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Link al detalle */}
+                      <Link
+                        to={`/exercises/${ex.exercise_id}`}
+                        className="inline-block text-[11px] font-bold text-accent hover:text-white uppercase tracking-wider transition-colors"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {t('exercises.viewDetail')} <i className="bi bi-arrow-right" />
+                      </Link>
+                    </div>
+                  </div>
+
+                  {ex.notes && (
+                    <div className="mt-3 bg-white/5 px-3 py-2 rounded-xl">
+                      <p className="text-xs text-neutral-400">{ex.notes}</p>
+                    </div>
+                  )}
+                  {ex.exercise_notes && (
+                    <div className="mt-2 bg-white/5 px-3 py-2 rounded-xl">
+                      <p className="text-xs text-neutral-500">{ex.exercise_notes}</p>
+                    </div>
+                  )}
+                </div>
+              </GlowCard>
+            )
+          })
         )}
       </div>
 
-      {/* Cooldown notes */}
       {routine.cooldown_notes && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
-          <p className="text-sm font-semibold text-blue-800 mb-1">❄️ Enfriamiento</p>
-          <p className="text-sm text-blue-700">{routine.cooldown_notes}</p>
-        </div>
+        <GlowCard className="mt-6">
+          <div className="px-5 py-4">
+            <p className="text-[11px] font-bold text-accent uppercase tracking-[0.12em] mb-2">{t('routines.cooldown')}</p>
+            <p className="text-sm text-neutral-300">{routine.cooldown_notes}</p>
+          </div>
+        </GlowCard>
       )}
     </div>
   )

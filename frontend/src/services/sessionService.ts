@@ -17,6 +17,15 @@ export const sessionService = {
     return res.data.data
   },
 
+  getLastPerformance: async (
+    exerciseId: number
+  ): Promise<{ weight_kg: number | null; reps_done: number | null; rpe: number | null; plateau_detected: boolean }> => {
+    const res = await api.get<{ data: { weight_kg: number | null; reps_done: number | null; rpe: number | null; plateau_detected: boolean } }>(
+      `/sessions/exercises/${exerciseId}/last-performance`
+    )
+    return res.data.data
+  },
+
   addSet: async (
     sessionId: number,
     payload: AddSetPayload

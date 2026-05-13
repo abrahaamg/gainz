@@ -25,6 +25,16 @@ export const SessionController = {
     } catch (err) { next(err) }
   },
 
+  getLastPerformance: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await SessionService.getLastPerformance(
+        req.user!.id,
+        Number(req.params.exerciseId)
+      )
+      res.json({ data: result })
+    } catch (err) { next(err) }
+  },
+
   addSet: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await SessionService.addSet(

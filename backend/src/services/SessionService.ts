@@ -30,6 +30,24 @@ export const SessionService = {
     return SessionModel.addSet(sessionId, userId, data)
   },
 
+  getLastPerformance: async (userId: number, exerciseId: number) => {
+    if (!exerciseId) throw new BadRequestError('exercise_id es requerido')
+    const perf = await SessionModel.getLastPerformance(userId, exerciseId)
+
+    // Plateau detection: check last 3 session volumes
+    let plateau_detected = false
+    const volumes = await SessionModel.getExerciseVolumes(userId, exerciseId)
+    if (volumes.length >= 3) {
+      // volumes[0] = most recent, volumes[2] = oldest
+      const [v1, v2, v3] = volumes.map(v => v.volume)
+      if (v1 <= v2 && v2 <= v3) {
+        plateau_detected = true
+      }
+    }
+
+    return perf ? { ...perf, plateau_detected } : { weight_kg: null, reps_done: null, rpe: null, plateau_detected }
+  },
+
   finish: async (
     sessionId: number,
     userId: number,

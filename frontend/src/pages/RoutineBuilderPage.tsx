@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   DndContext,
@@ -22,6 +23,7 @@ import { exerciseService } from '../services/exerciseService'
 import { RoutineExerciseForm } from '../types/routine'
 import { Exercise } from '../types/exercise'
 import useDebounce from '../hooks/useDebounce'
+import GlowCard from '../components/ui/GlowCard'
 
 // ─── Estimated duration ───────────────────────────────────────
 function calcDuration(exercises: RoutineExerciseForm[]): number {
@@ -34,15 +36,25 @@ function calcDuration(exercises: RoutineExerciseForm[]): number {
   return Math.round(secs / 60)
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+  strength:    'bg-neutral-900 text-white',
+  cardio:      'bg-red-500 text-white',
+  hiit:        'bg-orange-500 text-white',
+  flexibility: 'bg-green-600 text-white',
+  balance:     'bg-purple-600 text-white',
+}
+
 // ─── Sortable exercise card ───────────────────────────────────
 function SortableExerciseCard({
   ex,
   onChange,
   onRemove,
+  t,
 }: {
   ex: RoutineExerciseForm
   onChange: (id: string, field: keyof RoutineExerciseForm, value: unknown) => void
   onRemove: (id: string) => void
+  t: (key: string) => string
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: ex.id })
@@ -53,112 +65,107 @@ function SortableExerciseCard({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const CATEGORY_COLORS: Record<string, string> = {
-    strength:    'bg-blue-100 text-blue-800',
-    cardio:      'bg-red-100 text-red-800',
-    hiit:        'bg-orange-100 text-orange-800',
-    flexibility: 'bg-green-100 text-green-800',
-    balance:     'bg-purple-100 text-purple-800',
-  }
-
   return (
-    <div ref={setNodeRef} style={style} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-      <div className="flex items-start gap-3">
+    <div ref={setNodeRef} style={style}>
+      <GlowCard>
+        <div className="p-4 flex items-start gap-3">
         {/* Drag handle */}
         <button
           {...attributes}
           {...listeners}
-          className="mt-1 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing"
-          aria-label="Arrastrar"
+          className="mt-1 text-neutral-500 hover:text-accent cursor-grab active:cursor-grabbing text-lg"
+          aria-label={t('routines.drag')}
         >
-          ⠿
+          <i className="bi bi-grip-vertical" />
         </button>
 
         <div className="flex-1">
           <div className="flex justify-between items-start">
             <div>
-              <p className="font-semibold text-gray-900">{ex.exercise_name}</p>
+              <p className="font-black text-white">{ex.exercise_name}</p>
               <div className="flex gap-2 mt-1">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${CATEGORY_COLORS[ex.category] ?? 'bg-gray-100 text-gray-600'}`}>
+                <span className={`text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider rounded-full ${CATEGORY_COLORS[ex.category] ?? 'bg-white/10 text-neutral-300'}`}>
                   {ex.category}
                 </span>
-                <span className="text-xs text-gray-400">{ex.muscle_group}</span>
+                <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{t(`muscles.${ex.muscle_group}`)}</span>
               </div>
             </div>
-            <button onClick={() => onRemove(ex.id)} className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+            <button onClick={() => onRemove(ex.id)} className="text-red-400 hover:text-red-300 text-lg leading-none font-bold">×</button>
           </div>
 
           {/* Inputs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Series</label>
+              <label className="form-label">{t('common.sets')}</label>
               <input
                 type="number" min={1} max={20}
                 value={ex.sets}
                 onChange={e => onChange(ex.id, 'sets', Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                className="form-input text-center"
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">
-                {ex.duration_seconds !== null ? 'Duración (s)' : 'Reps'}
+              <label className="form-label">
+                {ex.duration_seconds !== null ? t('routines.duration') : t('common.reps')}
               </label>
               {ex.duration_seconds !== null ? (
                 <input
                   type="number" min={1}
                   value={ex.duration_seconds}
                   onChange={e => onChange(ex.id, 'duration_seconds', Number(e.target.value))}
-                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                  className="form-input text-center"
                 />
               ) : (
                 <input
                   type="number" min={1} max={200}
                   value={ex.reps ?? 10}
                   onChange={e => onChange(ex.id, 'reps', Number(e.target.value))}
-                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                  className="form-input text-center"
                 />
               )}
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Descanso (s)</label>
+              <label className="form-label">{t('routines.restSeconds')}</label>
               <input
                 type="number" min={0} step={5}
                 value={ex.rest_seconds}
                 onChange={e => onChange(ex.id, 'rest_seconds', Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                className="form-input text-center"
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Peso sugerido (kg)</label>
+              <label className="form-label">{t('routines.weight')}</label>
               <input
                 type="number" min={0} step={0.5}
                 value={ex.weight_suggestion ?? ''}
                 onChange={e => onChange(ex.id, 'weight_suggestion', e.target.value ? Number(e.target.value) : null)}
-                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                className="form-input text-center"
                 placeholder="—"
               />
             </div>
           </div>
 
-          {/* Nota NIVEL 2: del creador de la rutina para este ejercicio */}
+          {/* Nota NIVEL 2 */}
           <div className="mt-3">
-            <label className="text-xs text-gray-500 block mb-1">Nota de rutina (instrucción para el ejercicio)</label>
+            <label className="form-label">{t('routines.routineNote')}</label>
             <input
               type="text"
               value={ex.notes}
               onChange={e => onChange(ex.id, 'notes', e.target.value)}
-              placeholder='ej. "Agarre ancho, baja controlado"'
-              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
+              placeholder={t('routines.routineNotePlaceholder')}
+              className="form-input"
             />
           </div>
         </div>
-      </div>
+        </div>
+      </GlowCard>
     </div>
   )
 }
 
 // ─── Main builder ─────────────────────────────────────────────
 export default function RoutineBuilderPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id?: string }>()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
@@ -231,7 +238,6 @@ export default function RoutineBuilderPage() {
   }, [debouncedSearch])
 
   const addExercise = useCallback((ex: Exercise) => {
-    // skip if already added
     if (exercises.some(e => e.exercise_id === ex.id)) return
     const newEx: RoutineExerciseForm = {
       id: `${ex.id}-${Date.now()}`,
@@ -277,7 +283,7 @@ export default function RoutineBuilderPage() {
   }
 
   const handleSave = async () => {
-    if (!name.trim()) { setError('El nombre es obligatorio'); return }
+    if (!name.trim()) { setError(t('routines.nameRequired')); return }
     setSaving(true)
     setError(null)
     try {
@@ -311,7 +317,7 @@ export default function RoutineBuilderPage() {
       }
       navigate('/routines')
     } catch {
-      setError('Error al guardar la rutina')
+      setError(t('routines.saveError'))
     } finally {
       setSaving(false)
     }
@@ -320,136 +326,136 @@ export default function RoutineBuilderPage() {
   const estimatedDuration = calcDuration(exercises)
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
-        {isEdit ? 'Editar rutina' : 'Nueva rutina'}
+    <div className="max-w-3xl mx-auto px-6 py-10">
+      <button onClick={() => navigate('/routines')} className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
+        <i className="bi bi-arrow-left mr-1" />{t('nav.routines')}
+      </button>
+
+      <h1 className="page-title mb-8">
+        {isEdit ? t('routines.editRoutine') : t('routines.newRoutine')}
       </h1>
 
       {/* ── Metadata ── */}
-      <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6 space-y-4">
-        <h2 className="font-semibold text-gray-700">Información general</h2>
+      <GlowCard className="mb-6">
+        <section className="p-6 space-y-5">
+        <h2 className="text-sm font-black text-white uppercase tracking-wider">{t('routines.generalInfo')}</h2>
 
         <div>
-          <label className="block text-sm text-gray-600 mb-1">Nombre *</label>
+          <label className="form-label">{t('exercises.name')}</label>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="ej. Rutina Pecho y Tríceps"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            placeholder={t('routines.namePlaceholder')}
+            className="form-input"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-600 mb-1">Descripción</label>
+          <label className="form-label">{t('routines.descriptionLabel')}</label>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={2}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="form-input resize-none"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Objetivo</label>
-            <select
-              value={goal}
-              onChange={e => setGoal(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-            >
-              <option value="">Sin objetivo</option>
-              <option value="strength">Fuerza</option>
-              <option value="cardio">Cardio</option>
-              <option value="weight_loss">Pérdida de peso</option>
-              <option value="flexibility">Flexibilidad</option>
-              <option value="general">General</option>
+            <label className="form-label">{t('routines.goal')}</label>
+            <select value={goal} onChange={e => setGoal(e.target.value)} className="form-input">
+              <option value="">{t('routines.noGoal')}</option>
+              <option value="strength">{t('goals.strength')}</option>
+              <option value="cardio">{t('categories.cardio')}</option>
+              <option value="weight_loss">{t('goals.fat_loss')}</option>
+              <option value="flexibility">{t('goals.flexibility')}</option>
+              <option value="general">{t('goals.general_fitness')}</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Dificultad</label>
-            <select
-              value={difficulty}
-              onChange={e => setDifficulty(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-            >
-              <option value="easy">Fácil</option>
-              <option value="medium">Media</option>
-              <option value="hard">Difícil</option>
+            <label className="form-label">{t('exercises.difficulty')}</label>
+            <select value={difficulty} onChange={e => setDifficulty(e.target.value)} className="form-input">
+              <option value="easy">{t('difficulty.easy')}</option>
+              <option value="medium">{t('difficulty.medium')}</option>
+              <option value="hard">{t('difficulty.hard')}</option>
             </select>
           </div>
         </div>
 
         <div>
-          <label className="block text-sm text-gray-600 mb-1">🔥 Notas de calentamiento</label>
+          <label className="form-label">{t('routines.warmupNotes')}</label>
           <input
             value={warmupNotes}
             onChange={e => setWarmupNotes(e.target.value)}
-            placeholder='ej. "5 minutos en cinta"'
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            placeholder={t('routines.warmupPlaceholder')}
+            className="form-input"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-600 mb-1">❄️ Notas de enfriamiento</label>
+          <label className="form-label">{t('routines.cooldownNotes')}</label>
           <input
             value={cooldownNotes}
             onChange={e => setCooldownNotes(e.target.value)}
-            placeholder='ej. "Estirar 5 minutos"'
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            placeholder={t('routines.cooldownPlaceholder')}
+            className="form-input"
           />
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <label className="flex items-center gap-2.5 text-sm font-medium text-neutral-300 cursor-pointer">
           <input
             type="checkbox"
             checked={isPublic}
             onChange={e => setIsPublic(e.target.checked)}
-            className="w-4 h-4 rounded"
+            className="w-4 h-4 accent-accent"
           />
-          Rutina pública
+          {t('routines.publicRoutine')}
         </label>
-      </section>
+        </section>
+      </GlowCard>
 
       {/* ── Exercise search ── */}
-      <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
-        <h2 className="font-semibold text-gray-700 mb-3">Añadir ejercicios</h2>
+      <GlowCard className="mb-6">
+        <section className="p-6">
+        <h2 className="text-sm font-black text-white uppercase tracking-wider mb-4">{t('routines.addExercises')}</h2>
         <div className="relative">
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Buscar ejercicio..."
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            placeholder={t('routines.searchExercise')}
+            className="form-input"
           />
           {searching && (
-            <span className="absolute right-3 top-2.5 text-gray-400 text-sm">...</span>
+            <span className="absolute right-3 top-3 text-neutral-400 text-sm">...</span>
           )}
         </div>
 
         {searchResults.length > 0 && (
-          <ul className="mt-2 border border-gray-100 rounded-lg overflow-hidden shadow-sm">
+          <ul className="mt-2 border border-white/10 rounded-2xl overflow-hidden bg-black/30">
             {searchResults.map(ex => (
               <li key={ex.id}>
                 <button
                   onClick={() => addExercise(ex)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 transition-colors flex justify-between items-center text-sm"
+                  className="w-full text-left px-4 py-2.5 hover:bg-accent/10 transition-colors flex justify-between items-center text-sm border-b border-white/5 last:border-0"
                 >
                   <span>
-                    <span className="font-medium text-gray-900">{ex.name}</span>
-                    <span className="text-gray-400 ml-2">{ex.muscle_group}</span>
+                    <span className="font-bold text-white">{ex.name}</span>
+                    <span className="text-neutral-500 ml-2 text-[11px] uppercase tracking-wider">{t(`muscles.${ex.muscle_group}`)}</span>
                   </span>
-                  <span className="text-indigo-600 font-medium">+ Añadir</span>
+                  <span className="text-accent font-black text-[11px] uppercase tracking-wider">{t('exercises.add')}</span>
                 </button>
               </li>
             ))}
           </ul>
         )}
-      </section>
+        </section>
+      </GlowCard>
 
       {/* ── Sortable exercise list ── */}
       {exercises.length > 0 && (
         <section className="mb-6">
-          <h2 className="font-semibold text-gray-700 mb-3">
-            Ejercicios ({exercises.length})
+          <h2 className="text-sm font-black uppercase tracking-wider mb-4 text-neutral-700">
+            {t('common.exercises')} ({exercises.length})
           </h2>
           <DndContext
             sensors={sensors}
@@ -467,6 +473,7 @@ export default function RoutineBuilderPage() {
                     ex={ex}
                     onChange={updateExercise}
                     onRemove={removeExercise}
+                    t={t}
                   />
                 ))}
               </div>
@@ -476,30 +483,32 @@ export default function RoutineBuilderPage() {
       )}
 
       {/* ── Footer ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center justify-between sticky bottom-4">
-        <div className="text-sm text-gray-500">
-          {exercises.length > 0 && (
-            <span>⏱ Duración estimada: <strong className="text-gray-800">{estimatedDuration} min</strong></span>
-          )}
-        </div>
+      <GlowCard className="sticky bottom-4">
+        <div className="p-4 flex items-center justify-between">
+          <div className="text-sm text-neutral-400 font-medium">
+            {exercises.length > 0 && (
+              <span><i className="bi bi-clock mr-1" />{t('routines.estimatedDuration')} <strong className="text-accent">{estimatedDuration} {t('common.min')}</strong></span>
+            )}
+          </div>
 
-        <div className="flex gap-3">
-          {error && <p className="text-sm text-red-500 self-center">{error}</p>}
-          <button
-            onClick={() => navigate('/routines')}
-            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg border border-gray-200"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium disabled:opacity-60 transition-colors"
-          >
-            {saving ? 'Guardando...' : 'Guardar rutina'}
-          </button>
+          <div className="flex gap-3 items-center">
+            {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
+            <button
+              onClick={() => navigate('/routines')}
+              className="btn-secondary"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-primary disabled:opacity-50"
+            >
+              {saving ? t('common.saving') : t('routines.saveRoutine')}
+            </button>
+          </div>
         </div>
-      </div>
+      </GlowCard>
     </div>
   )
 }

@@ -1,11 +1,16 @@
 import * as q from '../queries/equipment.queries'
-import { CreateEquipmentDTO, Equipment, Recommendation } from '../types/entities/Equipment'
+import { CreateEquipmentDTO, Equipment, CatalogItem, Recommendation } from '../types/entities/Equipment'
 
 export const EquipmentModel = {
-  findByUser:   (userId: number): Promise<Equipment[]> => q.findUserEquipment(userId),
-  create:       (userId: number, data: CreateEquipmentDTO): Promise<Equipment> => q.createEquipment(userId, data),
-  update:       (id: number, userId: number, data: Partial<CreateEquipmentDTO>): Promise<Equipment | null> => q.updateEquipment(id, userId, data),
-  delete:       (id: number, userId: number): Promise<boolean> => q.deleteEquipment(id, userId),
-  countAccess:  (userId: number): Promise<number> => q.countAccessibleExercises(userId),
-  recommend:    (userId: number, filters?: { goal?: string; difficulty?: string }): Promise<Recommendation[]> => q.findRecommendations(userId, filters),
+  findByUser:     (userId: number): Promise<Equipment[]> => q.findUserEquipment(userId),
+  create:         (userId: number, data: CreateEquipmentDTO): Promise<Equipment> => q.createEquipment(userId, data),
+  update:         (id: number, userId: number, data: Partial<CreateEquipmentDTO>): Promise<Equipment | null> => q.updateEquipment(id, userId, data),
+  delete:         (id: number, userId: number): Promise<boolean> => q.deleteEquipment(id, userId),
+  countAccess:    (userId: number): Promise<number> => q.countAccessibleExercises(userId),
+  findAccessible: (userId: number) => q.findAccessibleExercises(userId),
+  countBodyweight:() => q.countBodyweightExercises(),
+  getCatalog:     (): Promise<CatalogItem[]> => q.getCatalog(),
+  recommend:      (userId: number, filters?: { goal?: string; difficulty?: string }): Promise<Recommendation[]> => q.findRecommendations(userId, filters),
+  linkCustom:     (name: string, exerciseIds: number[], isOptional?: boolean) => q.linkEquipmentToExercises(name, exerciseIds, isOptional),
+  unlinkCustom:   (name: string) => q.unlinkEquipmentFromExercises(name),
 }

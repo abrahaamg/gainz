@@ -2,28 +2,28 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2'
 import { pool } from '../config'
 import { CreateRoutineDTO, CreateRoutineExerciseDTO, Routine, RoutineExercise } from '../types/entities/Routine'
 
-// ─── Find all routines for a user ────────────────────────────
+// ─── Find all routines for a user (incluye rutinas públicas) ─
 export const findAllRoutines = async (userId: number): Promise<Routine[]> => {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT r.*,
        (SELECT COUNT(*) FROM routine_exercises WHERE routine_id = r.id) AS exercise_count
      FROM routines r
-     WHERE r.user_id = ?
+     WHERE r.user_id = ? OR r.is_public = true
      ORDER BY r.updated_at DESC`,
     [userId]
   )
-  return rows.map(r => ({ ...r, tags: JSON.parse(r.tags || '[]') })) as Routine[]
+  return rows.map(r => ({ ...r, tags: Array.isArray(r.tags) ? r.tags : [] })) as Routine[]
 }
 
 // ─── Find one routine with all exercises (full JOIN) ─────────
 export const findRoutineById = async (id: number, userId: number): Promise<{ routine: Routine; exercises: RoutineExercise[] } | null> => {
   const [routineRows] = await pool.query<RowDataPacket[]>(
-    'SELECT * FROM routines WHERE id = ? AND user_id = ?',
+    'SELECT * FROM routines WHERE id = ? AND (user_id = ? OR is_public = true)',
     [id, userId]
   )
   if (!routineRows.length) return null
 
-  const routine = { ...routineRows[0], tags: JSON.parse(routineRows[0].tags || '[]') } as Routine
+  const routine = { ...routineRows[0], tags: Array.isArray(routineRows[0].tags) ? routineRows[0].tags : [] } as Routine
 
   const [exRows] = await pool.query<RowDataPacket[]>(
     `SELECT
@@ -40,6 +40,9 @@ export const findRoutineById = async (id: number, userId: number): Promise<{ rou
        e.name          AS exercise_name,
        e.category,
        e.muscle_group,
+       e.secondary_muscles,
+       e.description,
+       e.instructions,
        e.difficulty,
        e.requires_equipment,
        e.is_unilateral,

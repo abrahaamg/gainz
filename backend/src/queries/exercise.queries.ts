@@ -44,9 +44,7 @@ export const findAllExercises = async (
     requires_equipment: Boolean(row.requires_equipment),
     is_unilateral: Boolean(row.is_unilateral),
     is_public: Boolean(row.is_public),
-    secondary_muscles: row.secondary_muscles
-      ? JSON.parse(row.secondary_muscles as unknown as string)
-      : [],
+    secondary_muscles: Array.isArray(row.secondary_muscles) ? row.secondary_muscles : [],
     equipment: (row as unknown as { equipment_list: string | null }).equipment_list
       ? (row as unknown as { equipment_list: string }).equipment_list.split(',')
       : [],
@@ -73,9 +71,7 @@ export const findExerciseById = async (id: number): Promise<Exercise | null> => 
     requires_equipment: Boolean(row.requires_equipment),
     is_unilateral: Boolean(row.is_unilateral),
     is_public: Boolean(row.is_public),
-    secondary_muscles: row.secondary_muscles
-      ? JSON.parse(row.secondary_muscles as string)
-      : [],
+    secondary_muscles: Array.isArray(row.secondary_muscles) ? row.secondary_muscles : [],
     equipment: row.equipment_list ? (row.equipment_list as string).split(',') : [],
   }
 }

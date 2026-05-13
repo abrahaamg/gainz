@@ -12,6 +12,9 @@ export interface RoutineExercise {
   exercise_name: string
   category: string
   muscle_group: string
+  secondary_muscles: string[]
+  description: string | null
+  instructions: string | null
   difficulty: string
   requires_equipment: boolean
   is_unilateral: boolean

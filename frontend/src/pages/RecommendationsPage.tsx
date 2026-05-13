@@ -1,173 +1,268 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
-import { equipmentService } from '../services/equipmentService'
-import { Recommendation } from '../types/equipment'
+import api from '../services/api'
 
-const GOAL_LABELS: Record<string, string> = {
-  strength:    'Fuerza',
-  cardio:      'Cardio',
-  weight_loss: 'Pérdida de peso',
-  flexibility: 'Flexibilidad',
-  general:     'General',
+/* ─── Types ──────────────────────────────────────────────────── */
+
+interface GeneratedExercise {
+  exercise_id: number
+  exercise_name: string
+  sets: number
+  reps: number | null
+  duration_seconds: number | null
+  rest_seconds: number
+  order_index: number
 }
 
-const DIFFICULTY_COLORS: Record<string, string> = {
-  easy:   'bg-green-100 text-green-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  hard:   'bg-red-100 text-red-800',
+interface GeneratedRoutine {
+  name: string
+  description: string
+  goal: string
+  difficulty: string
+  estimated_duration_min: number
+  warmup_notes: string
+  cooldown_notes: string
+  day_label: string
+  exercises: GeneratedExercise[]
 }
 
-function CompatBadge({ pct }: { pct: number }) {
-  const color = pct >= 90 ? 'bg-green-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-orange-500'
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden w-20">
-        <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className={`text-xs font-bold px-2 py-0.5 rounded-full text-white ${color}`}>
-        {pct}%
-      </span>
-    </div>
-  )
-}
+import { GOAL_LABELS, DIFFICULTY_LABELS as DIFF_LABELS } from '../utils/labels'
+import GlowCard from '../components/ui/GlowCard'
+
+/* ─── Component ──────────────────────────────────────────────── */
 
 export default function RecommendationsPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
-  const [recs, setRecs]           = useState<Recommendation[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [goalFilter, setGoal]     = useState('')
-  const [diffFilter, setDiff]     = useState('')
-  const [hasEquipment, setHasEquipment] = useState(true)
+  const [routines, setRoutines] = useState<GeneratedRoutine[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [saving, setSaving]     = useState(false)
+  const [saved, setSaved]       = useState(false)
+  const [expanded, setExpanded] = useState<number | null>(null)
+  const [error, setError]       = useState<string | null>(null)
+  const [profileChanged, setProfileChanged] = useState(() => localStorage.getItem('gainz_training_changed') === '1')
 
-  const load = (goal?: string, difficulty?: string) => {
-    setLoading(true)
-    equipmentService.getRecommendations({ goal: goal || undefined, difficulty: difficulty || undefined })
-      .then(setRecs)
+  useEffect(() => {
+    api.get('/recommendations/generate')
+      .then(res => setRoutines(res.data.data))
+      .catch(() => setError(t('recommendations.generateError')))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const regenerate = () => {
+    setLoading(true); setError(null); setSaved(false); setExpanded(null)
+    setRoutines([])
+    localStorage.removeItem('gainz_training_changed')
+    setProfileChanged(false)
+    api.get('/recommendations/generate')
+      .then(res => setRoutines(res.data.data))
+      .catch(() => setError(t('recommendations.generateError')))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => {
-    // Check if user has any equipment
-    equipmentService.getAll().then(({ items }) => setHasEquipment(items.length > 0))
-    load()
-  }, [])
+  const acceptAll = async () => {
+    setSaving(true); setError(null)
+    try {
+      await api.post('/recommendations/accept-all', { routines })
+      setSaved(true)
+    } catch {
+      setError(t('recommendations.saveAllError'))
+    } finally {
+      setSaving(false)
+    }
+  }
 
-  const handleFilter = (goal: string, diff: string) => {
-    setGoal(goal); setDiff(diff)
-    load(goal, diff)
+  const acceptOne = async (routine: GeneratedRoutine) => {
+    setSaving(true); setError(null)
+    try {
+      const res = await api.post('/recommendations/accept', routine)
+      navigate(`/routines/${res.data.data.id}`)
+    } catch {
+      setError(t('recommendations.saveOneError'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const formatDuration = (sec: number) => {
+    if (sec >= 60) return `${Math.floor(sec / 60)} ${t('common.min')}`
+    return `${sec}s`
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-start mb-6">
+    <div className="max-w-4xl mx-auto px-6 py-10">
+      <div className="card header-gradient px-8 py-8 mb-8 flex items-center justify-between border-none">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Recomendaciones</h1>
-          <p className="text-gray-500 text-sm mt-1">Rutinas públicas compatibles con tu equipamiento</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t('recommendations.title')}</h1>
+          <p className="text-neutral-500 text-xs mt-1">{t('recommendations.subtitle')}</p>
         </div>
-        <Link to="/equipment" className="text-sm text-indigo-600 hover:underline">
-          ⚙️ Gestionar equipo
-        </Link>
+        <div className="flex gap-2">
+          <Link to="/equipment" className="btn-secondary">
+            {t('recommendations.myEquipment')}
+          </Link>
+          <button
+            onClick={regenerate}
+            disabled={loading}
+            className="btn-secondary"
+          >
+            {t('recommendations.regenerate')}
+          </button>
+        </div>
       </div>
 
-      {/* No equipment banner */}
-      {!hasEquipment && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex items-center justify-between">
-          <p className="text-sm text-yellow-800">
-            Sin equipo registrado — solo se muestran rutinas de peso corporal
-          </p>
-          <Link to="/equipment" className="text-sm font-semibold text-yellow-700 hover:underline">
-            Añadir equipo →
-          </Link>
+      {/* Aviso de perfil de entrenamiento cambiado */}
+      {profileChanged && !loading && (
+        <div className="bg-accent/10 border border-accent/20 px-5 py-4 mb-6 rounded-2xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <i className="bi bi-exclamation-triangle-fill text-accent text-lg" />
+            <div>
+              <p className="text-sm text-white font-bold">{t('recommendations.profileChanged')}</p>
+              <p className="text-[11px] text-neutral-400 mt-0.5">{t('recommendations.profileChangedHint')}</p>
+            </div>
+          </div>
+          <button onClick={regenerate} className="btn-primary shrink-0">
+            {t('recommendations.regenerate')}
+          </button>
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <select
-          value={goalFilter}
-          onChange={e => handleFilter(e.target.value, diffFilter)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
-        >
-          <option value="">Todos los objetivos</option>
-          {Object.entries(GOAL_LABELS).map(([v, l]) => (
-            <option key={v} value={v}>{l}</option>
-          ))}
-        </select>
-        <select
-          value={diffFilter}
-          onChange={e => handleFilter(goalFilter, e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
-        >
-          <option value="">Todas las dificultades</option>
-          <option value="easy">Fácil</option>
-          <option value="medium">Media</option>
-          <option value="hard">Difícil</option>
-        </select>
-        {(goalFilter || diffFilter) && (
-          <button
-            onClick={() => handleFilter('', '')}
-            className="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-2 rounded-lg"
-          >
-            ✕ Limpiar filtros
-          </button>
-        )}
-      </div>
-
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-widest">{t('recommendations.analyzing')}</p>
         </div>
-      ) : recs.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-4xl mb-3">🔍</p>
-          <p className="font-medium">No hay rutinas compatibles con tu equipo actual</p>
-          <p className="text-sm mt-1">Prueba a añadir más equipo o cambia los filtros</p>
+      ) : error ? (
+        <div className="text-center py-16">
+          <p className="text-sm text-red-500 font-medium mb-4">{error}</p>
+          <button onClick={regenerate} className="text-[11px] font-black uppercase tracking-wider text-accent hover:text-accent-dk">
+            {t('common.retry')}
+          </button>
+        </div>
+      ) : routines.length === 0 ? (
+        <div className="text-center py-16 card border-dashed">
+          <p className="text-neutral-400 text-sm font-medium mb-2">{t('recommendations.noRoutines')}</p>
+          <p className="text-neutral-300 text-[11px] font-semibold uppercase tracking-wider mb-4">
+            {t('recommendations.noRoutinesHint')}
+          </p>
+          <Link to="/onboarding" className="text-[11px] font-black uppercase tracking-wider text-accent hover:text-accent-dk">
+            {t('recommendations.completeProfile')}
+          </Link>
         </div>
       ) : (
-        <div className="space-y-4">
-          {recs.map(rec => (
-            <div key={rec.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="font-bold text-gray-900 text-lg">{rec.name}</h2>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[rec.difficulty] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {rec.difficulty}
-                    </span>
-                    {rec.goal && (
-                      <span className="bg-indigo-50 text-indigo-700 text-xs px-2 py-0.5 rounded-full">
-                        {GOAL_LABELS[rec.goal] ?? rec.goal}
-                      </span>
-                    )}
-                  </div>
-
-                  {rec.description && (
-                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{rec.description}</p>
-                  )}
-
-                  <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-400">
-                    <span>💪 {rec.total_exercises} ejercicios</span>
-                    {rec.estimated_duration_min && <span>⏱ {rec.estimated_duration_min} min</span>}
-                    <span>✅ {rec.times_completed} veces completada</span>
-                    <span className="text-green-600">
-                      {rec.compatible_exercises}/{rec.total_exercises} ejercicios compatibles
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-3 shrink-0">
-                  <CompatBadge pct={rec.compatibility_pct} />
-                  <button
-                    onClick={() => navigate(`/session/${rec.id}`)}
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold"
-                  >
-                    ▶ Empezar
-                  </button>
-                </div>
+        <>
+          {/* Summary */}
+          <GlowCard className="mb-6">
+            <div className="px-5 py-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-white font-black">
+                  {routines.length} {t('recommendations.weeklySessions')}
+                </p>
+                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mt-0.5">
+                  {GOAL_LABELS[routines[0]?.goal] ?? routines[0]?.goal} — {DIFF_LABELS[routines[0]?.difficulty] ?? routines[0]?.difficulty}
+                </p>
               </div>
+              {!saved && (
+                <button
+                  onClick={acceptAll}
+                  disabled={saving}
+                  className="btn-primary disabled:opacity-50"
+                >
+                  {saving ? t('common.saving') : t('recommendations.acceptAll')}
+                </button>
+              )}
+              {saved && (
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-black text-green-400 uppercase tracking-wider">
+                    <i className="bi bi-check-circle-fill mr-1" />{t('recommendations.allSaved')}
+                  </span>
+                  <Link to="/routines" className="btn-primary">
+                    {t('recommendations.seeMyRoutines')}
+                  </Link>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
+          </GlowCard>
+
+          {/* Routine cards */}
+          <div className="space-y-3">
+            {routines.map((routine, idx) => {
+              const isExpanded = expanded === idx
+              return (
+                <GlowCard key={idx}>
+                  {/* Header */}
+                  <button
+                    onClick={() => setExpanded(isExpanded ? null : idx)}
+                    className="w-full px-5 py-4 text-left"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="font-black text-white text-base">{routine.name}</h2>
+                        <div className="flex flex-wrap gap-4 mt-1 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                          <span>{routine.exercises.length} {t('common.exercises')}</span>
+                          <span>{routine.estimated_duration_min} {t('common.min')}</span>
+                          <span>{routine.day_label}</span>
+                        </div>
+                      </div>
+                      <i className={`bi bi-chevron-down text-neutral-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+
+                  {/* Expanded details */}
+                  <div className={`dropdown-panel ${isExpanded ? 'open' : ''}`}>
+                    <div>
+                    <div className="border-t border-white/10 px-5 py-5">
+                      <p className="text-xs text-neutral-500 mb-5">{routine.description}</p>
+
+                      <div className="mb-5">
+                        <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-2">{t('recommendations.warmup')}</p>
+                        <p className="text-xs text-neutral-500 whitespace-pre-line">{routine.warmup_notes}</p>
+                      </div>
+
+                      <div className="mb-5">
+                        <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-2">{t('recommendations.exercisesSection')}</p>
+                        <div className="space-y-2">
+                          {routine.exercises.map((ex, exIdx) => (
+                            <div key={exIdx} className="flex items-center justify-between px-3 py-2.5 bg-white/5 border border-white/5 rounded-xl">
+                              <div className="flex items-center gap-3">
+                                <span className="text-[11px] font-black text-accent w-5">{ex.order_index}</span>
+                                <span className="text-sm font-bold text-white">{ex.exercise_name}</span>
+                              </div>
+                              <div className="flex gap-4 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                                {ex.reps ? (
+                                  <span>{ex.sets}x{ex.reps}</span>
+                                ) : (
+                                  <span>{formatDuration(ex.duration_seconds!)}</span>
+                                )}
+                                <span>{ex.rest_seconds}s {t('recommendations.restLabel')}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mb-5">
+                        <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-2">{t('recommendations.cooldown')}</p>
+                        <p className="text-xs text-neutral-500">{routine.cooldown_notes}</p>
+                      </div>
+
+                      {!saved && (
+                        <button
+                          onClick={() => acceptOne(routine)}
+                          disabled={saving}
+                          className="btn-primary disabled:opacity-50"
+                        >
+                          {t('recommendations.saveRoutine')}
+                        </button>
+                      )}
+                    </div>
+                    </div>
+                  </div>
+                </GlowCard>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
   )

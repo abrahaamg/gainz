@@ -1,10 +1,15 @@
 import api from './api'
-import { CreateEquipmentPayload, Equipment, Recommendation } from '../types/equipment'
+import { CatalogItem, CreateEquipmentPayload, Equipment, Recommendation } from '../types/equipment'
 
 export const equipmentService = {
-  getAll: async (): Promise<{ items: Equipment[]; accessible_exercises: number }> => {
-    const res = await api.get<{ data: Equipment[]; accessible_exercises: number }>('/equipment')
-    return { items: res.data.data, accessible_exercises: res.data.accessible_exercises }
+  getAll: async (): Promise<{ items: Equipment[]; accessible_exercises: number; bodyweight_exercises: number }> => {
+    const res = await api.get<{ data: Equipment[]; accessible_exercises: number; bodyweight_exercises: number }>('/equipment')
+    return { items: res.data.data, accessible_exercises: res.data.accessible_exercises, bodyweight_exercises: res.data.bodyweight_exercises }
+  },
+
+  getCatalog: async (): Promise<CatalogItem[]> => {
+    const res = await api.get<{ data: CatalogItem[] }>('/equipment/catalog')
+    return res.data.data
   },
 
   create: async (payload: CreateEquipmentPayload): Promise<Equipment> => {
@@ -19,6 +24,11 @@ export const equipmentService = {
 
   delete: async (id: number): Promise<void> => {
     await api.delete(`/equipment/${id}`)
+  },
+
+  getAccessibleExercises: async (): Promise<{ id: number; name: string; muscle_group: string }[]> => {
+    const res = await api.get<{ data: { id: number; name: string; muscle_group: string }[] }>('/equipment/exercises')
+    return res.data.data
   },
 
   getRecommendations: async (filters?: {

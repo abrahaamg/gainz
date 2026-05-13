@@ -123,6 +123,23 @@ export const getPersonalRecords = async (userId: number): Promise<PersonalRecord
   return rows as PersonalRecord[]
 }
 
+// ─── 1RM projection (estimated 1RM over time for one exercise) ─
+export const get1RMProgression = async (
+  userId: number,
+  exerciseId: number
+): Promise<ProgressionPoint[]> => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS date,
+            ROUND(MAX(estimated_1rm), 1) AS value
+     FROM exercise_1rm_history
+     WHERE user_id = ? AND exercise_id = ?
+     GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+     ORDER BY date`,
+    [userId, exerciseId]
+  )
+  return rows as ProgressionPoint[]
+}
+
 // ─── Streak stats ─────────────────────────────────────────────
 export const getStreakStats = async (userId: number): Promise<StreakStats | null> => {
   const [rows] = await pool.query<RowDataPacket[]>(

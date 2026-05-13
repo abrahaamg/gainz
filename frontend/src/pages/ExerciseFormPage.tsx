@@ -1,35 +1,35 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
 import { ExerciseCategory, Difficulty, CreateExerciseDTO } from '../types/exercise'
 
-const CATEGORIES: { value: ExerciseCategory; label: string }[] = [
-  { value: 'strength', label: 'Fuerza' },
-  { value: 'cardio', label: 'Cardio' },
-  { value: 'flexibility', label: 'Flexibilidad' },
-  { value: 'hiit', label: 'HIIT' },
-  { value: 'balance', label: 'Equilibrio' },
+const CATEGORIES: { value: ExerciseCategory; labelKey: string }[] = [
+  { value: 'strength', labelKey: 'categories.strength' },
+  { value: 'cardio', labelKey: 'categories.cardio' },
+  { value: 'flexibility', labelKey: 'categories.flexibility' },
+  { value: 'hiit', labelKey: 'categories.hiit' },
+  { value: 'balance', labelKey: 'categories.balance' },
 ]
 
 const MUSCLE_GROUPS = [
-  'chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'full_body',
+  'chest', 'lats', 'upper_back',
+  'quadriceps', 'hamstrings', 'glutes', 'calves',
+  'shoulders', 'biceps', 'triceps', 'forearms',
+  'core', 'full_body',
 ]
 
-const MUSCLE_LABELS: Record<string, string> = {
-  chest: 'Pecho', back: 'Espalda', legs: 'Piernas',
-  shoulders: 'Hombros', arms: 'Brazos', core: 'Core', full_body: 'Cuerpo completo',
-}
-
-const DIFFICULTIES: { value: Difficulty; label: string }[] = [
-  { value: 'easy', label: 'Fácil' },
-  { value: 'medium', label: 'Media' },
-  { value: 'hard', label: 'Difícil' },
+const DIFFICULTIES: { value: Difficulty; labelKey: string }[] = [
+  { value: 'easy', labelKey: 'difficulty.easy' },
+  { value: 'medium', labelKey: 'difficulty.medium' },
+  { value: 'hard', labelKey: 'difficulty.hard' },
 ]
 
 const EMPTY_FORM: CreateExerciseDTO = {
   name: '',
   category: 'strength',
   muscle_group: 'chest',
+  secondary_muscles: [],
   difficulty: 'medium',
   description: '',
   instructions: '',
@@ -41,6 +41,7 @@ const EMPTY_FORM: CreateExerciseDTO = {
 }
 
 export default function ExerciseFormPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
   const isEditing = Boolean(id)
@@ -51,7 +52,6 @@ export default function ExerciseFormPage() {
   const [fetchLoading, setFetchLoading] = useState(isEditing)
   const [error, setError] = useState<string | null>(null)
 
-  // Si es edición, cargar datos existentes
   useEffect(() => {
     if (!isEditing || !id) return
     const fetch = async () => {
@@ -61,6 +61,7 @@ export default function ExerciseFormPage() {
           name: exercise.name,
           category: exercise.category,
           muscle_group: exercise.muscle_group,
+          secondary_muscles: exercise.secondary_muscles ?? [],
           difficulty: exercise.difficulty,
           description: exercise.description ?? '',
           instructions: exercise.instructions ?? '',
@@ -71,13 +72,13 @@ export default function ExerciseFormPage() {
           equipment: exercise.equipment ?? [],
         })
       } catch {
-        setError('No se pudo cargar el ejercicio')
+        setError(t('exercises.loadError'))
       } finally {
         setFetchLoading(false)
       }
     }
     fetch()
-  }, [id, isEditing])
+  }, [id, isEditing, t])
 
   const set = <K extends keyof CreateExerciseDTO>(key: K, value: CreateExerciseDTO[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -96,7 +97,9 @@ export default function ExerciseFormPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) { setError('El nombre es obligatorio'); return }
+    if (!form.name.trim()) { setError(t('exercises.nameRequired')); return }
+    if (!form.description?.trim()) { setError(t('exercises.descriptionRequired')); return }
+    if (!form.instructions?.trim()) { setError(t('exercises.instructionsRequired')); return }
     setLoading(true)
     setError(null)
     try {
@@ -108,7 +111,7 @@ export default function ExerciseFormPage() {
         navigate(`/exercises/${created.id}`)
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al guardar'
+      const msg = err instanceof Error ? err.message : t('exercises.saveError')
       setError(msg)
     } finally {
       setLoading(false)
@@ -117,53 +120,49 @@ export default function ExerciseFormPage() {
 
   if (fetchLoading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-4">
-        <div className="h-8 bg-gray-200 rounded animate-pulse w-1/2" />
-        <div className="h-48 bg-gray-200 rounded animate-pulse" />
+      <div className="max-w-2xl mx-auto px-6 py-10 space-y-4">
+        <div className="h-8 bg-neutral-200 animate-pulse w-1/2" />
+        <div className="h-48 bg-neutral-200 animate-pulse" />
       </div>
     )
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <button onClick={() => navigate('/exercises')} className="text-blue-600 hover:underline text-sm mb-6">
-        ← Volver a ejercicios
+    <div className="max-w-2xl mx-auto px-6 py-10">
+      <button onClick={() => navigate('/exercises')} className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
+        <i className="bi bi-arrow-left mr-1" />{t('exercises.backToExercises')}
       </button>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">
-        {isEditing ? 'Editar ejercicio' : 'Nuevo ejercicio'}
+      <h1 className="page-title mb-8">
+        {isEditing ? t('exercises.editExercise') : t('exercises.newExercise')}
       </h1>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mb-4 text-sm">{error}</div>
+        <div className="bg-red-50 border border-red-200 text-red-600 p-3 mb-6 text-sm font-medium rounded-2xl">{error}</div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Nombre */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+          <label className="form-label">{t('exercises.name')}</label>
           <input
             type="text" required value={form.name}
             onChange={(e) => set('name', e.target.value)}
-            placeholder="Ej: Press de Banca"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={t('exercises.namePlaceholder')}
+            className="form-input"
           />
         </div>
 
         {/* Categoría */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
+          <label className="form-label">{t('exercises.category')}</label>
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(({ value, label }) => (
+            {CATEGORIES.map(({ value, labelKey }) => (
               <button key={value} type="button"
                 onClick={() => set('category', value)}
-                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                  form.category === value
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
-                }`}
+                className={`chip ${form.category === value ? 'chip-active' : ''}`}
               >
-                {label}
+                {t(labelKey)}
               </button>
             ))}
           </div>
@@ -171,32 +170,53 @@ export default function ExerciseFormPage() {
 
         {/* Músculo principal */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Músculo principal *</label>
+          <label className="form-label">{t('exercises.mainMuscle')}</label>
           <select
             value={form.muscle_group}
             onChange={(e) => set('muscle_group', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="form-input"
           >
             {MUSCLE_GROUPS.map((m) => (
-              <option key={m} value={m}>{MUSCLE_LABELS[m]}</option>
+              <option key={m} value={m}>{t(`muscles.${m}`)}</option>
             ))}
           </select>
         </div>
 
+        {/* Músculos secundarios */}
+        <div>
+          <label className="form-label">
+            {t('exercises.secondaryMuscles')} <span className="text-neutral-300 font-normal">({t('exercises.secondaryMusclesHint')})</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {MUSCLE_GROUPS.filter(m => m !== form.muscle_group && m !== 'full_body').map(m => {
+              const active = form.secondary_muscles?.includes(m)
+              return (
+                <button key={m} type="button"
+                  onClick={() => {
+                    const current = form.secondary_muscles ?? []
+                    set('secondary_muscles', active
+                      ? current.filter(x => x !== m)
+                      : [...current, m])
+                  }}
+                  className={`chip ${active ? 'chip-active' : ''}`}
+                >
+                  {t(`muscles.${m}`)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Dificultad */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Dificultad</label>
+          <label className="form-label">{t('exercises.difficulty')}</label>
           <div className="flex gap-2">
-            {DIFFICULTIES.map(({ value, label }) => (
+            {DIFFICULTIES.map(({ value, labelKey }) => (
               <button key={value} type="button"
                 onClick={() => set('difficulty', value)}
-                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                  form.difficulty === value
-                    ? 'bg-gray-800 text-white border-gray-800'
-                    : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
-                }`}
+                className={`chip ${form.difficulty === value ? 'chip-active' : ''}`}
               >
-                {label}
+                {t(labelKey)}
               </button>
             ))}
           </div>
@@ -204,51 +224,51 @@ export default function ExerciseFormPage() {
 
         {/* Descripción */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+          <label className="form-label">{t('exercises.description')}</label>
           <textarea rows={3} value={form.description ?? ''}
             onChange={(e) => set('description', e.target.value)}
-            placeholder="Breve descripción del ejercicio..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={t('exercises.descriptionPlaceholder')}
+            className="form-input"
           />
         </div>
 
         {/* Instrucciones */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Instrucciones <span className="text-gray-400 font-normal">(una por línea)</span>
+          <label className="form-label">
+            {t('exercises.instructionsLabel')}
           </label>
           <textarea rows={5} value={form.instructions ?? ''}
             onChange={(e) => set('instructions', e.target.value)}
-            placeholder="1. Primer paso&#10;2. Segundo paso&#10;3. Tercer paso"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={t('exercises.instructionsPlaceholder')}
+            className="form-input"
           />
         </div>
 
-        {/* Notas del creador — NIVEL 1 */}
+        {/* Notas del creador */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Notas del creador <span className="text-gray-400 font-normal">(técnica, advertencias)</span>
+          <label className="form-label">
+            {t('exercises.creatorNotes')}
           </label>
           <textarea rows={2} value={form.notes ?? ''}
             onChange={(e) => set('notes', e.target.value)}
-            placeholder="Advertencias técnicas, errores comunes a evitar..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={t('exercises.creatorNotesPlaceholder')}
+            className="form-input"
           />
         </div>
 
         {/* Toggles */}
         <div className="flex flex-wrap gap-6">
           {[
-            { key: 'requires_equipment' as const, label: '🏋️ Requiere equipamiento' },
-            { key: 'is_unilateral' as const, label: '🦵 Unilateral' },
-            { key: 'is_public' as const, label: '🌍 Ejercicio público' },
-          ].map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-2 cursor-pointer">
+            { key: 'requires_equipment' as const, labelKey: 'exercises.requiresEquipmentToggle' },
+            { key: 'is_unilateral' as const, labelKey: 'exercises.unilateral' },
+            { key: 'is_public' as const, labelKey: 'exercises.publicExercise' },
+          ].map(({ key, labelKey }) => (
+            <label key={key} className="flex items-center gap-2.5 cursor-pointer">
               <input type="checkbox" checked={Boolean(form[key])}
                 onChange={(e) => set(key, e.target.checked)}
-                className="w-4 h-4 accent-blue-600"
+                className="w-4 h-4 accent-accent"
               />
-              <span className="text-sm text-gray-700">{label}</span>
+              <span className="text-sm font-medium text-neutral-700">{t(labelKey)}</span>
             </label>
           ))}
         </div>
@@ -256,25 +276,25 @@ export default function ExerciseFormPage() {
         {/* Equipamiento requerido */}
         {form.requires_equipment && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Equipamiento necesario</label>
-            <div className="flex gap-2 mb-2">
+            <label className="form-label">{t('exercises.requiredEquipment')}</label>
+            <div className="flex gap-2 mb-3">
               <input type="text" value={equipmentInput}
                 onChange={(e) => setEquipmentInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEquipment() } }}
-                placeholder="Ej: barbell, dumbbell..."
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                placeholder={t('exercises.equipmentPlaceholder')}
+                className="flex-1 form-input"
               />
               <button type="button" onClick={addEquipment}
-                className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm">
-                + Añadir
+                className="btn-secondary">
+                {t('exercises.add')}
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {(form.equipment ?? []).map((eq) => (
-                <span key={eq} className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                <span key={eq} className="border border-accent/30 bg-accent/10 text-neutral-800 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 rounded-full">
                   {eq}
                   <button type="button" onClick={() => removeEquipment(eq)}
-                    className="ml-1 text-yellow-600 hover:text-red-600 font-bold leading-none">×</button>
+                    className="ml-1 text-neutral-500 hover:text-red-600 font-black leading-none">×</button>
                 </span>
               ))}
             </div>
@@ -284,12 +304,12 @@ export default function ExerciseFormPage() {
         {/* Botones */}
         <div className="flex gap-3 pt-2">
           <button type="submit" disabled={loading}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors disabled:opacity-50">
-            {loading ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear ejercicio'}
+            className="flex-1 btn-primary py-3 disabled:opacity-50">
+            {loading ? t('common.saving') : isEditing ? t('exercises.saveChanges') : t('exercises.createExercise')}
           </button>
           <button type="button" onClick={() => navigate('/exercises')}
-            className="px-6 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-            Cancelar
+            className="btn-secondary">
+            {t('common.cancel')}
           </button>
         </div>
       </form>
