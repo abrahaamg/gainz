@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
-import { Exercise, ExerciseCategory, Difficulty } from '../types/exercise'
+import { Exercise } from '../types/exercise'
 import OneRMCalculator from '../components/exercises/OneRMCalculator'
 import DifficultyDots from '../components/ui/DifficultyDots'
-import { CATEGORY_LABELS, DIFFICULTY_LABELS, translateMuscle } from '../utils/labels'
+import { translateMuscle } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
 
 export default function ExerciseDetailPage() {

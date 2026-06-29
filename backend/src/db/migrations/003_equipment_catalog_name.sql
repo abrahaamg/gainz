@@ -1,6 +1,8 @@
 -- Migración 003: Añadir catalog_name a equipment
 -- Permite vincular equipo personalizado a un item del catálogo para matching de ejercicios
 
+USE fitness_tracker;
+
 ALTER TABLE equipment ADD COLUMN catalog_name VARCHAR(100) DEFAULT NULL AFTER name;
 
 -- Para el equipo existente que vino del catálogo, rellenar catalog_name con el name actual

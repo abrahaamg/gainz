@@ -163,7 +163,7 @@ export default function ProgressPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                       <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#737373' }} tickFormatter={d => d.slice(5)} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#737373' }} />
-                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v: number) => [v, t('common.sessions')]} />
+                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v) => [String(v ?? 0), t('common.sessions')]} />
                       <Bar dataKey="sessions" fill="#F5C400" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -182,7 +182,7 @@ export default function ProgressPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                       <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#737373' }} tickFormatter={d => d.slice(5)} />
                       <YAxis tick={{ fontSize: 10, fill: '#737373' }} />
-                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v: number) => [`${v} kg`, t('progress.volume')]} />
+                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v) => [`${v} kg`, t('progress.volume')]} />
                       <Line type="monotone" dataKey="volume_kg" stroke="#F5C400" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -207,7 +207,7 @@ export default function ProgressPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                       <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#737373' }} tickFormatter={d => d.slice(5)} />
                       <YAxis tick={{ fontSize: 10, fill: '#737373' }} />
-                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v: number) => [`${v} min`, t('progress.duration')]} />
+                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v) => [`${v} min`, t('progress.duration')]} />
                       <Area type="monotone" dataKey="duration_min" stroke="#F5C400" strokeWidth={2} fill="url(#durationGrad)" />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -226,7 +226,7 @@ export default function ProgressPage() {
                       <PolarGrid stroke="rgba(255,255,255,0.1)" />
                       <PolarAngleAxis dataKey="muscle_group" tick={{ fontSize: 10, fill: '#a3a3a3' }} />
                       <Radar dataKey="sets" stroke="#F5C400" fill="#F5C400" fillOpacity={0.25} />
-                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} formatter={(v: number) => [v, t('common.sets')]} />
+                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} formatter={(v) => [String(v ?? 0), t('common.sets')]} />
                     </RadarChart>
                   </ResponsiveContainer>
                 )}
@@ -256,7 +256,7 @@ export default function ProgressPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#737373' }} tickFormatter={d => d.slice(5)} />
                   <YAxis tick={{ fontSize: 10, fill: '#737373' }} />
-                  <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v: number) => [`${v} kg`, t('progress.maxWeight')]} />
+                  <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v) => [`${v} kg`, t('progress.maxWeight')]} />
                   <Line type="monotone" dataKey="value" stroke="#fff" strokeWidth={2} dot={{ r: 2, fill: '#F5C400' }} />
                 </LineChart>
               </ResponsiveContainer>
@@ -276,7 +276,7 @@ export default function ProgressPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#737373' }} tickFormatter={d => d.slice(5)} />
                   <YAxis tick={{ fontSize: 10, fill: '#737373' }} />
-                  <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v: number) => [`${v} kg`, t('progress.estimated1RM')]} />
+                  <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }} labelFormatter={d => d} formatter={(v) => [`${v} kg`, t('progress.estimated1RM')]} />
                   <Line type="monotone" dataKey="value" stroke="#F5C400" strokeWidth={2.5} dot={{ r: 3, fill: '#F5C400', stroke: '#222', strokeWidth: 1 }} />
                 </LineChart>
               </ResponsiveContainer>

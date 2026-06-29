@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
 import { Routine } from '../types/routine'
-import { GOAL_LABELS, DIFFICULTY_LABELS } from '../utils/labels'
+import { GOAL_LABELS } from '../utils/labels'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
 

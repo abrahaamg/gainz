@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
 import { useDebounce } from '../hooks/useDebounce'
 import { Exercise, ExerciseCategory, Difficulty } from '../types/exercise'
-import { CATEGORY_LABELS, DIFFICULTY_LABELS, translateMuscle } from '../utils/labels'
+import { translateMuscle } from '../utils/labels'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
 

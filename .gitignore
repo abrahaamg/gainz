@@ -28,3 +28,12 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 .claude/
+
+# TFG — material auxiliar fuera del repo de código
+memoria/
+memoria-latex/
+memoria-latex.zip
+presentacion-tfg/
+_memorias_ref/
+gainz-codigo-fuente.zip
+*.zip

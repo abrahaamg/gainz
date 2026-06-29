@@ -70,7 +70,7 @@ export default function DashboardPage() {
                     <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#737373' }} width={20} />
                     <Tooltip
                       labelFormatter={d => d}
-                      formatter={(v: number) => [v, t('common.sessions')]}
+                      formatter={(v) => [String(v ?? 0), t('common.sessions')]}
                       contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', fontSize: 12, color: '#fff' }}
                     />
                     <Bar dataKey="sessions" fill="#F5C400" radius={[4, 4, 0, 0]} />
