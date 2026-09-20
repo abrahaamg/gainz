@@ -107,14 +107,26 @@ describe('ExerciseService', () => {
       const updated = { ...mockExercise, name: 'Press Actualizado' }
       vi.mocked(ExerciseModel.update).mockResolvedValue(updated)
 
-      const result = await ExerciseService.update(1, { name: 'Press Actualizado' })
+      const result = await ExerciseService.update(1, { name: 'Press Actualizado' }, 1)
       expect(result.name).toBe('Press Actualizado')
     })
 
     it('lanza NotFoundError si el ejercicio no existe', async () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(null)
 
-      await expect(ExerciseService.update(999, { name: 'Test' })).rejects.toThrow('not found')
+      await expect(ExerciseService.update(999, { name: 'Test' }, 1)).rejects.toThrow('not found')
+    })
+
+    it('lanza ForbiddenError si el ejercicio es de otro usuario', async () => {
+      vi.mocked(ExerciseModel.findById).mockResolvedValue({ ...mockExercise, created_by: 2 })
+
+      await expect(ExerciseService.update(1, { name: 'Test' }, 1)).rejects.toThrow('no has creado')
+    })
+
+    it('lanza ForbiddenError si el ejercicio es del catálogo base', async () => {
+      vi.mocked(ExerciseModel.findById).mockResolvedValue({ ...mockExercise, created_by: null })
+
+      await expect(ExerciseService.update(1, { name: 'Test' }, 1)).rejects.toThrow('no has creado')
     })
   })
 
@@ -123,20 +135,26 @@ describe('ExerciseService', () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(mockExercise)
       vi.mocked(ExerciseModel.delete).mockResolvedValue(true)
 
-      await expect(ExerciseService.delete(1)).resolves.toBeUndefined()
+      await expect(ExerciseService.delete(1, 1)).resolves.toBeUndefined()
     })
 
     it('lanza NotFoundError si el ejercicio no existe', async () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(null)
 
-      await expect(ExerciseService.delete(999)).rejects.toThrow('not found')
+      await expect(ExerciseService.delete(999, 1)).rejects.toThrow('not found')
+    })
+
+    it('lanza ForbiddenError si el ejercicio es de otro usuario', async () => {
+      vi.mocked(ExerciseModel.findById).mockResolvedValue({ ...mockExercise, created_by: 2 })
+
+      await expect(ExerciseService.delete(1, 1)).rejects.toThrow('no has creado')
     })
 
     it('lanza NotFoundError si delete devuelve false', async () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(mockExercise)
       vi.mocked(ExerciseModel.delete).mockResolvedValue(false)
 
-      await expect(ExerciseService.delete(1)).rejects.toThrow('not found')
+      await expect(ExerciseService.delete(1, 1)).rejects.toThrow('not found')
     })
   })
 })

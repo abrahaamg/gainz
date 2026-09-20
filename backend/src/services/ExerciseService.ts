@@ -1,7 +1,22 @@
 import ExerciseModel from '../models/ExerciseModel'
 import { Exercise, CreateExerciseDTO, UpdateExerciseDTO, ExerciseFilters } from '../types/entities/Exercise'
 import { PaginatedResult } from '../types'
-import { NotFoundError, BadRequestError } from '../utils'
+import { NotFoundError, BadRequestError, ForbiddenError } from '../utils'
+
+/**
+ * Solo el creador de un ejercicio puede modificarlo o borrarlo. Los ejercicios
+ * del catálogo base llegan con created_by = NULL y no pertenecen a nadie, así
+ * que nadie puede tocarlos por API.
+ *
+ * Antes update() y delete() solo comprobaban que el ejercicio existiera, de
+ * modo que cualquier usuario autenticado podía editar o borrar los ejercicios
+ * de los demás y el catálogo entero.
+ */
+const assertOwner = (exercise: Exercise, userId: number): void => {
+  if (exercise.created_by === null || exercise.created_by !== userId) {
+    throw new ForbiddenError('No puedes modificar un ejercicio que no has creado')
+  }
+}
 
 const ExerciseService = {
   async getAll(filters: ExerciseFilters): Promise<PaginatedResult<Exercise>> {
@@ -21,14 +36,16 @@ const ExerciseService = {
     return ExerciseModel.create(data, userId)
   },
 
-  async update(id: number, data: UpdateExerciseDTO): Promise<Exercise> {
-    await ExerciseService.getById(id)   // throws NotFoundError if missing
+  async update(id: number, data: UpdateExerciseDTO, userId: number): Promise<Exercise> {
+    const exercise = await ExerciseService.getById(id)   // throws NotFoundError if missing
+    assertOwner(exercise, userId)
     const updated = await ExerciseModel.update(id, data)
     return updated!
   },
 
-  async delete(id: number): Promise<void> {
-    await ExerciseService.getById(id)
+  async delete(id: number, userId: number): Promise<void> {
+    const exercise = await ExerciseService.getById(id)
+    assertOwner(exercise, userId)
     const deleted = await ExerciseModel.delete(id)
     if (!deleted) throw new NotFoundError('Exercise')
   },
