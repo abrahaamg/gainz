@@ -119,6 +119,22 @@ export const createExercise = async (
 }
 
 // ─── update ───────────────────────────────────────────────────
+const UPDATABLE_COLUMNS = new Set([
+  'name',
+  'category',
+  'muscle_group',
+  'secondary_muscles',
+  'description',
+  'instructions',
+  'difficulty',
+  'video_url',
+  'image_url',
+  'requires_equipment',
+  'is_unilateral',
+  'notes',
+  'is_public',
+])
+
 export const updateExercise = async (
   id: number,
   data: UpdateExerciseDTO
@@ -139,7 +155,13 @@ export const updateExercise = async (
     updateFields.is_public = updateFields.is_public ? 1 : 0
   }
 
-  const entries = Object.entries(updateFields).filter(([, v]) => v !== undefined)
+  // Lista blanca de columnas actualizables. Las claves de updateFields vienen
+  // del cuerpo de la petición y se concatenan como nombres de columna en el
+  // SET, así que sin este filtro un cliente podía inyectar SQL a través del
+  // nombre del campo (los valores sí van parametrizados, el nombre no).
+  const entries = Object.entries(updateFields).filter(
+    ([col, v]) => v !== undefined && UPDATABLE_COLUMNS.has(col)
+  )
   if (entries.length === 0 && equipment === undefined) return true
 
   if (entries.length > 0) {
