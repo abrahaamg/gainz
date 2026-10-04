@@ -53,14 +53,27 @@ export const findUserSessions = async (userId: number, limit = 20): Promise<Sess
 }
 
 // ─── Add set to session + check PR ───────────────────────────
+// Devuelve null si la sesión no existe, no es del usuario o ya no está en curso.
 export const addSet = async (
   sessionId: number,
   userId: number,
   data: AddSetDTO
-): Promise<{ new_pr: boolean }> => {
+): Promise<{ new_pr: boolean } | null> => {
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
+
+    // Bloquea la sesión y comprueba que es del usuario y sigue en curso
+    const [sessionRows] = await conn.query<RowDataPacket[]>(
+      `SELECT id FROM sessions
+       WHERE id = ? AND user_id = ? AND status = 'in_progress'
+       FOR UPDATE`,
+      [sessionId, userId]
+    )
+    if (!sessionRows.length) {
+      await conn.rollback()
+      return null
+    }
 
     // Insert session_exercise
     await conn.query(

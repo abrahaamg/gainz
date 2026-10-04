@@ -18,7 +18,7 @@ export const SessionModel = {
     sessionId: number,
     userId: number,
     data: AddSetDTO
-  ): Promise<{ new_pr: boolean }> =>
+  ): Promise<{ new_pr: boolean } | null> =>
     q.addSet(sessionId, userId, data),
 
   finish: (sessionId: number, userId: number, data: FinishSessionDTO): Promise<void> =>

@@ -94,6 +94,14 @@ describe('SessionService', () => {
       expect(result.new_pr).toBe(true)
     })
 
+    it('lanza NotFoundError (404) si la sesión no es del usuario o no está en curso', async () => {
+      vi.mocked(SessionModel.addSet).mockResolvedValue(null)
+
+      const dto = { exercise_id: 1, set_number: 1, reps_done: 10, weight_kg: 60 }
+      await expect(SessionService.addSet(1, 2, dto)).rejects.toMatchObject({ statusCode: 404 })
+      expect(SessionModel.addSet).toHaveBeenCalledWith(1, 2, dto)
+    })
+
     it('lanza BadRequestError si falta exercise_id', async () => {
       await expect(
         SessionService.addSet(1, 1, { exercise_id: 0, set_number: 1 } as any)

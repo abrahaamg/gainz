@@ -27,7 +27,9 @@ export const SessionService = {
   ): Promise<{ new_pr: boolean }> => {
     if (!data.exercise_id) throw new BadRequestError('exercise_id es requerido')
     if (!data.set_number) throw new BadRequestError('set_number es requerido')
-    return SessionModel.addSet(sessionId, userId, data)
+    const result = await SessionModel.addSet(sessionId, userId, data)
+    if (!result) throw new NotFoundError('Sesión no encontrada o ya finalizada')
+    return result
   },
 
   getLastPerformance: async (userId: number, exerciseId: number) => {
