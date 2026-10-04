@@ -1,50 +1,31 @@
-import { Request, Response, NextFunction } from 'express'
+import { Request, Response } from 'express'
 import { RoutineService } from '../services/RoutineService'
 import { HTTP_STATUS } from '../constants/http'
+import { asyncHandler } from '../utils/functions'
 
 export const RoutineController = {
-  getAll: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const routines = await RoutineService.getAll(req.user!.id)
-      res.json({ data: routines })
-    } catch (err) {
-      next(err)
-    }
-  },
+  getAll: asyncHandler(async (req: Request, res: Response) => {
+    const routines = await RoutineService.getAll(req.user!.id)
+    res.json({ data: routines })
+  }),
 
-  getById: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await RoutineService.getById(Number(req.params.id), req.user!.id)
-      res.json({ data: { ...result.routine, exercises: result.exercises } })
-    } catch (err) {
-      next(err)
-    }
-  },
+  getById: asyncHandler(async (req: Request, res: Response) => {
+    const result = await RoutineService.getById(Number(req.params.id), req.user!.id)
+    res.json({ data: { ...result.routine, exercises: result.exercises } })
+  }),
 
-  create: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await RoutineService.create(req.user!.id, req.body)
-      res.status(HTTP_STATUS.CREATED).json({ data: { ...result.routine, exercises: result.exercises } })
-    } catch (err) {
-      next(err)
-    }
-  },
+  create: asyncHandler(async (req: Request, res: Response) => {
+    const result = await RoutineService.create(req.user!.id, req.body)
+    res.status(HTTP_STATUS.CREATED).json({ data: { ...result.routine, exercises: result.exercises } })
+  }),
 
-  update: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await RoutineService.update(Number(req.params.id), req.user!.id, req.body)
-      res.json({ data: { ...result.routine, exercises: result.exercises } })
-    } catch (err) {
-      next(err)
-    }
-  },
+  update: asyncHandler(async (req: Request, res: Response) => {
+    const result = await RoutineService.update(Number(req.params.id), req.user!.id, req.body)
+    res.json({ data: { ...result.routine, exercises: result.exercises } })
+  }),
 
-  delete: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await RoutineService.delete(Number(req.params.id), req.user!.id)
-      res.json({ data: { deleted: true } })
-    } catch (err) {
-      next(err)
-    }
-  },
+  delete: asyncHandler(async (req: Request, res: Response) => {
+    await RoutineService.delete(Number(req.params.id), req.user!.id)
+    res.json({ data: { deleted: true } })
+  }),
 }
