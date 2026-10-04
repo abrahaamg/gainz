@@ -1,19 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ProgressService } from './ProgressService'
-import { ProgressModel } from '../models/ProgressModel'
+import * as q from '../queries/progress.queries'
 
-vi.mock('../models/ProgressModel', () => ({
-  ProgressModel: {
-    getFrequency: vi.fn(),
-    getVolume: vi.fn(),
-    getDuration: vi.fn(),
-    getMuscleDistribution: vi.fn(),
-    getTrainedExercises: vi.fn(),
-    getExerciseProgression: vi.fn(),
-    getPersonalRecords: vi.fn(),
-    get1RMProgression: vi.fn(),
-    getStreakStats: vi.fn(),
-  },
+vi.mock('../queries/progress.queries', () => ({
+  getFrequency: vi.fn(),
+  getVolume: vi.fn(),
+  getDuration: vi.fn(),
+  getMuscleDistribution: vi.fn(),
+  getTrainedExercises: vi.fn(),
+  getExerciseProgression: vi.fn(),
+  getPersonalRecords: vi.fn(),
+  get1RMProgression: vi.fn(),
+  getStreakStats: vi.fn(),
 }))
 
 describe('ProgressService', () => {
@@ -23,10 +21,10 @@ describe('ProgressService', () => {
 
   describe('getCharts', () => {
     it('devuelve las 4 series de datos de gráficas', async () => {
-      vi.mocked(ProgressModel.getFrequency).mockResolvedValue([{ date: '2024-01-01', sessions: 1 }])
-      vi.mocked(ProgressModel.getVolume).mockResolvedValue([{ date: '2024-01-01', volume_kg: 5000 }])
-      vi.mocked(ProgressModel.getDuration).mockResolvedValue([{ date: '2024-01-01', duration_min: 60 }])
-      vi.mocked(ProgressModel.getMuscleDistribution).mockResolvedValue([{ muscle_group: 'chest', sets: 3 }])
+      vi.mocked(q.getFrequency).mockResolvedValue([{ date: '2024-01-01', sessions: 1 }])
+      vi.mocked(q.getVolume).mockResolvedValue([{ date: '2024-01-01', volume_kg: 5000 }])
+      vi.mocked(q.getDuration).mockResolvedValue([{ date: '2024-01-01', duration_min: 60 }])
+      vi.mocked(q.getMuscleDistribution).mockResolvedValue([{ muscle_group: 'chest', sets: 3 }])
 
       const result = await ProgressService.getCharts(1, 30)
       expect(result.frequency).toHaveLength(1)
@@ -36,29 +34,29 @@ describe('ProgressService', () => {
     })
 
     it('llama a todos los modelos con los parámetros correctos', async () => {
-      vi.mocked(ProgressModel.getFrequency).mockResolvedValue([])
-      vi.mocked(ProgressModel.getVolume).mockResolvedValue([])
-      vi.mocked(ProgressModel.getDuration).mockResolvedValue([])
-      vi.mocked(ProgressModel.getMuscleDistribution).mockResolvedValue([])
+      vi.mocked(q.getFrequency).mockResolvedValue([])
+      vi.mocked(q.getVolume).mockResolvedValue([])
+      vi.mocked(q.getDuration).mockResolvedValue([])
+      vi.mocked(q.getMuscleDistribution).mockResolvedValue([])
 
       await ProgressService.getCharts(1, 7)
-      expect(ProgressModel.getFrequency).toHaveBeenCalledWith(1, 7)
-      expect(ProgressModel.getVolume).toHaveBeenCalledWith(1, 7)
-      expect(ProgressModel.getDuration).toHaveBeenCalledWith(1, 7)
-      expect(ProgressModel.getMuscleDistribution).toHaveBeenCalledWith(1, 7)
+      expect(q.getFrequency).toHaveBeenCalledWith(1, 7)
+      expect(q.getVolume).toHaveBeenCalledWith(1, 7)
+      expect(q.getDuration).toHaveBeenCalledWith(1, 7)
+      expect(q.getMuscleDistribution).toHaveBeenCalledWith(1, 7)
     })
   })
 
   describe('getStats', () => {
     it('calcula badges correctamente con stats reales', async () => {
-      vi.mocked(ProgressModel.getStreakStats).mockResolvedValue({
+      vi.mocked(q.getStreakStats).mockResolvedValue({
         current_streak: 5,
         longest_streak: 10,
         total_workouts: 30,
         total_minutes: 350,
         last_workout_date: '2024-01-01',
       })
-      vi.mocked(ProgressModel.getPersonalRecords).mockResolvedValue(
+      vi.mocked(q.getPersonalRecords).mockResolvedValue(
         Array.from({ length: 12 }, (_, i) => ({
           id: i, exercise_id: i, exercise_name: 'Test', value: 100,
           record_type: 'max_weight' as const, achieved_at: '2024-01-01',
@@ -82,8 +80,8 @@ describe('ProgressService', () => {
     })
 
     it('devuelve stats por defecto si no hay datos', async () => {
-      vi.mocked(ProgressModel.getStreakStats).mockResolvedValue(null as any)
-      vi.mocked(ProgressModel.getPersonalRecords).mockResolvedValue([])
+      vi.mocked(q.getStreakStats).mockResolvedValue(null as any)
+      vi.mocked(q.getPersonalRecords).mockResolvedValue([])
 
       const result = await ProgressService.getStats(1)
       expect(result.streak.current_streak).toBe(0)
@@ -92,14 +90,14 @@ describe('ProgressService', () => {
     })
 
     it('badge streak_30 no se gana con racha de 10', async () => {
-      vi.mocked(ProgressModel.getStreakStats).mockResolvedValue({
+      vi.mocked(q.getStreakStats).mockResolvedValue({
         current_streak: 10,
         longest_streak: 10,
         total_workouts: 10,
         total_minutes: 100,
         last_workout_date: '2024-01-01',
       })
-      vi.mocked(ProgressModel.getPersonalRecords).mockResolvedValue([])
+      vi.mocked(q.getPersonalRecords).mockResolvedValue([])
 
       const result = await ProgressService.getStats(1)
       const streak30 = result.badges.find(b => b.id === 'streak_30')
@@ -110,11 +108,11 @@ describe('ProgressService', () => {
   describe('getRecords', () => {
     it('delega al modelo', async () => {
       const mockRecords = [{ id: 1, exercise_id: 1, exercise_name: 'Bench', value: 100, record_type: 'max_weight' as const, achieved_at: '2024-01-01' }]
-      vi.mocked(ProgressModel.getPersonalRecords).mockResolvedValue(mockRecords)
+      vi.mocked(q.getPersonalRecords).mockResolvedValue(mockRecords)
 
       const result = await ProgressService.getRecords(1)
       expect(result).toEqual(mockRecords)
-      expect(ProgressModel.getPersonalRecords).toHaveBeenCalledWith(1)
+      expect(q.getPersonalRecords).toHaveBeenCalledWith(1)
     })
   })
 })

@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { RoutineGeneratorService } from './RoutineGeneratorService'
 import { pool } from '../config'
-import { RoutineModel } from '../models/RoutineModel'
+import { createRoutines } from '../queries/routine.queries'
+
+vi.mock('../queries/routine.queries', () => ({
+  createRoutines: vi.fn(),
+}))
 
 vi.mock('../config', () => ({
   pool: {
@@ -197,7 +201,7 @@ describe('RoutineGeneratorService', () => {
     }
 
     it('guarda una rutina generada en la BD', async () => {
-      const createMany = vi.spyOn(RoutineModel, 'createMany').mockResolvedValue([10])
+      const createMany = vi.mocked(createRoutines).mockResolvedValue([10])
 
       const id = await RoutineGeneratorService.save(1, routine)
       expect(id).toBe(10)
@@ -212,7 +216,7 @@ describe('RoutineGeneratorService', () => {
     })
 
     it('saveAll guarda todas las rutinas en una sola llamada (una transacción)', async () => {
-      const createMany = vi.spyOn(RoutineModel, 'createMany').mockResolvedValue([10, 11])
+      const createMany = vi.mocked(createRoutines).mockResolvedValue([10, 11])
 
       const ids = await RoutineGeneratorService.saveAll(1, [routine, { ...routine, name: 'Otra' }])
       expect(ids).toEqual([10, 11])
@@ -221,7 +225,7 @@ describe('RoutineGeneratorService', () => {
     })
 
     it('saveAll lanza BadRequestError si no llegan rutinas', async () => {
-      const createMany = vi.spyOn(RoutineModel, 'createMany')
+      const createMany = vi.mocked(createRoutines)
 
       await expect(RoutineGeneratorService.saveAll(1, undefined as any)).rejects.toMatchObject({ statusCode: 400 })
       expect(createMany).not.toHaveBeenCalled()

@@ -1,6 +1,6 @@
 import { RowDataPacket } from 'mysql2'
 import { pool } from '../config'
-import { RoutineModel } from '../models/RoutineModel'
+import { createRoutines } from '../queries/routine.queries'
 import { CreateRoutineDTO } from '../types/entities/Routine'
 import { BadRequestError } from '../utils/customErrors'
 
@@ -339,7 +339,7 @@ export const RoutineGeneratorService = {
     if (!Array.isArray(routines) || routines.length === 0) {
       throw new BadRequestError('routines debe ser una lista no vacía')
     }
-    return RoutineModel.createMany(userId, routines.map(toCreateRoutineDTO))
+    return createRoutines(userId, routines.map(toCreateRoutineDTO))
   },
 }
 

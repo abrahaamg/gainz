@@ -1,17 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { SessionService } from './SessionService'
-import { SessionModel } from '../models/SessionModel'
+import * as q from '../queries/session.queries'
 
-vi.mock('../models/SessionModel', () => ({
-  SessionModel: {
-    create: vi.fn(),
-    findById: vi.fn(),
-    findByUser: vi.fn(),
-    addSet: vi.fn(),
-    finish: vi.fn(),
-    getLastPerformance: vi.fn(),
-    getExerciseVolumes: vi.fn(),
-  },
+vi.mock('../queries/session.queries', () => ({
+  createSession: vi.fn(),
+  findSessionById: vi.fn(),
+  findUserSessions: vi.fn(),
+  addSet: vi.fn(),
+  finishSession: vi.fn(),
+  getLastPerformance: vi.fn(),
+  getExerciseVolumes: vi.fn(),
 }))
 
 const mockSession = {
@@ -40,15 +38,15 @@ describe('SessionService', () => {
 
   describe('create', () => {
     it('crea una sesión con routine_id válido', async () => {
-      vi.mocked(SessionModel.create).mockResolvedValue(1)
+      vi.mocked(q.createSession).mockResolvedValue(1)
 
       const result = await SessionService.create(1, 5)
       expect(result).toBe(1)
-      expect(SessionModel.create).toHaveBeenCalledWith(1, 5)
+      expect(q.createSession).toHaveBeenCalledWith(1, 5)
     })
 
     it('lanza NotFoundError (404) si la rutina no es accesible para el usuario', async () => {
-      vi.mocked(SessionModel.create).mockResolvedValue(null)
+      vi.mocked(q.createSession).mockResolvedValue(null)
 
       await expect(SessionService.create(1, 99)).rejects.toMatchObject({ statusCode: 404 })
     })
@@ -60,14 +58,14 @@ describe('SessionService', () => {
 
   describe('getById', () => {
     it('devuelve sesión si existe', async () => {
-      vi.mocked(SessionModel.findById).mockResolvedValue(mockSessionResult)
+      vi.mocked(q.findSessionById).mockResolvedValue(mockSessionResult)
 
       const result = await SessionService.getById(1, 1)
       expect(result.session.id).toBe(1)
     })
 
     it('lanza NotFoundError si no existe', async () => {
-      vi.mocked(SessionModel.findById).mockResolvedValue(null)
+      vi.mocked(q.findSessionById).mockResolvedValue(null)
 
       await expect(SessionService.getById(999, 1)).rejects.toThrow('no encontrada')
     })
@@ -75,17 +73,17 @@ describe('SessionService', () => {
 
   describe('getByUser', () => {
     it('devuelve lista de sesiones del usuario', async () => {
-      vi.mocked(SessionModel.findByUser).mockResolvedValue([mockSession])
+      vi.mocked(q.findUserSessions).mockResolvedValue([mockSession])
 
       const result = await SessionService.getByUser(1, 10)
       expect(result).toHaveLength(1)
-      expect(SessionModel.findByUser).toHaveBeenCalledWith(1, 10)
+      expect(q.findUserSessions).toHaveBeenCalledWith(1, 10)
     })
   })
 
   describe('addSet', () => {
     it('añade una serie con datos válidos', async () => {
-      vi.mocked(SessionModel.addSet).mockResolvedValue({ new_pr: false })
+      vi.mocked(q.addSet).mockResolvedValue({ new_pr: false })
 
       const dto = { exercise_id: 1, set_number: 1, reps_done: 10, weight_kg: 60 }
       const result = await SessionService.addSet(1, 1, dto)
@@ -93,7 +91,7 @@ describe('SessionService', () => {
     })
 
     it('devuelve new_pr: true cuando se bate un récord', async () => {
-      vi.mocked(SessionModel.addSet).mockResolvedValue({ new_pr: true })
+      vi.mocked(q.addSet).mockResolvedValue({ new_pr: true })
 
       const dto = { exercise_id: 1, set_number: 1, reps_done: 5, weight_kg: 120 }
       const result = await SessionService.addSet(1, 1, dto)
@@ -101,11 +99,11 @@ describe('SessionService', () => {
     })
 
     it('lanza NotFoundError (404) si la sesión no es del usuario o no está en curso', async () => {
-      vi.mocked(SessionModel.addSet).mockResolvedValue(null)
+      vi.mocked(q.addSet).mockResolvedValue(null)
 
       const dto = { exercise_id: 1, set_number: 1, reps_done: 10, weight_kg: 60 }
       await expect(SessionService.addSet(1, 2, dto)).rejects.toMatchObject({ statusCode: 404 })
-      expect(SessionModel.addSet).toHaveBeenCalledWith(1, 2, dto)
+      expect(q.addSet).toHaveBeenCalledWith(1, 2, dto)
     })
 
     it('lanza BadRequestError si falta exercise_id', async () => {
@@ -123,10 +121,10 @@ describe('SessionService', () => {
 
   describe('getLastPerformance', () => {
     it('devuelve rendimiento anterior sin plateau', async () => {
-      vi.mocked(SessionModel.getLastPerformance).mockResolvedValue({
+      vi.mocked(q.getLastPerformance).mockResolvedValue({
         weight_kg: 80, reps_done: 5, rpe: 8,
       })
-      vi.mocked(SessionModel.getExerciseVolumes).mockResolvedValue([
+      vi.mocked(q.getExerciseVolumes).mockResolvedValue([
         { volume: 2000 }, { volume: 1800 },
       ])
 
@@ -136,10 +134,10 @@ describe('SessionService', () => {
     })
 
     it('detecta plateau si 3 sesiones con volumen estancado', async () => {
-      vi.mocked(SessionModel.getLastPerformance).mockResolvedValue({
+      vi.mocked(q.getLastPerformance).mockResolvedValue({
         weight_kg: 80, reps_done: 5, rpe: 8,
       })
-      vi.mocked(SessionModel.getExerciseVolumes).mockResolvedValue([
+      vi.mocked(q.getExerciseVolumes).mockResolvedValue([
         { volume: 1800 }, { volume: 1900 }, { volume: 2000 },
       ])
 
@@ -148,11 +146,11 @@ describe('SessionService', () => {
     })
 
     it('compara los volúmenes como números aunque lleguen como string (DECIMAL)', async () => {
-      vi.mocked(SessionModel.getLastPerformance).mockResolvedValue({
+      vi.mocked(q.getLastPerformance).mockResolvedValue({
         weight_kg: 80, reps_done: 5, rpe: 8,
       })
       // Como texto '1000' <= '900' <= '950' daría plateau; como número no
-      vi.mocked(SessionModel.getExerciseVolumes).mockResolvedValue([
+      vi.mocked(q.getExerciseVolumes).mockResolvedValue([
         { volume: '1000' }, { volume: '900' }, { volume: '950' },
       ] as any)
 
@@ -161,11 +159,11 @@ describe('SessionService', () => {
     })
 
     it('detecta plateau con volúmenes en string', async () => {
-      vi.mocked(SessionModel.getLastPerformance).mockResolvedValue({
+      vi.mocked(q.getLastPerformance).mockResolvedValue({
         weight_kg: 80, reps_done: 5, rpe: 8,
       })
       // Como texto '900' <= '1000' es false; como número sí hay plateau
-      vi.mocked(SessionModel.getExerciseVolumes).mockResolvedValue([
+      vi.mocked(q.getExerciseVolumes).mockResolvedValue([
         { volume: '900' }, { volume: '1000' }, { volume: '1100' },
       ] as any)
 
@@ -174,10 +172,10 @@ describe('SessionService', () => {
     })
 
     it('no detecta plateau con menos de 3 sesiones', async () => {
-      vi.mocked(SessionModel.getLastPerformance).mockResolvedValue({
+      vi.mocked(q.getLastPerformance).mockResolvedValue({
         weight_kg: 80, reps_done: 5, rpe: 8,
       })
-      vi.mocked(SessionModel.getExerciseVolumes).mockResolvedValue([
+      vi.mocked(q.getExerciseVolumes).mockResolvedValue([
         { volume: 2000 },
       ])
 
@@ -186,8 +184,8 @@ describe('SessionService', () => {
     })
 
     it('devuelve nulls si no hay rendimiento previo', async () => {
-      vi.mocked(SessionModel.getLastPerformance).mockResolvedValue(null)
-      vi.mocked(SessionModel.getExerciseVolumes).mockResolvedValue([])
+      vi.mocked(q.getLastPerformance).mockResolvedValue(null)
+      vi.mocked(q.getExerciseVolumes).mockResolvedValue([])
 
       const result = await SessionService.getLastPerformance(1, 1)
       expect(result.weight_kg).toBeNull()
@@ -198,13 +196,13 @@ describe('SessionService', () => {
 
   describe('finish', () => {
     it('finaliza una sesión en progreso', async () => {
-      vi.mocked(SessionModel.findById)
+      vi.mocked(q.findSessionById)
         .mockResolvedValueOnce(mockSessionResult) // check existing
         .mockResolvedValueOnce({
           session: { ...mockSession, status: 'completed', finished_at: '2024-01-01T11:00:00' },
           exercises: [],
         })
-      vi.mocked(SessionModel.finish).mockResolvedValue(true)
+      vi.mocked(q.finishSession).mockResolvedValue(true)
 
       const result = await SessionService.finish(1, 1, {
         status: 'completed', rating: 4, notes: 'Buen entreno', duration_seconds: 3600,
@@ -213,17 +211,17 @@ describe('SessionService', () => {
     })
 
     it('lanza BadRequestError si otra petición la finalizó a la vez (doble clic)', async () => {
-      vi.mocked(SessionModel.findById).mockResolvedValue(mockSessionResult)
-      vi.mocked(SessionModel.finish).mockResolvedValue(false)
+      vi.mocked(q.findSessionById).mockResolvedValue(mockSessionResult)
+      vi.mocked(q.finishSession).mockResolvedValue(false)
 
       await expect(
         SessionService.finish(1, 1, { status: 'completed', duration_seconds: 60 })
       ).rejects.toThrow('ya fue finalizada')
-      expect(SessionModel.findById).toHaveBeenCalledTimes(1)
+      expect(q.findSessionById).toHaveBeenCalledTimes(1)
     })
 
     it('lanza NotFoundError si la sesión no existe', async () => {
-      vi.mocked(SessionModel.findById).mockResolvedValue(null)
+      vi.mocked(q.findSessionById).mockResolvedValue(null)
 
       await expect(
         SessionService.finish(999, 1, { status: 'completed', duration_seconds: 0 })
@@ -231,7 +229,7 @@ describe('SessionService', () => {
     })
 
     it('lanza BadRequestError si la sesión ya fue finalizada', async () => {
-      vi.mocked(SessionModel.findById).mockResolvedValue({
+      vi.mocked(q.findSessionById).mockResolvedValue({
         session: { ...mockSession, status: 'completed' },
         exercises: [],
       })

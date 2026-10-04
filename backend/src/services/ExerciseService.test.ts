@@ -1,15 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import ExerciseService from './ExerciseService'
-import ExerciseModel from '../models/ExerciseModel'
+import * as q from '../queries/exercise.queries'
 
-vi.mock('../models/ExerciseModel', () => ({
-  default: {
-    findAll: vi.fn(),
-    findById: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
+vi.mock('../queries/exercise.queries', () => ({
+  findAllExercises: vi.fn(),
+  findExerciseById: vi.fn(),
+  createExercise: vi.fn(),
+  updateExercise: vi.fn(),
+  deleteExercise: vi.fn(),
 }))
 
 const mockExercise = {
@@ -43,33 +41,33 @@ describe('ExerciseService', () => {
         data: [mockExercise],
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1, hasNext: false, hasPrev: false },
       }
-      vi.mocked(ExerciseModel.findAll).mockResolvedValue(mockResult)
+      vi.mocked(q.findAllExercises).mockResolvedValue({ rows: [mockExercise], total: 1 })
 
       const result = await ExerciseService.getAll({ page: 1, limit: 20 }, 1)
       expect(result).toEqual(mockResult)
-      expect(ExerciseModel.findAll).toHaveBeenCalledWith({ page: 1, limit: 20 }, 1)
+      expect(q.findAllExercises).toHaveBeenCalledWith({ page: 1, limit: 20, offset: 0 }, 1)
     })
 
     it('aplica filtros de categoría y músculo', async () => {
       const filters = { category: 'strength', muscle: 'chest' }
-      vi.mocked(ExerciseModel.findAll).mockResolvedValue({ data: [], pagination: {} as any })
+      vi.mocked(q.findAllExercises).mockResolvedValue({ rows: [], total: 0 })
 
       await ExerciseService.getAll(filters, 1)
-      expect(ExerciseModel.findAll).toHaveBeenCalledWith(filters, 1)
+      expect(q.findAllExercises).toHaveBeenCalledWith({ ...filters, page: 1, limit: 20, offset: 0 }, 1)
     })
   })
 
   describe('getById', () => {
     it('devuelve el ejercicio si existe', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue(mockExercise)
+      vi.mocked(q.findExerciseById).mockResolvedValue(mockExercise)
 
       const result = await ExerciseService.getById(1, 1)
       expect(result).toEqual(mockExercise)
-      expect(ExerciseModel.findById).toHaveBeenCalledWith(1, 1)
+      expect(q.findExerciseById).toHaveBeenCalledWith(1, 1)
     })
 
     it('lanza NotFoundError si no existe', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue(null)
+      vi.mocked(q.findExerciseById).mockResolvedValue(null)
 
       await expect(ExerciseService.getById(999, 1)).rejects.toThrow('no encontrado')
     })
@@ -78,11 +76,12 @@ describe('ExerciseService', () => {
   describe('create', () => {
     it('crea un ejercicio con datos válidos', async () => {
       const dto = { name: 'Nuevo ejercicio', category: 'strength' as const, muscle_group: 'chest' }
-      vi.mocked(ExerciseModel.create).mockResolvedValue(mockExercise)
+      vi.mocked(q.createExercise).mockResolvedValue(1)
+      vi.mocked(q.findExerciseById).mockResolvedValue(mockExercise)
 
       const result = await ExerciseService.create(dto, 1)
       expect(result).toEqual(mockExercise)
-      expect(ExerciseModel.create).toHaveBeenCalledWith(dto, 1)
+      expect(q.createExercise).toHaveBeenCalledWith(dto, 1)
     })
 
     it('lanza BadRequestError si falta el nombre', async () => {
@@ -103,28 +102,27 @@ describe('ExerciseService', () => {
 
   describe('update', () => {
     it('actualiza un ejercicio existente', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue(mockExercise)
       const updated = { ...mockExercise, name: 'Press Actualizado' }
-      vi.mocked(ExerciseModel.update).mockResolvedValue(updated)
+      vi.mocked(q.findExerciseById).mockResolvedValueOnce(mockExercise).mockResolvedValueOnce(updated)
 
       const result = await ExerciseService.update(1, { name: 'Press Actualizado' }, 1)
       expect(result.name).toBe('Press Actualizado')
     })
 
     it('lanza NotFoundError si el ejercicio no existe', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue(null)
+      vi.mocked(q.findExerciseById).mockResolvedValue(null)
 
       await expect(ExerciseService.update(999, { name: 'Test' }, 1)).rejects.toThrow('no encontrado')
     })
 
     it('lanza ForbiddenError si el ejercicio es de otro usuario', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue({ ...mockExercise, created_by: 2 })
+      vi.mocked(q.findExerciseById).mockResolvedValue({ ...mockExercise, created_by: 2 })
 
       await expect(ExerciseService.update(1, { name: 'Test' }, 1)).rejects.toThrow('no has creado')
     })
 
     it('lanza ForbiddenError si el ejercicio es del catálogo base', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue({ ...mockExercise, created_by: null })
+      vi.mocked(q.findExerciseById).mockResolvedValue({ ...mockExercise, created_by: null })
 
       await expect(ExerciseService.update(1, { name: 'Test' }, 1)).rejects.toThrow('no has creado')
     })
@@ -132,27 +130,27 @@ describe('ExerciseService', () => {
 
   describe('delete', () => {
     it('elimina un ejercicio existente', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue(mockExercise)
-      vi.mocked(ExerciseModel.delete).mockResolvedValue(true)
+      vi.mocked(q.findExerciseById).mockResolvedValue(mockExercise)
+      vi.mocked(q.deleteExercise).mockResolvedValue(true)
 
       await expect(ExerciseService.delete(1, 1)).resolves.toBeUndefined()
     })
 
     it('lanza NotFoundError si el ejercicio no existe', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue(null)
+      vi.mocked(q.findExerciseById).mockResolvedValue(null)
 
       await expect(ExerciseService.delete(999, 1)).rejects.toThrow('no encontrado')
     })
 
     it('lanza ForbiddenError si el ejercicio es de otro usuario', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue({ ...mockExercise, created_by: 2 })
+      vi.mocked(q.findExerciseById).mockResolvedValue({ ...mockExercise, created_by: 2 })
 
       await expect(ExerciseService.delete(1, 1)).rejects.toThrow('no has creado')
     })
 
     it('lanza NotFoundError si delete devuelve false', async () => {
-      vi.mocked(ExerciseModel.findById).mockResolvedValue(mockExercise)
-      vi.mocked(ExerciseModel.delete).mockResolvedValue(false)
+      vi.mocked(q.findExerciseById).mockResolvedValue(mockExercise)
+      vi.mocked(q.deleteExercise).mockResolvedValue(false)
 
       await expect(ExerciseService.delete(1, 1)).rejects.toThrow('no encontrado')
     })

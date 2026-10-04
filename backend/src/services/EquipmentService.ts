@@ -1,26 +1,26 @@
-import { EquipmentModel } from '../models/EquipmentModel'
+import * as q from '../queries/equipment.queries'
 import { CreateEquipmentDTO, Equipment, CatalogItem, Recommendation } from '../types/entities/Equipment'
 import { BadRequestError, NotFoundError } from '../utils/customErrors'
 
 export const EquipmentService = {
   getAll: (userId: number): Promise<Equipment[]> =>
-    EquipmentModel.findByUser(userId),
+    q.findUserEquipment(userId),
 
   countAccessible: (userId: number): Promise<number> =>
-    EquipmentModel.countAccess(userId),
+    q.countAccessibleExercises(userId),
 
   countBodyweight: (): Promise<number> =>
-    EquipmentModel.countBodyweight(),
+    q.countBodyweightExercises(),
 
   findAccessible: (userId: number) =>
-    EquipmentModel.findAccessible(userId),
+    q.findAccessibleExercises(userId),
 
   getCatalog: (): Promise<CatalogItem[]> =>
-    EquipmentModel.getCatalog(),
+    q.getCatalog(),
 
   create: async (userId: number, data: CreateEquipmentDTO): Promise<Equipment> => {
     if (!data.name?.trim()) throw new BadRequestError('El nombre del equipo es obligatorio')
-    return EquipmentModel.create(userId, data)
+    return q.createEquipment(userId, data)
   },
 
   createWithExercises: async (
@@ -29,21 +29,21 @@ export const EquipmentService = {
     exerciseIds: number[]
   ): Promise<Equipment> => {
     if (!data.name?.trim()) throw new BadRequestError('El nombre del equipo es obligatorio')
-    const item = await EquipmentModel.create(userId, data)
+    const item = await q.createEquipment(userId, data)
     if (exerciseIds.length > 0) {
-      await EquipmentModel.linkCustom(userId, item.name, exerciseIds)
+      await q.linkEquipmentToExercises(userId, item.name, exerciseIds)
     }
     return item
   },
 
   update: async (id: number, userId: number, data: Partial<CreateEquipmentDTO>): Promise<Equipment> => {
-    const updated = await EquipmentModel.update(id, userId, data)
+    const updated = await q.updateEquipment(id, userId, data)
     if (!updated) throw new NotFoundError('Equipo no encontrado')
     return updated
   },
 
   delete: async (id: number, userId: number): Promise<void> => {
-    const deleted = await EquipmentModel.delete(id, userId)
+    const deleted = await q.deleteEquipment(id, userId)
     if (!deleted) throw new NotFoundError('Equipo no encontrado')
   },
 
@@ -51,5 +51,5 @@ export const EquipmentService = {
     userId: number,
     filters?: { goal?: string; difficulty?: string }
   ): Promise<Recommendation[]> =>
-    EquipmentModel.recommend(userId, filters),
+    q.findRecommendations(userId, filters),
 }

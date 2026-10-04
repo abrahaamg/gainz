@@ -1,15 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { RoutineService } from './RoutineService'
-import { RoutineModel } from '../models/RoutineModel'
+import * as q from '../queries/routine.queries'
 
-vi.mock('../models/RoutineModel', () => ({
-  RoutineModel: {
-    findAll: vi.fn(),
-    findById: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
+vi.mock('../queries/routine.queries', () => ({
+  findAllRoutines: vi.fn(),
+  findRoutineById: vi.fn(),
+  createRoutine: vi.fn(),
+  updateRoutine: vi.fn(),
+  deleteRoutine: vi.fn(),
 }))
 
 const mockRoutine = {
@@ -44,16 +42,16 @@ describe('RoutineService', () => {
 
   describe('getAll', () => {
     it('devuelve todas las rutinas del usuario', async () => {
-      vi.mocked(RoutineModel.findAll).mockResolvedValue([mockRoutine])
+      vi.mocked(q.findAllRoutines).mockResolvedValue([mockRoutine])
 
       const result = await RoutineService.getAll(1)
       expect(result).toHaveLength(1)
       expect(result[0].name).toBe('Fuerza Básica con Barra')
-      expect(RoutineModel.findAll).toHaveBeenCalledWith(1)
+      expect(q.findAllRoutines).toHaveBeenCalledWith(1)
     })
 
     it('devuelve array vacío si no hay rutinas', async () => {
-      vi.mocked(RoutineModel.findAll).mockResolvedValue([])
+      vi.mocked(q.findAllRoutines).mockResolvedValue([])
 
       const result = await RoutineService.getAll(1)
       expect(result).toHaveLength(0)
@@ -62,7 +60,7 @@ describe('RoutineService', () => {
 
   describe('getById', () => {
     it('devuelve rutina con ejercicios si existe', async () => {
-      vi.mocked(RoutineModel.findById).mockResolvedValue(mockRoutineResult)
+      vi.mocked(q.findRoutineById).mockResolvedValue(mockRoutineResult)
 
       const result = await RoutineService.getById(1, 1)
       expect(result.routine.name).toBe('Fuerza Básica con Barra')
@@ -70,7 +68,7 @@ describe('RoutineService', () => {
     })
 
     it('lanza NotFoundError si no existe', async () => {
-      vi.mocked(RoutineModel.findById).mockResolvedValue(null)
+      vi.mocked(q.findRoutineById).mockResolvedValue(null)
 
       await expect(RoutineService.getById(999, 1)).rejects.toThrow('no encontrada')
     })
@@ -78,13 +76,13 @@ describe('RoutineService', () => {
 
   describe('create', () => {
     it('crea una rutina con datos válidos', async () => {
-      vi.mocked(RoutineModel.create).mockResolvedValue(1)
-      vi.mocked(RoutineModel.findById).mockResolvedValue(mockRoutineResult)
+      vi.mocked(q.createRoutine).mockResolvedValue(1)
+      vi.mocked(q.findRoutineById).mockResolvedValue(mockRoutineResult)
 
       const dto = { name: 'Nueva Rutina', exercises: [] }
       const result = await RoutineService.create(1, dto)
       expect(result.routine.name).toBe('Fuerza Básica con Barra')
-      expect(RoutineModel.create).toHaveBeenCalledWith(1, dto)
+      expect(q.createRoutine).toHaveBeenCalledWith(1, dto)
     })
 
     it('lanza BadRequestError si falta el nombre', async () => {
@@ -94,8 +92,8 @@ describe('RoutineService', () => {
     })
 
     it('inicializa exercises como array vacío si no se pasa', async () => {
-      vi.mocked(RoutineModel.create).mockResolvedValue(1)
-      vi.mocked(RoutineModel.findById).mockResolvedValue(mockRoutineResult)
+      vi.mocked(q.createRoutine).mockResolvedValue(1)
+      vi.mocked(q.findRoutineById).mockResolvedValue(mockRoutineResult)
 
       const dto = { name: 'Sin ejercicios' } as any
       await RoutineService.create(1, dto)
@@ -105,15 +103,15 @@ describe('RoutineService', () => {
 
   describe('update', () => {
     it('actualiza una rutina existente', async () => {
-      vi.mocked(RoutineModel.findById).mockResolvedValue(mockRoutineResult)
-      vi.mocked(RoutineModel.update).mockResolvedValue(undefined)
+      vi.mocked(q.findRoutineById).mockResolvedValue(mockRoutineResult)
+      vi.mocked(q.updateRoutine).mockResolvedValue(undefined)
 
       const result = await RoutineService.update(1, 1, { name: 'Actualizada' })
       expect(result.routine).toBeDefined()
     })
 
     it('lanza ForbiddenError (403) si la rutina es pública pero de otro usuario', async () => {
-      vi.mocked(RoutineModel.findById).mockResolvedValue({
+      vi.mocked(q.findRoutineById).mockResolvedValue({
         ...mockRoutineResult,
         routine: { ...mockRoutine, user_id: 2, is_public: true },
       })
@@ -121,11 +119,11 @@ describe('RoutineService', () => {
       await expect(
         RoutineService.update(1, 1, { exercises: [] })
       ).rejects.toMatchObject({ statusCode: 403 })
-      expect(RoutineModel.update).not.toHaveBeenCalled()
+      expect(q.updateRoutine).not.toHaveBeenCalled()
     })
 
     it('lanza NotFoundError si no existe', async () => {
-      vi.mocked(RoutineModel.findById).mockResolvedValueOnce(null)
+      vi.mocked(q.findRoutineById).mockResolvedValueOnce(null)
 
       await expect(
         RoutineService.update(999, 1, { name: 'Test' })
@@ -135,13 +133,13 @@ describe('RoutineService', () => {
 
   describe('delete', () => {
     it('elimina una rutina existente', async () => {
-      vi.mocked(RoutineModel.delete).mockResolvedValue(true)
+      vi.mocked(q.deleteRoutine).mockResolvedValue(true)
 
       await expect(RoutineService.delete(1, 1)).resolves.toBeUndefined()
     })
 
     it('lanza NotFoundError si no se pudo eliminar', async () => {
-      vi.mocked(RoutineModel.delete).mockResolvedValue(false)
+      vi.mocked(q.deleteRoutine).mockResolvedValue(false)
 
       await expect(RoutineService.delete(999, 1)).rejects.toThrow('no encontrada')
     })

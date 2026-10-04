@@ -1,4 +1,4 @@
-import { ProgressModel } from '../models/ProgressModel'
+import * as q from '../queries/progress.queries'
 import { Badge, StreakStats } from '../types/entities/Progress'
 
 const BADGE_DEFS: Omit<Badge, 'earned'>[] = [
@@ -34,28 +34,28 @@ function buildBadges(stats: StreakStats, prCount: number): Badge[] {
 export const ProgressService = {
   getCharts: async (userId: number, days: number) => {
     const [frequency, volume, duration, muscles] = await Promise.all([
-      ProgressModel.getFrequency(userId, days),
-      ProgressModel.getVolume(userId, days),
-      ProgressModel.getDuration(userId, days),
-      ProgressModel.getMuscleDistribution(userId, days),
+      q.getFrequency(userId, days),
+      q.getVolume(userId, days),
+      q.getDuration(userId, days),
+      q.getMuscleDistribution(userId, days),
     ])
     return { frequency, volume, duration, muscles }
   },
 
-  getTrainedExercises: (userId: number) => ProgressModel.getTrainedExercises(userId),
+  getTrainedExercises: (userId: number) => q.getTrainedExercises(userId),
 
   getExerciseProgression: (userId: number, exerciseId: number) =>
-    ProgressModel.getExerciseProgression(userId, exerciseId),
+    q.getExerciseProgression(userId, exerciseId),
 
-  getRecords: (userId: number) => ProgressModel.getPersonalRecords(userId),
+  getRecords: (userId: number) => q.getPersonalRecords(userId),
 
   get1RMProgression: (userId: number, exerciseId: number) =>
-    ProgressModel.get1RMProgression(userId, exerciseId),
+    q.get1RMProgression(userId, exerciseId),
 
   getStats: async (userId: number) => {
     const [stats, records] = await Promise.all([
-      ProgressModel.getStreakStats(userId),
-      ProgressModel.getPersonalRecords(userId),
+      q.getStreakStats(userId),
+      q.getPersonalRecords(userId),
     ])
     const defaultStats: StreakStats = {
       current_streak: 0,

@@ -1,7 +1,7 @@
-import ExerciseModel from '../models/ExerciseModel'
+import * as q from '../queries/exercise.queries'
 import { Exercise, CreateExerciseDTO, UpdateExerciseDTO, ExerciseFilters } from '../types/entities/Exercise'
 import { PaginatedResult } from '../types'
-import { NotFoundError, BadRequestError, ForbiddenError } from '../utils'
+import { NotFoundError, BadRequestError, ForbiddenError, buildPaginatedResult, parsePaginationParams } from '../utils'
 
 /**
  * Solo el creador de un ejercicio puede modificarlo o borrarlo. Los ejercicios
@@ -20,11 +20,13 @@ const assertOwner = (exercise: Exercise, userId: number): void => {
 
 const ExerciseService = {
   async getAll(filters: ExerciseFilters, userId: number): Promise<PaginatedResult<Exercise>> {
-    return ExerciseModel.findAll(filters, userId)
+    const pagination = parsePaginationParams(filters.page, filters.limit)
+    const { rows, total } = await q.findAllExercises({ ...filters, ...pagination }, userId)
+    return buildPaginatedResult(rows, total, pagination)
   },
 
   async getById(id: number, userId: number): Promise<Exercise> {
-    const exercise = await ExerciseModel.findById(id, userId)
+    const exercise = await q.findExerciseById(id, userId)
     if (!exercise) throw new NotFoundError('Ejercicio no encontrado')
     return exercise
   },
@@ -33,20 +35,23 @@ const ExerciseService = {
     if (!data.name?.trim()) throw new BadRequestError('El nombre del ejercicio es obligatorio')
     if (!data.category)     throw new BadRequestError('La categoría es obligatoria')
     if (!data.muscle_group) throw new BadRequestError('El grupo muscular es obligatorio')
-    return ExerciseModel.create(data, userId)
+    const id = await q.createExercise(data, userId)
+    const exercise = await q.findExerciseById(id, userId)
+    return exercise!
   },
 
   async update(id: number, data: UpdateExerciseDTO, userId: number): Promise<Exercise> {
     const exercise = await ExerciseService.getById(id, userId)   // throws NotFoundError if missing
     assertOwner(exercise, userId)
-    const updated = await ExerciseModel.update(id, data, userId)
+    await q.updateExercise(id, data)
+    const updated = await q.findExerciseById(id, userId)
     return updated!
   },
 
   async delete(id: number, userId: number): Promise<void> {
     const exercise = await ExerciseService.getById(id, userId)
     assertOwner(exercise, userId)
-    const deleted = await ExerciseModel.delete(id)
+    const deleted = await q.deleteExercise(id)
     if (!deleted) throw new NotFoundError('Ejercicio no encontrado')
   },
 }
