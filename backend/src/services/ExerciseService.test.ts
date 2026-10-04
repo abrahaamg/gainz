@@ -71,7 +71,7 @@ describe('ExerciseService', () => {
     it('lanza NotFoundError si no existe', async () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(null)
 
-      await expect(ExerciseService.getById(999)).rejects.toThrow('not found')
+      await expect(ExerciseService.getById(999)).rejects.toThrow('no encontrado')
     })
   })
 
@@ -114,7 +114,7 @@ describe('ExerciseService', () => {
     it('lanza NotFoundError si el ejercicio no existe', async () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(null)
 
-      await expect(ExerciseService.update(999, { name: 'Test' }, 1)).rejects.toThrow('not found')
+      await expect(ExerciseService.update(999, { name: 'Test' }, 1)).rejects.toThrow('no encontrado')
     })
 
     it('lanza ForbiddenError si el ejercicio es de otro usuario', async () => {
@@ -141,7 +141,7 @@ describe('ExerciseService', () => {
     it('lanza NotFoundError si el ejercicio no existe', async () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(null)
 
-      await expect(ExerciseService.delete(999, 1)).rejects.toThrow('not found')
+      await expect(ExerciseService.delete(999, 1)).rejects.toThrow('no encontrado')
     })
 
     it('lanza ForbiddenError si el ejercicio es de otro usuario', async () => {
@@ -154,7 +154,7 @@ describe('ExerciseService', () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(mockExercise)
       vi.mocked(ExerciseModel.delete).mockResolvedValue(false)
 
-      await expect(ExerciseService.delete(1, 1)).rejects.toThrow('not found')
+      await expect(ExerciseService.delete(1, 1)).rejects.toThrow('no encontrado')
     })
   })
 })

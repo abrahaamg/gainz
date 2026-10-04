@@ -18,15 +18,14 @@ describe('Custom Errors', () => {
   })
 
   it('NotFoundError tiene status 404', () => {
-    const err = new NotFoundError('Ejercicio')
+    const err = new NotFoundError('Rutina no encontrada')
     expect(err.statusCode).toBe(404)
-    expect(err.message).toContain('Ejercicio')
-    expect(err.message).toContain('not found')
+    expect(err.message).toBe('Rutina no encontrada')
   })
 
-  it('NotFoundError sin argumento usa "Resource"', () => {
+  it('NotFoundError sin argumento usa un mensaje genérico', () => {
     const err = new NotFoundError()
-    expect(err.message).toBe('Resource not found')
+    expect(err.message).toBe('Recurso no encontrado')
   })
 
   it('BadRequestError tiene status 400', () => {

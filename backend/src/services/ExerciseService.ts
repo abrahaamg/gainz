@@ -25,7 +25,7 @@ const ExerciseService = {
 
   async getById(id: number): Promise<Exercise> {
     const exercise = await ExerciseModel.findById(id)
-    if (!exercise) throw new NotFoundError('Exercise')
+    if (!exercise) throw new NotFoundError('Ejercicio no encontrado')
     return exercise
   },
 
@@ -47,7 +47,7 @@ const ExerciseService = {
     const exercise = await ExerciseService.getById(id)
     assertOwner(exercise, userId)
     const deleted = await ExerciseModel.delete(id)
-    if (!deleted) throw new NotFoundError('Exercise')
+    if (!deleted) throw new NotFoundError('Ejercicio no encontrado')
   },
 }
 
