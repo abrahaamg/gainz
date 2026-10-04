@@ -194,11 +194,12 @@ export const getExerciseVolumes = async (
 }
 
 // ─── Finish session: update + streak + calories ───────────────
+// Devuelve false si la sesión ya no estaba en curso (p. ej. doble clic).
 export const finishSession = async (
   sessionId: number,
   userId: number,
   data: FinishSessionDTO
-): Promise<void> => {
+): Promise<boolean> => {
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
@@ -214,12 +215,12 @@ export const finishSession = async (
     const durationMin = data.duration_seconds / 60
     const caloriesBurned = Math.round((5 * weightKg * durationMin) / 60)
 
-    // Update session
-    await conn.query(
+    // Update session (solo si sigue en curso)
+    const [updateResult] = await conn.query<ResultSetHeader>(
       `UPDATE sessions
        SET status = ?, notes = ?, rating = ?,
            finished_at = NOW(), duration_seconds = ?, calories_burned = ?
-       WHERE id = ? AND user_id = ?`,
+       WHERE id = ? AND user_id = ? AND status = 'in_progress'`,
       [
         data.status,
         data.notes ?? null,
@@ -230,6 +231,10 @@ export const finishSession = async (
         userId,
       ]
     )
+    if (updateResult.affectedRows === 0) {
+      await conn.rollback()
+      return false
+    }
 
     // Update streak if completed (spec §5.2)
     if (data.status === 'completed') {
@@ -298,6 +303,7 @@ export const finishSession = async (
     }
 
     await conn.commit()
+    return true
   } catch (err) {
     await conn.rollback()
     throw err

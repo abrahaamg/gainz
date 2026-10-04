@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { pool } from '../config'
-import { addSet } from './session.queries'
+import { addSet, finishSession } from './session.queries'
 
 vi.mock('../config', () => ({
   pool: {
@@ -90,6 +90,23 @@ describe('session.queries', () => {
       const result = await addSet(1, 1, { exercise_id: 1, set_number: 1, reps_done: 5, weight_kg: 60 })
 
       expect(result).toEqual({ new_pr: true })
+    })
+  })
+
+  describe('finishSession', () => {
+    it('devuelve false y no toca la racha si la sesión ya no estaba en curso', async () => {
+      conn.query
+        .mockResolvedValueOnce([[{ weight_kg: 70 }]])   // SELECT peso usuario
+        .mockResolvedValueOnce([{ affectedRows: 0 }])   // UPDATE sessions
+
+      const result = await finishSession(1, 1, { status: 'completed', duration_seconds: 3600 })
+
+      expect(result).toBe(false)
+      const updateSql = conn.query.mock.calls[1][0] as string
+      expect(updateSql).toMatch(/status = 'in_progress'/)
+      expect(conn.query).toHaveBeenCalledTimes(2)
+      expect(conn.rollback).toHaveBeenCalled()
+      expect(conn.commit).not.toHaveBeenCalled()
     })
   })
 })

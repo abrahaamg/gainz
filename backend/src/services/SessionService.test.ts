@@ -172,12 +172,22 @@ describe('SessionService', () => {
           session: { ...mockSession, status: 'completed', finished_at: '2024-01-01T11:00:00' },
           exercises: [],
         })
-      vi.mocked(SessionModel.finish).mockResolvedValue(undefined)
+      vi.mocked(SessionModel.finish).mockResolvedValue(true)
 
       const result = await SessionService.finish(1, 1, {
         status: 'completed', rating: 4, notes: 'Buen entreno', duration_seconds: 3600,
       })
       expect(result.session.status).toBe('completed')
+    })
+
+    it('lanza BadRequestError si otra petición la finalizó a la vez (doble clic)', async () => {
+      vi.mocked(SessionModel.findById).mockResolvedValue(mockSessionResult)
+      vi.mocked(SessionModel.finish).mockResolvedValue(false)
+
+      await expect(
+        SessionService.finish(1, 1, { status: 'completed', duration_seconds: 60 })
+      ).rejects.toThrow('ya fue finalizada')
+      expect(SessionModel.findById).toHaveBeenCalledTimes(1)
     })
 
     it('lanza NotFoundError si la sesión no existe', async () => {

@@ -60,7 +60,8 @@ export const SessionService = {
     if (existing.session.status !== 'in_progress') {
       throw new BadRequestError('La sesión ya fue finalizada')
     }
-    await SessionModel.finish(sessionId, userId, data)
+    const finished = await SessionModel.finish(sessionId, userId, data)
+    if (!finished) throw new BadRequestError('La sesión ya fue finalizada')
     const updated = await SessionModel.findById(sessionId, userId)
     return updated!
   },

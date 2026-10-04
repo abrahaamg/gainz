@@ -21,7 +21,7 @@ export const SessionModel = {
   ): Promise<{ new_pr: boolean } | null> =>
     q.addSet(sessionId, userId, data),
 
-  finish: (sessionId: number, userId: number, data: FinishSessionDTO): Promise<void> =>
+  finish: (sessionId: number, userId: number, data: FinishSessionDTO): Promise<boolean> =>
     q.finishSession(sessionId, userId, data),
 
   getLastPerformance: (userId: number, exerciseId: number) =>
