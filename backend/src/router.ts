@@ -1,7 +1,8 @@
 import { Router, IRouter, Request, Response } from 'express'
 import { rateLimit } from 'express-rate-limit'
 import { checkDatabaseConnection } from './config'
-import { authMiddleware } from './middlewares'
+import { authMiddleware, validate } from './middlewares'
+import { acceptAllBody, generatedRoutineBody } from './schemas/routine'
 import exerciseRouter from './routes/exercise'
 import routineRouter from './routes/routine'
 import sessionRouter from './routes/session'
@@ -40,8 +41,8 @@ router.use('/api/v1/sessions',    authMiddleware, sessionRouter)
 router.use('/api/v1/equipment',   authMiddleware, equipmentRouter)
 router.get('/api/v1/recommendations',             authMiddleware, EquipmentController.getRecommendations)
 router.get('/api/v1/recommendations/generate',    authMiddleware, RecommendationController.generate)
-router.post('/api/v1/recommendations/accept',     authMiddleware, RecommendationController.accept)
-router.post('/api/v1/recommendations/accept-all', authMiddleware, RecommendationController.acceptAll)
+router.post('/api/v1/recommendations/accept',     authMiddleware, validate({ body: generatedRoutineBody }), RecommendationController.accept)
+router.post('/api/v1/recommendations/accept-all', authMiddleware, validate({ body: acceptAllBody }), RecommendationController.acceptAll)
 router.use('/api/v1/progress',                    authMiddleware, progressRouter)
 
 export default router
