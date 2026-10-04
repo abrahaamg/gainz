@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { RoutineGeneratorService } from './RoutineGeneratorService'
 import { pool } from '../config'
+import { RoutineModel } from '../models/RoutineModel'
 
 vi.mock('../config', () => ({
   pool: {
@@ -180,30 +181,50 @@ describe('RoutineGeneratorService', () => {
   })
 
   describe('save', () => {
-    it('guarda una rutina generada en la BD', async () => {
-      vi.mocked(pool.query)
-        .mockResolvedValueOnce([{ insertId: 10 }] as any) // INSERT routine
-        .mockResolvedValueOnce([{}] as any) // INSERT exercise 1
-        .mockResolvedValueOnce([{}] as any) // INSERT exercise 2
+    const routine = {
+      name: 'Test Rutina',
+      description: 'Test',
+      goal: 'hypertrophy',
+      difficulty: 'medium',
+      estimated_duration_min: 60,
+      warmup_notes: 'Calentar',
+      cooldown_notes: 'Estirar',
+      day_label: 'Lunes',
+      exercises: [
+        { exercise_id: 1, exercise_name: 'Press', sets: 4, reps: 10, duration_seconds: null, rest_seconds: 90, order_index: 1 },
+        { exercise_id: 2, exercise_name: 'Squat', sets: 4, reps: 10, duration_seconds: null, rest_seconds: 90, order_index: 2 },
+      ],
+    }
 
-      const routine = {
-        name: 'Test Rutina',
-        description: 'Test',
-        goal: 'hypertrophy',
-        difficulty: 'medium',
-        estimated_duration_min: 60,
-        warmup_notes: 'Calentar',
-        cooldown_notes: 'Estirar',
-        day_label: 'Lunes',
-        exercises: [
-          { exercise_id: 1, exercise_name: 'Press', sets: 4, reps: 10, duration_seconds: null, rest_seconds: 90, order_index: 1 },
-          { exercise_id: 2, exercise_name: 'Squat', sets: 4, reps: 10, duration_seconds: null, rest_seconds: 90, order_index: 2 },
-        ],
-      }
+    it('guarda una rutina generada en la BD', async () => {
+      const createMany = vi.spyOn(RoutineModel, 'createMany').mockResolvedValue([10])
 
       const id = await RoutineGeneratorService.save(1, routine)
       expect(id).toBe(10)
-      expect(pool.query).toHaveBeenCalledTimes(3) // 1 routine + 2 exercises
+      expect(createMany).toHaveBeenCalledTimes(1)
+      const [userId, dtos] = createMany.mock.calls[0]
+      expect(userId).toBe(1)
+      expect(dtos[0]).toMatchObject({ name: 'Test Rutina', is_public: false })
+      expect(dtos[0].exercises).toEqual([
+        { exercise_id: 1, order_index: 1, sets: 4, reps: 10, duration_seconds: null, rest_seconds: 90 },
+        { exercise_id: 2, order_index: 2, sets: 4, reps: 10, duration_seconds: null, rest_seconds: 90 },
+      ])
+    })
+
+    it('saveAll guarda todas las rutinas en una sola llamada (una transacción)', async () => {
+      const createMany = vi.spyOn(RoutineModel, 'createMany').mockResolvedValue([10, 11])
+
+      const ids = await RoutineGeneratorService.saveAll(1, [routine, { ...routine, name: 'Otra' }])
+      expect(ids).toEqual([10, 11])
+      expect(createMany).toHaveBeenCalledTimes(1)
+      expect(createMany.mock.calls[0][1]).toHaveLength(2)
+    })
+
+    it('saveAll lanza BadRequestError si no llegan rutinas', async () => {
+      const createMany = vi.spyOn(RoutineModel, 'createMany')
+
+      await expect(RoutineGeneratorService.saveAll(1, undefined as any)).rejects.toMatchObject({ statusCode: 400 })
+      expect(createMany).not.toHaveBeenCalled()
     })
   })
 })

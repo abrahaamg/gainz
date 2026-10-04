@@ -1,5 +1,8 @@
 import { RowDataPacket } from 'mysql2'
 import { pool } from '../config'
+import { RoutineModel } from '../models/RoutineModel'
+import { CreateRoutineDTO } from '../types/entities/Routine'
+import { BadRequestError } from '../utils/customErrors'
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -327,27 +330,38 @@ export const RoutineGeneratorService = {
 
   /** Save a generated routine to the database */
   async save(userId: number, routine: GeneratedRoutine): Promise<number> {
-    const [result] = await pool.query<any>(
-      `INSERT INTO routines (user_id, name, description, goal, difficulty,
-                             estimated_duration_min, warmup_notes, cooldown_notes, is_public)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, false)`,
-      [userId, routine.name, routine.description, routine.goal, routine.difficulty,
-       routine.estimated_duration_min, routine.warmup_notes, routine.cooldown_notes]
-    )
-    const routineId = result.insertId
-
-    for (const ex of routine.exercises) {
-      await pool.query(
-        `INSERT INTO routine_exercises
-           (routine_id, exercise_id, order_index, sets, reps, duration_seconds, rest_seconds)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [routineId, ex.exercise_id, ex.order_index, ex.sets,
-         ex.reps, ex.duration_seconds, ex.rest_seconds]
-      )
-    }
-
-    return routineId
+    const [id] = await RoutineGeneratorService.saveAll(userId, [routine])
+    return id
   },
+
+  /** Save several generated routines in a single transaction */
+  async saveAll(userId: number, routines: GeneratedRoutine[]): Promise<number[]> {
+    if (!Array.isArray(routines) || routines.length === 0) {
+      throw new BadRequestError('routines debe ser una lista no vacía')
+    }
+    return RoutineModel.createMany(userId, routines.map(toCreateRoutineDTO))
+  },
+}
+
+function toCreateRoutineDTO(routine: GeneratedRoutine): CreateRoutineDTO {
+  return {
+    name: routine.name,
+    description: routine.description,
+    goal: routine.goal,
+    difficulty: routine.difficulty,
+    estimated_duration_min: routine.estimated_duration_min,
+    warmup_notes: routine.warmup_notes,
+    cooldown_notes: routine.cooldown_notes,
+    is_public: false,
+    exercises: routine.exercises.map(ex => ({
+      exercise_id: ex.exercise_id,
+      order_index: ex.order_index,
+      sets: ex.sets,
+      reps: ex.reps,
+      duration_seconds: ex.duration_seconds,
+      rest_seconds: ex.rest_seconds,
+    })),
+  }
 }
 
 /* ─── Helpers ────────────────────────────────────────────────── */

@@ -23,12 +23,7 @@ export const RecommendationController = {
   /** POST /api/v1/recommendations/accept-all — guarda todas las rutinas generadas */
   acceptAll: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { routines } = req.body
-      const ids: number[] = []
-      for (const routine of routines) {
-        const id = await RoutineGeneratorService.save(req.user!.id, routine)
-        ids.push(id)
-      }
+      const ids = await RoutineGeneratorService.saveAll(req.user!.id, req.body.routines)
       res.status(HTTP_STATUS.CREATED).json({ data: { ids } })
     } catch (err) { next(err) }
   },

@@ -59,33 +59,23 @@ export const findRoutineById = async (id: number, userId: number): Promise<{ rou
 
 // ─── Create routine ───────────────────────────────────────────
 export const createRoutine = async (userId: number, data: CreateRoutineDTO): Promise<number> => {
+  const [routineId] = await createRoutines(userId, [data])
+  return routineId
+}
+
+// ─── Create several routines in one transaction ──────────────
+export const createRoutines = async (userId: number, routines: CreateRoutineDTO[]): Promise<number[]> => {
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
 
-    const [result] = await conn.query<ResultSetHeader>(
-      `INSERT INTO routines (user_id, name, description, goal, difficulty,
-        estimated_duration_min, warmup_notes, cooldown_notes, is_public, tags)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        data.name,
-        data.description ?? null,
-        data.goal ?? null,
-        data.difficulty ?? 'medium',
-        data.estimated_duration_min ?? null,
-        data.warmup_notes ?? null,
-        data.cooldown_notes ?? null,
-        data.is_public ?? false,
-        JSON.stringify(data.tags ?? []),
-      ]
-    )
-
-    const routineId = result.insertId
-    await insertRoutineExercises(conn, routineId, data.exercises)
+    const ids: number[] = []
+    for (const data of routines) {
+      ids.push(await insertRoutine(conn, userId, data))
+    }
 
     await conn.commit()
-    return routineId
+    return ids
   } catch (err) {
     await conn.rollback()
     throw err
@@ -148,6 +138,33 @@ export const deleteRoutine = async (id: number, userId: number): Promise<boolean
     [id, userId]
   )
   return result.affectedRows > 0
+}
+
+// ─── Helper: insert routine + its exercises ───────────────────
+async function insertRoutine(
+  conn: Awaited<ReturnType<typeof pool.getConnection>>,
+  userId: number,
+  data: CreateRoutineDTO
+): Promise<number> {
+  const [result] = await conn.query<ResultSetHeader>(
+    `INSERT INTO routines (user_id, name, description, goal, difficulty,
+      estimated_duration_min, warmup_notes, cooldown_notes, is_public, tags)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      userId,
+      data.name,
+      data.description ?? null,
+      data.goal ?? null,
+      data.difficulty ?? 'medium',
+      data.estimated_duration_min ?? null,
+      data.warmup_notes ?? null,
+      data.cooldown_notes ?? null,
+      data.is_public ?? false,
+      JSON.stringify(data.tags ?? []),
+    ]
+  )
+  await insertRoutineExercises(conn, result.insertId, data.exercises)
+  return result.insertId
 }
 
 // ─── Helper: insert exercises into routine ────────────────────

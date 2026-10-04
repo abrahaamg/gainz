@@ -11,6 +11,9 @@ export const RoutineModel = {
   create: (userId: number, data: CreateRoutineDTO): Promise<number> =>
     q.createRoutine(userId, data),
 
+  createMany: (userId: number, routines: CreateRoutineDTO[]): Promise<number[]> =>
+    q.createRoutines(userId, routines),
+
   update: (id: number, userId: number, data: Partial<CreateRoutineDTO>): Promise<void> =>
     q.updateRoutine(id, userId, data),
 
