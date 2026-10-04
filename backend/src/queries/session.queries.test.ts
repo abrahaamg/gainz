@@ -108,5 +108,64 @@ describe('session.queries', () => {
       expect(conn.rollback).toHaveBeenCalled()
       expect(conn.commit).not.toHaveBeenCalled()
     })
+
+    // Secuencia: peso usuario, UPDATE sesión, SELECT racha, UPDATE/INSERT racha
+    const mockFinishQueries = (streakRows: Record<string, unknown>[]) => {
+      conn.query
+        .mockResolvedValueOnce([[{ weight_kg: 70 }]])
+        .mockResolvedValueOnce([{ affectedRows: 1 }])
+        .mockResolvedValueOnce([streakRows])
+        .mockResolvedValueOnce([{ affectedRows: 1 }])
+    }
+    const streakUpdate = () => conn.query.mock.calls[3] as [string, unknown[]]
+
+    it('no sube la racha si ya entrenó hoy (fecha calculada en SQL)', async () => {
+      mockFinishQueries([{ current_streak: 4, longest_streak: 6, diff_days: 0 }])
+
+      const result = await finishSession(1, 1, { status: 'completed', duration_seconds: 1800 })
+
+      expect(result).toBe(true)
+      expect(conn.query.mock.calls[2][0]).toMatch(/DATEDIFF\(CURDATE\(\), last_workout_date\)/)
+      const [sql, params] = streakUpdate()
+      expect(sql).toMatch(/last_workout_date = CURDATE\(\)/)
+      // [current_streak, longest_streak, +workouts, +minutos, userId]
+      expect(params).toEqual([4, 6, 0, 30, 1])
+      expect(conn.commit).toHaveBeenCalled()
+    })
+
+    it('suma 1 a la racha si entrenó ayer', async () => {
+      mockFinishQueries([{ current_streak: 6, longest_streak: 6, diff_days: 1 }])
+
+      await finishSession(1, 1, { status: 'completed', duration_seconds: 600 })
+
+      expect(streakUpdate()[1]).toEqual([7, 7, 1, 10, 1])
+    })
+
+    it('reinicia la racha a 1 si pasó más de un día', async () => {
+      mockFinishQueries([{ current_streak: 6, longest_streak: 9, diff_days: 3 }])
+
+      await finishSession(1, 1, { status: 'completed', duration_seconds: 600 })
+
+      expect(streakUpdate()[1]).toEqual([1, 9, 1, 10, 1])
+    })
+
+    it('empieza la racha en 1 si nunca había entrenado', async () => {
+      mockFinishQueries([{ current_streak: 0, longest_streak: 0, diff_days: null }])
+
+      await finishSession(1, 1, { status: 'completed', duration_seconds: 600 })
+
+      expect(streakUpdate()[1]).toEqual([1, 1, 1, 10, 1])
+    })
+
+    it('crea la fila de racha con CURDATE() si no existe', async () => {
+      mockFinishQueries([])
+
+      await finishSession(1, 1, { status: 'completed', duration_seconds: 600 })
+
+      const [sql, params] = streakUpdate()
+      expect(sql).toMatch(/INSERT INTO streaks/)
+      expect(sql).toMatch(/CURDATE\(\)/)
+      expect(params).toEqual([1, 10])
+    })
   })
 })

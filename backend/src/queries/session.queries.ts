@@ -238,46 +238,39 @@ export const finishSession = async (
 
     // Update streak if completed (spec §5.2)
     if (data.status === 'completed') {
+      // Las fechas se calculan en MySQL con CURDATE(): antes se usaba la medianoche
+      // local pasada por toISOString(), que en UTC+N guardaba el día anterior.
       const [streakRows] = await conn.query<RowDataPacket[]>(
-        'SELECT * FROM streaks WHERE user_id = ?',
+        `SELECT current_streak, longest_streak,
+                DATEDIFF(CURDATE(), last_workout_date) AS diff_days
+         FROM streaks WHERE user_id = ?
+         FOR UPDATE`,
         [userId]
       )
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
       const addMinutes = Math.round(data.duration_seconds / 60)
 
       if (streakRows.length) {
         // Usuario ya tiene fila de streak → actualizar
         const streak = streakRows[0]
+        const diffDays: number | null = streak.diff_days === null ? null : Number(streak.diff_days)
 
-        let newStreak = streak.current_streak
-        const lastDate = streak.last_workout_date ? new Date(streak.last_workout_date) : null
-
-        if (lastDate) {
-          lastDate.setHours(0, 0, 0, 0)
-          const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / 86400000)
-          if (diffDays === 0) {
-            // Already trained today — no change to streak
-            newStreak = streak.current_streak
-          } else if (diffDays === 1) {
-            newStreak = streak.current_streak + 1
-          } else {
-            newStreak = 1  // streak broken
-          }
+        let newStreak: number
+        if (diffDays === 0) {
+          newStreak = streak.current_streak  // ya entrenó hoy: la racha no cambia
+        } else if (diffDays === 1) {
+          newStreak = streak.current_streak + 1
         } else {
-          newStreak = 1  // first ever session
+          newStreak = 1  // racha rota o primera sesión
         }
 
         const longestStreak = Math.max(newStreak, streak.longest_streak)
-        const lastWasToday = lastDate
-          ? Math.floor((today.getTime() - new Date(lastDate).setHours(0, 0, 0, 0)) / 86400000) === 0
-          : false
+        const lastWasToday = diffDays === 0
 
         await conn.query(
           `UPDATE streaks SET
              current_streak    = ?,
              longest_streak    = ?,
-             last_workout_date = ?,
+             last_workout_date = CURDATE(),
              total_workouts    = total_workouts + ?,
              total_minutes     = total_minutes + ?,
              updated_at        = NOW()
@@ -285,7 +278,6 @@ export const finishSession = async (
           [
             newStreak,
             longestStreak,
-            today.toISOString().split('T')[0],
             lastWasToday ? 0 : 1,  // don't double-count if already trained today
             addMinutes,
             userId,
@@ -296,8 +288,8 @@ export const finishSession = async (
         await conn.query(
           `INSERT INTO streaks (user_id, current_streak, longest_streak, last_workout_date,
                                 total_workouts, total_minutes, updated_at)
-           VALUES (?, 1, 1, ?, 1, ?, NOW())`,
-          [userId, today.toISOString().split('T')[0], addMinutes]
+           VALUES (?, 1, 1, CURDATE(), 1, ?, NOW())`,
+          [userId, addMinutes]
         )
       }
     }
