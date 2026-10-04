@@ -143,8 +143,10 @@ export const get1RMProgression = async (
 // ─── Streak stats ─────────────────────────────────────────────
 export const getStreakStats = async (userId: number): Promise<StreakStats | null> => {
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT current_streak, longest_streak, total_workouts,
-            total_minutes, last_workout_date
+    // La racha solo se guarda al finalizar sesión: si el último entreno fue antes
+    // de ayer, la racha ya está rota aunque la fila conserve el valor antiguo.
+    `SELECT IF(last_workout_date < CURDATE() - INTERVAL 1 DAY, 0, current_streak) AS current_streak,
+            longest_streak, total_workouts, total_minutes, last_workout_date
      FROM streaks WHERE user_id = ?`,
     [userId]
   )
