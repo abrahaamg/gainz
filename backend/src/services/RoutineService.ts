@@ -1,6 +1,6 @@
 import { RoutineModel } from '../models/RoutineModel'
 import { CreateRoutineDTO, Routine, RoutineExercise } from '../types/entities/Routine'
-import { BadRequestError, NotFoundError } from '../utils/customErrors'
+import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/customErrors'
 
 export const RoutineService = {
   getAll: (userId: number): Promise<Routine[]> =>
@@ -23,6 +23,10 @@ export const RoutineService = {
   update: async (id: number, userId: number, data: Partial<CreateRoutineDTO>): Promise<{ routine: Routine; exercises: RoutineExercise[] }> => {
     const existing = await RoutineModel.findById(id, userId)
     if (!existing) throw new NotFoundError('Rutina no encontrada')
+    // findById también devuelve rutinas públicas ajenas: solo el dueño puede editar
+    if (existing.routine.user_id !== userId) {
+      throw new ForbiddenError('No puedes modificar una rutina que no es tuya')
+    }
     await RoutineModel.update(id, userId, data)
     const updated = await RoutineModel.findById(id, userId)
     return updated!

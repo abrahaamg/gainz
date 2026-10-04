@@ -112,6 +112,18 @@ describe('RoutineService', () => {
       expect(result.routine).toBeDefined()
     })
 
+    it('lanza ForbiddenError (403) si la rutina es pública pero de otro usuario', async () => {
+      vi.mocked(RoutineModel.findById).mockResolvedValue({
+        ...mockRoutineResult,
+        routine: { ...mockRoutine, user_id: 2, is_public: true },
+      })
+
+      await expect(
+        RoutineService.update(1, 1, { exercises: [] })
+      ).rejects.toMatchObject({ statusCode: 403 })
+      expect(RoutineModel.update).not.toHaveBeenCalled()
+    })
+
     it('lanza NotFoundError si no existe', async () => {
       vi.mocked(RoutineModel.findById).mockResolvedValueOnce(null)
 
