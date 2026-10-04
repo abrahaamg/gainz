@@ -1,4 +1,5 @@
 import { Router, IRouter, Request, Response } from 'express'
+import { rateLimit } from 'express-rate-limit'
 import { checkDatabaseConnection } from './config'
 import { authMiddleware } from './middlewares'
 import exerciseRouter from './routes/exercise'
@@ -23,6 +24,15 @@ router.get('/health', async (_req: Request, res: Response) => {
 })
 
 // ─── API v1 ──────────────────────────────────────────────────
+// Límite por IP para toda la API (el health check queda fuera)
+router.use('/api', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { status: 'error', message: 'Demasiadas peticiones, inténtalo más tarde' },
+}))
+
 router.use('/api/v1/auth',        authMiddleware, authRouter)
 router.use('/api/v1/exercises',   authMiddleware, exerciseRouter)
 router.use('/api/v1/routines',    authMiddleware, routineRouter)
