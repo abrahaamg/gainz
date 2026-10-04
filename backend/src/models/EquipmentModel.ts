@@ -11,6 +11,6 @@ export const EquipmentModel = {
   countBodyweight:() => q.countBodyweightExercises(),
   getCatalog:     (): Promise<CatalogItem[]> => q.getCatalog(),
   recommend:      (userId: number, filters?: { goal?: string; difficulty?: string }): Promise<Recommendation[]> => q.findRecommendations(userId, filters),
-  linkCustom:     (name: string, exerciseIds: number[], isOptional?: boolean) => q.linkEquipmentToExercises(name, exerciseIds, isOptional),
+  linkCustom:     (userId: number, name: string, exerciseIds: number[], isOptional?: boolean) => q.linkEquipmentToExercises(userId, name, exerciseIds, isOptional),
   unlinkCustom:   (name: string) => q.unlinkEquipmentFromExercises(name),
 }

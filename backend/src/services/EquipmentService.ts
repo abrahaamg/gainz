@@ -31,7 +31,7 @@ export const EquipmentService = {
     if (!data.name?.trim()) throw new BadRequestError('El nombre del equipo es obligatorio')
     const item = await EquipmentModel.create(userId, data)
     if (exerciseIds.length > 0) {
-      await EquipmentModel.linkCustom(item.name, exerciseIds)
+      await EquipmentModel.linkCustom(userId, item.name, exerciseIds)
     }
     return item
   },

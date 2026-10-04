@@ -229,16 +229,21 @@ export const findRecommendations = async (
 }
 
 // ─── Link custom equipment to exercises ──────────────────────
+// exercise_equipment es global: solo se vincula a ejercicios creados por el
+// usuario para no alterar el catálogo de los demás.
 export const linkEquipmentToExercises = async (
+  userId: number,
   equipmentName: string,
   exerciseIds: number[],
   isOptional: boolean = false
 ): Promise<void> => {
   if (!exerciseIds.length) return
-  const values = exerciseIds.map(id => [id, equipmentName, isOptional])
   await pool.query(
-    'INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional) VALUES ?',
-    [values]
+    `INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+     SELECT e.id, ?, ?
+     FROM exercises e
+     WHERE e.id IN (?) AND e.created_by = ?`,
+    [equipmentName, isOptional, exerciseIds, userId]
   )
 }
 
