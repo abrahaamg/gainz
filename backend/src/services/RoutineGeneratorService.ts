@@ -1,6 +1,6 @@
-import { RowDataPacket } from 'mysql2'
-import { pool } from '../config'
+import { findAccessiblePublicExercises } from '../queries/equipment.queries'
 import { createRoutines } from '../queries/routine.queries'
+import { findUserTrainingProfile } from '../queries/user.queries'
 import { CreateRoutineDTO } from '../types/entities/Routine'
 import { BadRequestError } from '../utils/customErrors'
 
@@ -218,18 +218,9 @@ export const RoutineGeneratorService = {
 
   async generate(userId: number): Promise<GeneratedRoutine[]> {
     // 1. Get user profile
-    const [userRows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, sex, age, fitness_level, experience, primary_goal, goals,
-              weight_kg, available_days, session_duration_min, injuries
-       FROM users WHERE id = ?`,
-      [userId]
-    )
-    if (!userRows.length) return []
-
-    const user = userRows[0] as unknown as UserProfile
-    if (typeof user.goals === 'string') user.goals = JSON.parse(user.goals as string)
-    if (typeof user.available_days === 'string') user.available_days = JSON.parse(user.available_days as string)
-    if (typeof user.injuries === 'string') user.injuries = JSON.parse(user.injuries as string)
+    const profile = await findUserTrainingProfile(userId)
+    if (!profile) return []
+    const user = profile as unknown as UserProfile
 
     const numDays = user.available_days?.length ?? 3
     const duration = user.session_duration_min ?? 60
@@ -239,24 +230,8 @@ export const RoutineGeneratorService = {
     const emphasis = getEmphasis(user.sex, goal)
 
     // 2. Get accessible exercises
-    const [exercises] = await pool.query<RowDataPacket[]>(`
-      SELECT DISTINCT e.id, e.name, e.category, e.muscle_group, e.secondary_muscles,
-             e.difficulty, e.requires_equipment
-      FROM exercises e
-      WHERE e.is_public = true
-        AND (
-          e.requires_equipment = false
-          OR NOT EXISTS (
-            SELECT 1 FROM exercise_equipment ee
-            WHERE ee.exercise_id = e.id AND ee.is_optional = false
-              AND ee.equipment_name NOT IN (
-                SELECT COALESCE(eq.catalog_name, eq.name) FROM equipment eq WHERE eq.user_id = ?
-              )
-          )
-        )
-    `, [userId])
-
-    const pool_ = (exercises as RowDataPacket[]).map(row => ({
+    const rows = await findAccessiblePublicExercises(userId)
+    const pool_ = rows.map(row => ({
       ...row,
       secondary_muscles: Array.isArray(row.secondary_muscles)
         ? row.secondary_muscles

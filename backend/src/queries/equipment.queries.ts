@@ -109,6 +109,28 @@ export const countAccessibleExercises = async (userId: number): Promise<number> 
   return rows.length
 }
 
+// ─── Public exercises accessible to the user (routine generator) ──
+// Same accessibility rule, but resolved in SQL against the user's equipment
+export const findAccessiblePublicExercises = async (userId: number): Promise<RowDataPacket[]> => {
+  const [rows] = await pool.query<RowDataPacket[]>(`
+    SELECT DISTINCT e.id, e.name, e.category, e.muscle_group, e.secondary_muscles,
+           e.difficulty, e.requires_equipment
+    FROM exercises e
+    WHERE e.is_public = true
+      AND (
+        e.requires_equipment = false
+        OR NOT EXISTS (
+          SELECT 1 FROM exercise_equipment ee
+          WHERE ee.exercise_id = e.id AND ee.is_optional = false
+            AND ee.equipment_name NOT IN (
+              SELECT COALESCE(eq.catalog_name, eq.name) FROM equipment eq WHERE eq.user_id = ?
+            )
+        )
+      )
+  `, [userId])
+  return rows
+}
+
 // ─── Recommendations ─────────────────────────────────────────
 export const findRecommendations = async (
   userId: number,

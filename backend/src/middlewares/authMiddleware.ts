@@ -1,8 +1,12 @@
 import { Request, Response, NextFunction } from 'express'
-import { RowDataPacket, ResultSetHeader } from 'mysql2'
-import { pool } from '../config'
 import type { DecodedIdToken } from 'firebase-admin/auth'
 import { verifyIdToken } from '../services/firebaseService'
+import {
+  createFirebaseUser,
+  findUserByFirebaseUid,
+  isUsernameTaken,
+  updateUserEmail,
+} from '../queries/user.queries'
 
 /**
  * Atajo de desarrollo: sin Firebase configurado se trabaja con un usuario fijo
@@ -72,55 +76,29 @@ const syncFirebaseUser = async (
 ): Promise<{ id: number; email: string | null }> => {
   const email = decoded.email || null
 
-  const findByUid = async () => {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, email FROM users WHERE firebase_uid = ?',
-      [decoded.uid]
-    )
-    return rows[0] as { id: number; email: string | null } | undefined
-  }
-
-  const existing = await findByUid()
+  const existing = await findUserByFirebaseUid(decoded.uid)
   if (existing) {
     if (email && existing.email !== email) {
-      await pool.query<ResultSetHeader>(
-        'UPDATE users SET email = ?, updated_at = NOW() WHERE id = ?',
-        [email, existing.id]
-      )
+      await updateUserEmail(existing.id, email)
     }
     return { id: existing.id, email: email ?? existing.email }
   }
 
   const base = (email?.split('@')[0] || decoded.uid).slice(0, USERNAME_MAX)
-  const [taken] = await pool.query<RowDataPacket[]>(
-    'SELECT 1 FROM users WHERE username = ? LIMIT 1',
-    [base]
-  )
   const suffix = decoded.uid.slice(0, 10)
-  const username = taken.length
+  const username = (await isUsernameTaken(base))
     ? `${base.slice(0, USERNAME_MAX - suffix.length - 1)}_${suffix}`
     : base
 
-  let userId: number
   try {
-    const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO users (firebase_uid, email, username) VALUES (?, ?, ?)',
-      [decoded.uid, email, username]
-    )
-    userId = result.insertId
+    const userId = await createFirebaseUser(decoded.uid, email, username)
+    return { id: userId, email }
   } catch (err) {
     // Dos peticiones simultáneas del mismo usuario nuevo: la otra ya lo creó
-    const raced = (err as { code?: string }).code === 'ER_DUP_ENTRY' ? await findByUid() : undefined
+    const raced = (err as { code?: string }).code === 'ER_DUP_ENTRY'
+      ? await findUserByFirebaseUid(decoded.uid)
+      : undefined
     if (!raced) throw err
     return raced
   }
-
-  // Asegurar que el usuario tiene fila en streaks
-  await pool.query<ResultSetHeader>(
-    `INSERT IGNORE INTO streaks (user_id, current_streak, longest_streak, total_workouts, total_minutes)
-     VALUES (?, 0, 0, 0, 0)`,
-    [userId]
-  )
-
-  return { id: userId, email }
 }
