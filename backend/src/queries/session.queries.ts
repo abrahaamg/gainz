@@ -3,13 +3,16 @@ import { pool } from '../config'
 import { AddSetDTO, FinishSessionDTO, Session, SessionExercise } from '../types/entities/Session'
 
 // ─── Create session ───────────────────────────────────────────
-export const createSession = async (userId: number, routineId: number): Promise<number> => {
+// Solo inserta si la rutina es del usuario o pública; si no, devuelve null.
+export const createSession = async (userId: number, routineId: number): Promise<number | null> => {
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO sessions (user_id, routine_id, started_at, status)
-     VALUES (?, ?, NOW(), 'in_progress')`,
-    [userId, routineId]
+     SELECT ?, r.id, NOW(), 'in_progress'
+     FROM routines r
+     WHERE r.id = ? AND (r.user_id = ? OR r.is_public = true)`,
+    [userId, routineId, userId]
   )
-  return result.insertId
+  return result.affectedRows ? result.insertId : null
 }
 
 // ─── Get session by id ────────────────────────────────────────

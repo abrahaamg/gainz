@@ -47,6 +47,12 @@ describe('SessionService', () => {
       expect(SessionModel.create).toHaveBeenCalledWith(1, 5)
     })
 
+    it('lanza NotFoundError (404) si la rutina no es accesible para el usuario', async () => {
+      vi.mocked(SessionModel.create).mockResolvedValue(null)
+
+      await expect(SessionService.create(1, 99)).rejects.toMatchObject({ statusCode: 404 })
+    })
+
     it('lanza BadRequestError si falta routine_id', async () => {
       await expect(SessionService.create(1, 0)).rejects.toThrow('routine_id')
     })

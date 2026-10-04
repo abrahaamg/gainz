@@ -2,7 +2,7 @@ import * as q from '../queries/session.queries'
 import { AddSetDTO, FinishSessionDTO, Session, SessionExercise } from '../types/entities/Session'
 
 export const SessionModel = {
-  create: (userId: number, routineId: number): Promise<number> =>
+  create: (userId: number, routineId: number): Promise<number | null> =>
     q.createSession(userId, routineId),
 
   findById: (

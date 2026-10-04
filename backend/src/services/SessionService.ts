@@ -5,7 +5,9 @@ import { BadRequestError, NotFoundError } from '../utils/customErrors'
 export const SessionService = {
   create: async (userId: number, routineId: number): Promise<number> => {
     if (!routineId) throw new BadRequestError('routine_id es requerido')
-    return SessionModel.create(userId, routineId)
+    const sessionId = await SessionModel.create(userId, routineId)
+    if (sessionId === null) throw new NotFoundError('Rutina no encontrada')
+    return sessionId
   },
 
   getById: async (
