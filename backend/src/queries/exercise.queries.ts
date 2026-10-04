@@ -4,12 +4,14 @@ import { Exercise, CreateExerciseDTO, UpdateExerciseDTO, ExerciseFilters } from 
 
 // ─── findAll con filtros y paginación ────────────────────────
 export const findAllExercises = async (
-  filters: ExerciseFilters
+  filters: ExerciseFilters,
+  userId: number
 ): Promise<{ rows: Exercise[]; total: number }> => {
   const { category, muscle, difficulty, requires_equipment, q, page = 1, limit = 20 } = filters
   const offset = (page - 1) * limit
-  const conditions: string[] = []
-  const params: unknown[] = []
+  // Los ejercicios privados solo los ve su creador
+  const conditions: string[] = ['(e.is_public = 1 OR e.created_by = ?)']
+  const params: unknown[] = [userId]
 
   if (category) { conditions.push('e.category = ?'); params.push(category) }
   if (muscle)   { conditions.push('e.muscle_group = ?'); params.push(muscle) }
@@ -20,7 +22,7 @@ export const findAllExercises = async (
   }
   if (q) { conditions.push('e.name LIKE ?'); params.push(`%${q}%`) }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+  const where = `WHERE ${conditions.join(' AND ')}`
 
   const [countRows] = await pool.query<RowDataPacket[]>(
     `SELECT COUNT(*) as total FROM exercises e ${where}`,
@@ -54,14 +56,14 @@ export const findAllExercises = async (
 }
 
 // ─── findById con equipamiento ────────────────────────────────
-export const findExerciseById = async (id: number): Promise<Exercise | null> => {
+export const findExerciseById = async (id: number, userId: number): Promise<Exercise | null> => {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT e.*, GROUP_CONCAT(ee.equipment_name) as equipment_list
      FROM exercises e
      LEFT JOIN exercise_equipment ee ON e.id = ee.exercise_id
-     WHERE e.id = ?
+     WHERE e.id = ? AND (e.is_public = 1 OR e.created_by = ?)
      GROUP BY e.id`,
-    [id]
+    [id, userId]
   )
   if (!rows[0]) return null
 

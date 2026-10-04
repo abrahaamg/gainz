@@ -19,12 +19,12 @@ const assertOwner = (exercise: Exercise, userId: number): void => {
 }
 
 const ExerciseService = {
-  async getAll(filters: ExerciseFilters): Promise<PaginatedResult<Exercise>> {
-    return ExerciseModel.findAll(filters)
+  async getAll(filters: ExerciseFilters, userId: number): Promise<PaginatedResult<Exercise>> {
+    return ExerciseModel.findAll(filters, userId)
   },
 
-  async getById(id: number): Promise<Exercise> {
-    const exercise = await ExerciseModel.findById(id)
+  async getById(id: number, userId: number): Promise<Exercise> {
+    const exercise = await ExerciseModel.findById(id, userId)
     if (!exercise) throw new NotFoundError('Ejercicio no encontrado')
     return exercise
   },
@@ -37,14 +37,14 @@ const ExerciseService = {
   },
 
   async update(id: number, data: UpdateExerciseDTO, userId: number): Promise<Exercise> {
-    const exercise = await ExerciseService.getById(id)   // throws NotFoundError if missing
+    const exercise = await ExerciseService.getById(id, userId)   // throws NotFoundError if missing
     assertOwner(exercise, userId)
-    const updated = await ExerciseModel.update(id, data)
+    const updated = await ExerciseModel.update(id, data, userId)
     return updated!
   },
 
   async delete(id: number, userId: number): Promise<void> {
-    const exercise = await ExerciseService.getById(id)
+    const exercise = await ExerciseService.getById(id, userId)
     assertOwner(exercise, userId)
     const deleted = await ExerciseModel.delete(id)
     if (!deleted) throw new NotFoundError('Ejercicio no encontrado')

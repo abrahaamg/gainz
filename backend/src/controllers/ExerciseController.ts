@@ -17,7 +17,7 @@ const ExerciseController = {
         page:  req.query.page  ? parseInt(req.query.page as string, 10)  : undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
       }
-      const result = await ExerciseService.getAll(filters)
+      const result = await ExerciseService.getAll(filters, req.user!.id)
       res.status(HTTP_STATUS.OK).json(result)
     } catch (err) {
       next(err)
@@ -27,7 +27,7 @@ const ExerciseController = {
   // GET /api/v1/exercises/:id
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const exercise = await ExerciseService.getById(parseInt(req.params.id, 10))
+      const exercise = await ExerciseService.getById(parseInt(req.params.id, 10), req.user!.id)
       res.status(HTTP_STATUS.OK).json(exercise)
     } catch (err) {
       next(err)

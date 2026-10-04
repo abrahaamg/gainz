@@ -45,17 +45,17 @@ describe('ExerciseService', () => {
       }
       vi.mocked(ExerciseModel.findAll).mockResolvedValue(mockResult)
 
-      const result = await ExerciseService.getAll({ page: 1, limit: 20 })
+      const result = await ExerciseService.getAll({ page: 1, limit: 20 }, 1)
       expect(result).toEqual(mockResult)
-      expect(ExerciseModel.findAll).toHaveBeenCalledWith({ page: 1, limit: 20 })
+      expect(ExerciseModel.findAll).toHaveBeenCalledWith({ page: 1, limit: 20 }, 1)
     })
 
     it('aplica filtros de categoría y músculo', async () => {
       const filters = { category: 'strength', muscle: 'chest' }
       vi.mocked(ExerciseModel.findAll).mockResolvedValue({ data: [], pagination: {} as any })
 
-      await ExerciseService.getAll(filters)
-      expect(ExerciseModel.findAll).toHaveBeenCalledWith(filters)
+      await ExerciseService.getAll(filters, 1)
+      expect(ExerciseModel.findAll).toHaveBeenCalledWith(filters, 1)
     })
   })
 
@@ -63,15 +63,15 @@ describe('ExerciseService', () => {
     it('devuelve el ejercicio si existe', async () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(mockExercise)
 
-      const result = await ExerciseService.getById(1)
+      const result = await ExerciseService.getById(1, 1)
       expect(result).toEqual(mockExercise)
-      expect(ExerciseModel.findById).toHaveBeenCalledWith(1)
+      expect(ExerciseModel.findById).toHaveBeenCalledWith(1, 1)
     })
 
     it('lanza NotFoundError si no existe', async () => {
       vi.mocked(ExerciseModel.findById).mockResolvedValue(null)
 
-      await expect(ExerciseService.getById(999)).rejects.toThrow('no encontrado')
+      await expect(ExerciseService.getById(999, 1)).rejects.toThrow('no encontrado')
     })
   })
 
