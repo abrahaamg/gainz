@@ -8,7 +8,7 @@ const optionalStringList = z.array(z.string().max(50)).nullable().optional()
 
 export const updateMeBody = z.object({
   username: z.string().trim().min(1).max(100).nullable().optional(),
-  sex: optionalText(20),
+  sex: optionalText(16),
   age: numeric(z.number().int().min(0).max(150).nullable()).optional(),
   birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato esperado AAAA-MM-DD').nullable().optional(),
   fitness_level: optionalText(20),
