@@ -83,7 +83,7 @@ En MySQL Workbench: `File → Open SQL Script…`, seleccionar el archivo y puls
 
 > El archivo `seeds/003_seed_test_data.sql` añade sesiones de prueba ya completadas para ver el *dashboard*, las gráficas de progreso y los logros desbloqueados sin tener que registrar tú mismo varias sesiones. **No es obligatorio** si quieres empezar la BD vacía y registrar tus propias sesiones.
 >
-> El archivo `seeds/004b_cleanup_duplicates.sql` es una utilidad de mantenimiento que **no forma parte del flujo de instalación**. Solo es necesario si por accidente se re-ejecuta el seed 004 dos veces y aparecen ejercicios duplicados.
+> El seed `004_seed_extended_exercises.sql` es idempotente: si se ejecuta más de una vez no duplica ejercicios.
 
 ### 4. Configurar variables de entorno
 

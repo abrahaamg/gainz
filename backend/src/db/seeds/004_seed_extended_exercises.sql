@@ -1,12 +1,20 @@
 -- ============================================================
 -- SEED: Ejercicios extendidos (complementarios al seed original de 25)
 -- Ejecutar DESPUÉS de 001_seed_exercises.sql y 006_secondary_muscles.sql
+--
+-- Idempotente: los ejercicios se cargan primero en una tabla temporal y
+-- solo se copian a `exercises` los que no existen ya en el catálogo
+-- (mismo nombre y created_by IS NULL). Los vínculos con el equipo usan
+-- INSERT IGNORE. Se puede re-ejecutar sin crear duplicados.
 -- ============================================================
 
 USE fitness_tracker;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_seed_exercises;
+CREATE TEMPORARY TABLE tmp_seed_exercises LIKE exercises;
 -- ─── PECHO (14 ejercicios nuevos) ─────────────────────────────
 
-INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
 ('Press de Banca Inclinado con Barra', 'strength', 'chest', '["shoulders","triceps"]',
  'Variante del press de banca en banco inclinado a 30-45° que enfatiza la porción superior del pecho.',
  '1. Ajusta el banco a 30-45° de inclinación.\n2. Agarra la barra a la anchura de los hombros.\n3. Baja la barra controladamente hasta la parte superior del pecho.\n4. Empuja de forma explosiva hasta la extensión completa.',
@@ -79,7 +87,7 @@ INSERT INTO exercises (name, category, muscle_group, secondary_muscles, descript
 
 -- ─── ESPALDA (17 ejercicios nuevos) ──────────────────────────
 
-INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
 ('Jalón al Pecho Agarre Abierto', 'strength', 'back', '["biceps","forearms"]',
  'Jalón con agarre prono abierto que enfatiza los dorsales y la amplitud de espalda.',
  '1. Siéntate en la máquina de jalón y agarra la barra con agarre ancho.\n2. Tira de la barra hacia la parte superior del pecho.\n3. Aprieta las escápulas abajo y atrás.\n4. Vuelve controladamente.',
@@ -167,7 +175,7 @@ INSERT INTO exercises (name, category, muscle_group, secondary_muscles, descript
 
 -- ─── HOMBROS (11 ejercicios nuevos) ──────────────────────────
 
-INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
 ('Press Arnold', 'strength', 'shoulders', '["triceps","chest"]',
  'Press de hombros con rotación que trabaja las tres cabezas del deltoides.',
  '1. Siéntate con mancuernas a la altura de los hombros, palmas hacia ti.\n2. Mientras empujas hacia arriba, rota las palmas hacia fuera.\n3. Extiende los brazos completamente.\n4. Baja rotando de vuelta a la posición inicial.',
@@ -225,7 +233,7 @@ INSERT INTO exercises (name, category, muscle_group, secondary_muscles, descript
 
 -- ─── BÍCEPS (11 ejercicios nuevos) ───────────────────────────
 
-INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
 ('Curl con Barra EZ', 'strength', 'arms', '["forearms"]',
  'Curl de bíceps con barra EZ que reduce estrés en las muñecas.',
  '1. Sujeta la barra EZ con agarre supino en la curvatura.\n2. Flexiona los codos llevando la barra hacia los hombros.\n3. Mantén los codos pegados al cuerpo.\n4. Baja controladamente.',
@@ -283,7 +291,7 @@ INSERT INTO exercises (name, category, muscle_group, secondary_muscles, descript
 
 -- ─── TRÍCEPS (10 ejercicios nuevos) ──────────────────────────
 
-INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
 ('Press Francés (Skull Crusher)', 'strength', 'arms', '["chest"]',
  'Extensión de tríceps tumbado con barra EZ que trabaja todas las cabezas del tríceps.',
  '1. Túmbate en banco plano con barra EZ y brazos extendidos.\n2. Flexiona los codos bajando la barra hacia la frente.\n3. Mantén los codos fijos apuntando al techo.\n4. Extiende los brazos hasta la posición inicial.',
@@ -336,7 +344,7 @@ INSERT INTO exercises (name, category, muscle_group, secondary_muscles, descript
 
 -- ─── PIERNAS (24 ejercicios nuevos) ──────────────────────────
 
-INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
 ('Sentadilla Goblet', 'strength', 'legs', '["glutes","core"]',
  'Sentadilla con mancuerna o kettlebell sujeta al pecho, ideal para aprender la técnica.',
  '1. Sujeta una mancuerna o kettlebell pegada al pecho.\n2. Baja en sentadilla con el pecho erguido.\n3. Baja hasta que los muslos estén paralelos al suelo.\n4. Sube empujando desde los talones.',
@@ -459,7 +467,7 @@ INSERT INTO exercises (name, category, muscle_group, secondary_muscles, descript
 
 -- ─── CORE / ABDOMEN (16 ejercicios nuevos) ───────────────────
 
-INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
 ('Plancha (Plank)', 'strength', 'core', '["shoulders"]',
  'Ejercicio isométrico fundamental para estabilidad del core.',
  '1. Colócate en posición de plancha sobre los antebrazos.\n2. Mantén el cuerpo en línea recta de cabeza a talones.\n3. Activa abdomen, glúteos y cuádriceps.\n4. Mantén la posición el tiempo indicado.',
@@ -542,7 +550,7 @@ INSERT INTO exercises (name, category, muscle_group, secondary_muscles, descript
 
 -- ─── CARDIO / POTENCIA / FUNCIONAL (13 ejercicios nuevos) ────
 
-INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
 ('Assault Bike', 'cardio', 'full_body', '[]',
  'Bicicleta de aire para cardio de alta intensidad con trabajo de brazos y piernas.',
  '1. Siéntate en la assault bike y pedalea.\n2. Empuja y tira de los brazos simultáneamente.\n3. Aumenta la intensidad con más velocidad.\n4. Mantén el ritmo el tiempo indicado.',
@@ -610,7 +618,7 @@ INSERT INTO exercises (name, category, muscle_group, secondary_muscles, descript
 
 -- ─── MOVILIDAD / ESTIRAMIENTOS (14 ejercicios nuevos) ────────
 
-INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
 ('Child''s Pose', 'flexibility', 'back', '[]',
  'Postura de descanso que estira la espalda baja y los dorsales.',
  '1. Arrodíllate con las rodillas abiertas y los pies juntos.\n2. Siéntate sobre los talones.\n3. Extiende los brazos al frente y apoya la frente en el suelo.\n4. Mantén la posición respirando profundamente.',
@@ -680,6 +688,19 @@ INSERT INTO exercises (name, category, muscle_group, secondary_muscles, descript
  'Estiramiento de dorsal usando una polea o barra fija.',
  '1. Agarra una barra fija o polea con un brazo.\n2. Deja caer el peso del cuerpo hacia el lado contrario.\n3. Siente el estiramiento en el dorsal.\n4. Mantén 20-30 segundos por lado.',
  'easy', true, true, true, NULL);
+
+-- ─── Copiar al catálogo solo los que faltan ──────────────────
+INSERT INTO exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by)
+SELECT t.name, t.category, t.muscle_group, t.secondary_muscles, t.description, t.instructions,
+       t.difficulty, t.requires_equipment, t.is_unilateral, t.is_public, t.created_by
+FROM tmp_seed_exercises t
+WHERE NOT EXISTS (
+  SELECT 1 FROM exercises e
+  WHERE e.name = t.name AND e.created_by IS NULL
+)
+ORDER BY t.id;
+
+DROP TEMPORARY TABLE tmp_seed_exercises;
 
 -- ═══════════════════════════════════════════════════════════════
 -- EXERCISE ↔ EQUIPMENT LINKS
