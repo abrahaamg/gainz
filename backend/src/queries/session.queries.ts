@@ -105,47 +105,45 @@ export const addSet = async (
       )
     }
 
-    // Check PR for max_weight
+    // Récords personales candidatos para esta serie
+    const candidates: { type: 'max_weight' | 'max_reps' | 'max_duration'; value: number }[] = []
     if (data.weight_kg && data.weight_kg > 0) {
-      const [prResult] = await conn.query<ResultSetHeader>(
-        `INSERT INTO personal_records (user_id, exercise_id, record_type, value, session_id)
-         VALUES (?, ?, 'max_weight', ?, ?)
-         ON DUPLICATE KEY UPDATE
-           value       = IF(VALUES(value) > value, VALUES(value), value),
-           achieved_at = IF(VALUES(value) > value, NOW(), achieved_at),
-           session_id  = IF(VALUES(value) > value, VALUES(session_id), session_id)`,
-        [userId, data.exercise_id, data.weight_kg, sessionId]
-      )
-      // affectedRows=1 → new insert, affectedRows=2 → updated (new PR)
-      if (prResult.affectedRows >= 1) newPR = true
+      candidates.push({ type: 'max_weight', value: data.weight_kg })
     }
-
-    // Check PR for max_reps (no weight exercises)
     if (data.reps_done && data.reps_done > 0 && (!data.weight_kg || data.weight_kg === 0)) {
-      const [prResult] = await conn.query<ResultSetHeader>(
-        `INSERT INTO personal_records (user_id, exercise_id, record_type, value, session_id)
-         VALUES (?, ?, 'max_reps', ?, ?)
-         ON DUPLICATE KEY UPDATE
-           value       = IF(VALUES(value) > value, VALUES(value), value),
-           achieved_at = IF(VALUES(value) > value, NOW(), achieved_at),
-           session_id  = IF(VALUES(value) > value, VALUES(session_id), session_id)`,
-        [userId, data.exercise_id, data.reps_done, sessionId]
-      )
-      if (prResult.affectedRows >= 1) newPR = true
+      candidates.push({ type: 'max_reps', value: data.reps_done })
+    }
+    if (data.duration_done_sec && data.duration_done_sec > 0) {
+      candidates.push({ type: 'max_duration', value: data.duration_done_sec })
     }
 
-    // Check PR for max_duration
-    if (data.duration_done_sec && data.duration_done_sec > 0) {
-      const [prResult] = await conn.query<ResultSetHeader>(
-        `INSERT INTO personal_records (user_id, exercise_id, record_type, value, session_id)
-         VALUES (?, ?, 'max_duration', ?, ?)
-         ON DUPLICATE KEY UPDATE
-           value       = IF(VALUES(value) > value, VALUES(value), value),
-           achieved_at = IF(VALUES(value) > value, NOW(), achieved_at),
-           session_id  = IF(VALUES(value) > value, VALUES(session_id), session_id)`,
-        [userId, data.exercise_id, data.duration_done_sec, sessionId]
+    if (candidates.length) {
+      // Valor previo leído dentro de la transacción para saber si hay récord nuevo
+      const [prevRows] = await conn.query<RowDataPacket[]>(
+        `SELECT record_type, value FROM personal_records
+         WHERE user_id = ? AND exercise_id = ?
+         FOR UPDATE`,
+        [userId, data.exercise_id]
       )
-      if (prResult.affectedRows >= 1) newPR = true
+      const previous = new Map(prevRows.map(r => [r.record_type as string, Number(r.value)]))
+
+      for (const { type, value } of candidates) {
+        const prev = previous.get(type)
+        if (prev !== undefined && value <= prev) continue
+        newPR = true
+
+        // MySQL evalúa el SET de izquierda a derecha: achieved_at y session_id
+        // van antes de value para comparar contra el valor anterior.
+        await conn.query<ResultSetHeader>(
+          `INSERT INTO personal_records (user_id, exercise_id, record_type, value, session_id)
+           VALUES (?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             achieved_at = IF(VALUES(value) > value, NOW(), achieved_at),
+             session_id  = IF(VALUES(value) > value, VALUES(session_id), session_id),
+             value       = IF(VALUES(value) > value, VALUES(value), value)`,
+          [userId, data.exercise_id, type, value, sessionId]
+        )
+      }
     }
 
     await conn.commit()
