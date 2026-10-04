@@ -41,7 +41,8 @@ export const SessionService = {
     const volumes = await SessionModel.getExerciseVolumes(userId, exerciseId)
     if (volumes.length >= 3) {
       // volumes[0] = most recent, volumes[2] = oldest
-      const [v1, v2, v3] = volumes.map(v => v.volume)
+      // mysql2 devuelve los DECIMAL como string: sin Number() se comparaban como texto
+      const [v1, v2, v3] = volumes.map(v => Number(v.volume))
       if (v1 <= v2 && v2 <= v3) {
         plateau_detected = true
       }

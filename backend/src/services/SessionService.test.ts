@@ -141,6 +141,32 @@ describe('SessionService', () => {
       expect(result.plateau_detected).toBe(true)
     })
 
+    it('compara los volúmenes como números aunque lleguen como string (DECIMAL)', async () => {
+      vi.mocked(SessionModel.getLastPerformance).mockResolvedValue({
+        weight_kg: 80, reps_done: 5, rpe: 8,
+      })
+      // Como texto '1000' <= '900' <= '950' daría plateau; como número no
+      vi.mocked(SessionModel.getExerciseVolumes).mockResolvedValue([
+        { volume: '1000' }, { volume: '900' }, { volume: '950' },
+      ] as any)
+
+      const result = await SessionService.getLastPerformance(1, 1)
+      expect(result.plateau_detected).toBe(false)
+    })
+
+    it('detecta plateau con volúmenes en string', async () => {
+      vi.mocked(SessionModel.getLastPerformance).mockResolvedValue({
+        weight_kg: 80, reps_done: 5, rpe: 8,
+      })
+      // Como texto '900' <= '1000' es false; como número sí hay plateau
+      vi.mocked(SessionModel.getExerciseVolumes).mockResolvedValue([
+        { volume: '900' }, { volume: '1000' }, { volume: '1100' },
+      ] as any)
+
+      const result = await SessionService.getLastPerformance(1, 1)
+      expect(result.plateau_detected).toBe(true)
+    })
+
     it('no detecta plateau con menos de 3 sesiones', async () => {
       vi.mocked(SessionModel.getLastPerformance).mockResolvedValue({
         weight_kg: 80, reps_done: 5, rpe: 8,
