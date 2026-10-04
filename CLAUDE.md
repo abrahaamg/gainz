@@ -2,10 +2,15 @@
 
 ## Stack
 - Backend: Node.js + TypeScript + Express + MySQL (mysql2) — puerto 3001
-- Frontend: React 18 + TypeScript + Vite + Tailwind CSS — puerto 5173
+- Frontend: React 19 + TypeScript + Vite + Tailwind CSS — puerto 5173
 - Package manager: pnpm
 - BD: `fitness_tracker` (no `gainz`)
 - Usuario dev: id=1, sin auth real (Firebase vacío)
+
+## Arquitectura backend
+- Capas: `routes` → `controllers` → `services` → `queries` (SQL con mysql2). **No hay capa `models`**: los services llaman directamente a `queries/*`
+- Controladores envueltos con `asyncHandler` (`utils/functions.ts`), sin try/catch
+- Respuestas de éxito: `{ data }` (más metadatos al mismo nivel si hace falta, p. ej. `pagination`). Errores: `{ status: 'error', message }` vía `ErrorHandler`
 
 ## Convenciones UI / Frontend
 
@@ -54,6 +59,9 @@ Ejecutar en MySQL Workbench en este orden:
 4. `backend/src/db/migrations/004_1rm_history.sql` — tabla `exercise_1rm_history` para gráfica de proyección de 1RM
 5. `backend/src/db/migrations/005_birth_date.sql` — columna `birth_date` en users (reemplaza edad estática por fecha de nacimiento con cálculo automático)
 6. `backend/src/db/migrations/006_secondary_muscles.sql` — poblar `secondary_muscles` JSON para los 25 ejercicios del seed
+7. `backend/src/db/migrations/007_indices.sql` — índices para las consultas de sesiones, 1RM y progreso
+8. `backend/src/db/migrations/008_users_email_nullable.sql` — `users.email` admite NULL (cuentas de Firebase sin email)
+9. `backend/src/db/migrations/009_users_sex_length.sql` — `users.sex` pasa a VARCHAR(16) para admitir `unspecified`
 
 ## Flujo de onboarding
 - `/register` → crea cuenta (Firebase en producción, skip en DEV)
