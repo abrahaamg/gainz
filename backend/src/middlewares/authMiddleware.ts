@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { RowDataPacket, ResultSetHeader } from 'mysql2'
 import { pool } from '../config'
+import type { DecodedIdToken } from 'firebase-admin/auth'
 import { verifyIdToken } from '../services/firebaseService'
 
 /**
@@ -15,6 +16,7 @@ import { verifyIdToken } from '../services/firebaseService'
 const isProduction = process.env.NODE_ENV === 'production'
 const firebaseConfigured = Boolean(process.env.FIREBASE_PROJECT_ID)
 const devAuthBypass = !isProduction && !firebaseConfigured
+const USERNAME_MAX = 100
 
 export const authMiddleware = async (
   req: Request,
@@ -40,34 +42,85 @@ export const authMiddleware = async (
     return
   }
 
+  let decoded: DecodedIdToken
   try {
-    const token   = authHeader.split(' ')[1]
-    const decoded = await verifyIdToken(token)
+    decoded = await verifyIdToken(authHeader.split(' ')[1])
+  } catch {
+    res.status(401).json({ error: 'Token inválido o expirado' })
+    return
+  }
 
-    // Upsert user en MySQL (crea si no existe, actualiza email si cambió)
-    const username = (decoded.email?.split('@')[0] ?? decoded.uid).slice(0, 100)
-    await pool.query<ResultSetHeader>(
-      `INSERT INTO users (firebase_uid, email, username)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE email = VALUES(email), updated_at = NOW()`,
-      [decoded.uid, decoded.email ?? '', username]
-    )
+  // Un fallo de BD aquí no es un problema del token: va al ErrorHandler (500)
+  try {
+    req.user = await syncFirebaseUser(decoded)
+  } catch (err) {
+    next(err)
+    return
+  }
+  next()
+}
 
+/**
+ * Crea o actualiza en MySQL el usuario de Firebase y devuelve su id.
+ *
+ * username y email son UNIQUE: si el username derivado del email ya existe
+ * (juan@gmail vs juan@hotmail) se le añade un sufijo sacado del uid, y si
+ * Firebase no da email se guarda NULL en vez de '' (que chocaba entre cuentas).
+ */
+const syncFirebaseUser = async (
+  decoded: DecodedIdToken
+): Promise<{ id: number; email: string | null }> => {
+  const email = decoded.email || null
+
+  const findByUid = async () => {
     const [rows] = await pool.query<RowDataPacket[]>(
       'SELECT id, email FROM users WHERE firebase_uid = ?',
       [decoded.uid]
     )
-
-    // Asegurar que el usuario tiene fila en streaks (crea si no existe)
-    await pool.query<ResultSetHeader>(
-      `INSERT IGNORE INTO streaks (user_id, current_streak, longest_streak, total_workouts, total_minutes)
-       VALUES (?, 0, 0, 0, 0)`,
-      [rows[0].id]
-    )
-
-    req.user = { id: rows[0].id, email: rows[0].email }
-    next()
-  } catch {
-    res.status(401).json({ error: 'Token inválido o expirado' })
+    return rows[0] as { id: number; email: string | null } | undefined
   }
+
+  const existing = await findByUid()
+  if (existing) {
+    if (email && existing.email !== email) {
+      await pool.query<ResultSetHeader>(
+        'UPDATE users SET email = ?, updated_at = NOW() WHERE id = ?',
+        [email, existing.id]
+      )
+    }
+    return { id: existing.id, email: email ?? existing.email }
+  }
+
+  const base = (email?.split('@')[0] || decoded.uid).slice(0, USERNAME_MAX)
+  const [taken] = await pool.query<RowDataPacket[]>(
+    'SELECT 1 FROM users WHERE username = ? LIMIT 1',
+    [base]
+  )
+  const suffix = decoded.uid.slice(0, 10)
+  const username = taken.length
+    ? `${base.slice(0, USERNAME_MAX - suffix.length - 1)}_${suffix}`
+    : base
+
+  let userId: number
+  try {
+    const [result] = await pool.query<ResultSetHeader>(
+      'INSERT INTO users (firebase_uid, email, username) VALUES (?, ?, ?)',
+      [decoded.uid, email, username]
+    )
+    userId = result.insertId
+  } catch (err) {
+    // Dos peticiones simultáneas del mismo usuario nuevo: la otra ya lo creó
+    const raced = (err as { code?: string }).code === 'ER_DUP_ENTRY' ? await findByUid() : undefined
+    if (!raced) throw err
+    return raced
+  }
+
+  // Asegurar que el usuario tiene fila en streaks
+  await pool.query<ResultSetHeader>(
+    `INSERT IGNORE INTO streaks (user_id, current_streak, longest_streak, total_workouts, total_minutes)
+     VALUES (?, 0, 0, 0, 0)`,
+    [userId]
+  )
+
+  return { id: userId, email }
 }
