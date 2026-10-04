@@ -24,26 +24,26 @@ const ExerciseController = {
   // GET /api/v1/exercises/:id
   getById: asyncHandler(async (req: Request, res: Response) => {
     const exercise = await ExerciseService.getById(parseInt(req.params.id, 10), req.user!.id)
-    res.status(HTTP_STATUS.OK).json(exercise)
+    res.status(HTTP_STATUS.OK).json({ data: exercise })
   }),
 
   // POST /api/v1/exercises
   create: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id
     const exercise = await ExerciseService.create(req.body, userId)
-    res.status(HTTP_STATUS.CREATED).json(exercise)
+    res.status(HTTP_STATUS.CREATED).json({ data: exercise })
   }),
 
   // PUT /api/v1/exercises/:id
   update: asyncHandler(async (req: Request, res: Response) => {
     const exercise = await ExerciseService.update(parseInt(req.params.id, 10), req.body, req.user!.id)
-    res.status(HTTP_STATUS.OK).json(exercise)
+    res.status(HTTP_STATUS.OK).json({ data: exercise })
   }),
 
   // DELETE /api/v1/exercises/:id
   delete: asyncHandler(async (req: Request, res: Response) => {
     await ExerciseService.delete(parseInt(req.params.id, 10), req.user!.id)
-    res.status(HTTP_STATUS.OK).json({ deleted: true })
+    res.status(HTTP_STATUS.OK).json({ data: { deleted: true } })
   }),
 }
 

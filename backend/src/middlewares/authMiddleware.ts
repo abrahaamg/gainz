@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import type { DecodedIdToken } from 'firebase-admin/auth'
 import { verifyIdToken } from '../services/firebaseService'
+import { AppError, UnauthorizedError } from '../utils/customErrors'
 import {
   createFirebaseUser,
   findUserByFirebaseUid,
@@ -24,7 +25,7 @@ const USERNAME_MAX = 100
 
 export const authMiddleware = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   if (devAuthBypass) {
@@ -36,13 +37,13 @@ export const authMiddleware = async (
     console.error(
       '[auth] FIREBASE_PROJECT_ID no está definido en producción: se rechazan todas las peticiones.'
     )
-    res.status(500).json({ error: 'Autenticación no configurada en el servidor' })
+    next(new AppError('Autenticación no configurada en el servidor', 500))
     return
   }
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Token no proporcionado' })
+    next(new UnauthorizedError('Token no proporcionado'))
     return
   }
 
@@ -50,7 +51,7 @@ export const authMiddleware = async (
   try {
     decoded = await verifyIdToken(authHeader.split(' ')[1])
   } catch {
-    res.status(401).json({ error: 'Token inválido o expirado' })
+    next(new UnauthorizedError('Token inválido o expirado'))
     return
   }
 
