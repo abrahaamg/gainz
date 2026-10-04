@@ -109,42 +109,6 @@ export const countAccessibleExercises = async (userId: number): Promise<number> 
   return rows.length
 }
 
-// ─── Find exercises with missing equipment + alternatives ─────
-// Returns exercises the user can't do with their current equipment
-// plus alternative exercises for the same muscle group
-export const findExercisesWithAlternatives = async (userId: number): Promise<RowDataPacket[]> => {
-  const equipment = await findUserEquipment(userId)
-  const names = equipment.map(e => e.catalog_name ?? e.name)
-
-  if (!names.length) {
-    // User has no equipment — all equipment-requiring exercises are inaccessible
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT e.id, e.name, e.muscle_group, e.category,
-              GROUP_CONCAT(DISTINCT ee.equipment_name) AS missing_equipment
-       FROM exercises e
-       JOIN exercise_equipment ee ON ee.exercise_id = e.id AND ee.is_optional = false
-       WHERE e.requires_equipment = true
-       GROUP BY e.id
-       ORDER BY e.name`
-    )
-    return rows
-  }
-
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT e.id, e.name, e.muscle_group, e.category,
-            GROUP_CONCAT(DISTINCT ee.equipment_name) AS missing_equipment
-     FROM exercises e
-     JOIN exercise_equipment ee ON ee.exercise_id = e.id
-       AND ee.is_optional = false
-       AND ee.equipment_name NOT IN (?)
-     WHERE e.requires_equipment = true
-     GROUP BY e.id
-     ORDER BY e.name`,
-    [names]
-  )
-  return rows
-}
-
 // ─── Recommendations ─────────────────────────────────────────
 export const findRecommendations = async (
   userId: number,
@@ -244,15 +208,5 @@ export const linkEquipmentToExercises = async (
      FROM exercises e
      WHERE e.id IN (?) AND e.created_by = ?`,
     [equipmentName, isOptional, exerciseIds, userId]
-  )
-}
-
-// ─── Unlink custom equipment from exercises ──────────────────
-export const unlinkEquipmentFromExercises = async (
-  equipmentName: string
-): Promise<void> => {
-  await pool.query(
-    'DELETE FROM exercise_equipment WHERE equipment_name = ?',
-    [equipmentName]
   )
 }

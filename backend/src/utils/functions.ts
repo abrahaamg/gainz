@@ -10,25 +10,3 @@ export const asyncHandler = (fn: AsyncHandler): RequestHandler => {
     fn(req, res, next).catch(next)
   }
 }
-
-/**
- * Filters out undefined/null values from an object (useful for dynamic UPDATE queries)
- */
-export const filterDefinedFields = <T extends Record<string, unknown>>(obj: T): Partial<T> => {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, value]) => value !== undefined && value !== null)
-  ) as Partial<T>
-}
-
-/**
- * Builds a parameterized SET clause for SQL UPDATE statements
- * Returns { clause: "col1 = $1, col2 = $2", values: [...] }
- */
-export const buildSetClause = (
-  fields: Record<string, unknown>
-): { clause: string; values: unknown[] } => {
-  const entries = Object.entries(fields)
-  const clause = entries.map(([col], i) => `${col} = $${i + 1}`).join(', ')
-  const values = entries.map(([, v]) => v)
-  return { clause, values }
-}
