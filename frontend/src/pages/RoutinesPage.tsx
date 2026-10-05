@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
-import { GOAL_LABELS } from '../utils/labels'
+import { label } from '../utils/labels'
 import { useAsync } from '../hooks/useAsync'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
@@ -77,7 +77,7 @@ export default function RoutinesPage() {
                 {/* Goal + Duration pills */}
                 <div className="flex flex-wrap items-center gap-2">
                   {routine.goal && (
-                    <span className="text-[10px] font-bold text-accent uppercase tracking-wider bg-accent/10 px-2.5 py-1 rounded-full">{GOAL_LABELS[routine.goal] ?? routine.goal}</span>
+                    <span className="text-[10px] font-bold text-accent uppercase tracking-wider bg-accent/10 px-2.5 py-1 rounded-full">{label('goals', routine.goal)}</span>
                   )}
                   {routine.estimated_duration_min && (
                     <span className="text-[10px] font-semibold text-neutral-500 bg-white/5 px-2.5 py-1 rounded-full">{routine.estimated_duration_min} min</span>

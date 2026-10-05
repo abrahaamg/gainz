@@ -4,7 +4,7 @@ import { equipmentService } from '../services/equipmentService'
 import { exerciseService } from '../services/exerciseService'
 import { CatalogItem, Equipment } from '../types/equipment'
 import type { Exercise } from '../types/exercise'
-import { MUSCLE_LABELS, EQUIPMENT_CATEGORY_LABELS as CATEGORY_LABELS } from '../utils/labels'
+import { label } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
 import Modal from '../components/ui/Modal'
 
@@ -158,7 +158,7 @@ export default function EquipmentPage() {
                       {bodyweightExercises.map(ex => (
                         <li key={ex.id} className="text-xs flex justify-between">
                           <span className="text-neutral-300 font-medium">{ex.name}</span>
-                          <span className="text-neutral-500 uppercase tracking-wider text-[11px] font-semibold">{MUSCLE_LABELS[ex.muscle_group] ?? ex.muscle_group}</span>
+                          <span className="text-neutral-500 uppercase tracking-wider text-[11px] font-semibold">{label('muscles', ex.muscle_group)}</span>
                         </li>
                       ))}
                     </ul>
@@ -198,7 +198,7 @@ export default function EquipmentPage() {
                         {equipmentExercises.map(ex => (
                           <li key={ex.id} className="text-xs flex justify-between">
                             <span className="text-neutral-300 font-medium">{ex.name}</span>
-                            <span className="text-neutral-500 uppercase tracking-wider text-[11px] font-semibold">{MUSCLE_LABELS[ex.muscle_group] ?? ex.muscle_group}</span>
+                            <span className="text-neutral-500 uppercase tracking-wider text-[11px] font-semibold">{label('muscles', ex.muscle_group)}</span>
                           </li>
                         ))}
                       </ul>
@@ -223,7 +223,7 @@ export default function EquipmentPage() {
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([cat, catItems]) => {
-            const catLabel = CATEGORY_LABELS[cat] ?? cat
+            const catLabel = label('equipmentCategories', cat)
             return (
               <div key={cat}>
                 <h2 className="section-title">{catLabel}</h2>
@@ -262,7 +262,7 @@ export default function EquipmentPage() {
                 {Object.entries(catalogGrouped).map(([cat, catItems]) => (
                   <div key={cat}>
                     <p className="section-title mb-2">
-                      {CATEGORY_LABELS[cat] ?? cat}
+                      {label('equipmentCategories', cat)}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {catItems.map(item => (

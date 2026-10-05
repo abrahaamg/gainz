@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
-import { CATEGORY_LABELS, DIFFICULTY_LABELS, GOAL_LABELS, translateMuscle } from '../utils/labels'
+import { label, translateMuscle } from '../utils/labels'
 import { useAsync } from '../hooks/useAsync'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
@@ -94,7 +94,7 @@ export default function RoutineDetailPage() {
           <div className="flex flex-wrap gap-2">
             {routine.goal && (
               <span className="border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-neutral-300 uppercase tracking-wider rounded-full">
-                {GOAL_LABELS[routine.goal] ?? routine.goal}
+                {label('goals', routine.goal)}
               </span>
             )}
             {routine.estimated_duration_min && (
@@ -146,7 +146,7 @@ export default function RoutineDetailPage() {
                         </div>
                         <div className="flex gap-2 mt-1">
                           <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-                            {CATEGORY_LABELS[ex.category] ?? ex.category}
+                            {label('categories', ex.category)}
                           </span>
                           <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
                             {translateMuscle(ex.muscle_group)}
@@ -188,7 +188,7 @@ export default function RoutineDetailPage() {
                         <div className="flex items-center gap-1.5">
                           <span className="text-neutral-500 font-semibold uppercase tracking-wider">{t('exercises.difficulty')}: </span>
                           <DifficultyDots level={ex.difficulty} />
-                          <span className="text-neutral-300 font-medium">{DIFFICULTY_LABELS[ex.difficulty] ?? ex.difficulty}</span>
+                          <span className="text-neutral-300 font-medium">{label('difficulty', ex.difficulty)}</span>
                         </div>
                       </div>
 

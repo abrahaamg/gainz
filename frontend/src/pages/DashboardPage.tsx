@@ -5,7 +5,7 @@ import { routineService } from '../services/routineService'
 import { progressService } from '../services/progressService'
 import { Routine } from '../types/routine'
 import { StreakStats, FrequencyPoint } from '../types/progress'
-import { GOAL_LABELS } from '../utils/labels'
+import { label } from '../utils/labels'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import AnimatedHero from '../components/ui/AnimatedHero'
 import GlowCard from '../components/ui/GlowCard'
@@ -173,7 +173,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {r.goal && (
                       <span className="text-[10px] font-bold text-accent uppercase tracking-wider bg-accent/10 px-2.5 py-1 rounded-full">
-                        {GOAL_LABELS[r.goal] ?? r.goal}
+                        {label('goals', r.goal)}
                       </span>
                     )}
                     {r.estimated_duration_min && (

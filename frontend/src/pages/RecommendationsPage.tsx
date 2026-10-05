@@ -30,7 +30,7 @@ interface GeneratedRoutine {
   exercises: GeneratedExercise[]
 }
 
-import { GOAL_LABELS, DIFFICULTY_LABELS as DIFF_LABELS } from '../utils/labels'
+import { label } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
 import Spinner from '../components/ui/Spinner'
 
@@ -168,7 +168,7 @@ export default function RecommendationsPage() {
                   {routines.length} {t('recommendations.weeklySessions')}
                 </p>
                 <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mt-0.5">
-                  {GOAL_LABELS[routines[0]?.goal] ?? routines[0]?.goal} — {DIFF_LABELS[routines[0]?.difficulty] ?? routines[0]?.difficulty}
+                  {label('goals', routines[0]?.goal ?? '')} — {label('difficulty', routines[0]?.difficulty ?? '')}
                 </p>
               </div>
               {!saved && (
