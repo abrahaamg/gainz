@@ -46,3 +46,10 @@ export interface FinishSessionPayload {
   rating?: number | null
   duration_seconds: number
 }
+
+export interface LastPerformance {
+  weight_kg: number | null
+  reps_done: number | null
+  rpe: number | null
+  plateau_detected: boolean
+}

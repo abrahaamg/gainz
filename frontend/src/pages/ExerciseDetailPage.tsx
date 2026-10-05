@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
-import { Exercise } from '../types/exercise'
+import { useAsync } from '../hooks/useAsync'
 import OneRMCalculator from '../components/exercises/OneRMCalculator'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import { translateMuscle } from '../utils/labels'
@@ -12,27 +12,24 @@ export default function ExerciseDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [exercise, setExercise] = useState<Exercise | null>(null)
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState<string | null>(null)
+  const { data: exercise, loading, error: loadError, reload } = useAsync(
+    () => exerciseService.getById(parseInt(id!, 10)),
+    [id],
+  )
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-
-  useEffect(() => {
-    exerciseService.getById(parseInt(id!, 10))
-      .then(setExercise)
-      .catch(() => setError(t('exercises.exerciseNotFound')))
-      .finally(() => setLoading(false))
-  }, [id])
+  const error = deleteError ?? (loadError ? t('exercises.exerciseNotFound') : null)
 
   const handleDelete = async () => {
     if (!exercise) return
     if (!confirm(t('exercises.deleteConfirm', { name: exercise.name }))) return
     setDeleting(true)
+    setDeleteError(null)
     try {
       await exerciseService.delete(exercise.id)
       navigate('/exercises')
     } catch {
-      setError(t('exercises.deleteError'))
+      setDeleteError(t('exercises.deleteError'))
       setDeleting(false)
     }
   }
@@ -47,7 +44,10 @@ export default function ExerciseDetailPage() {
 
   if (error || !exercise) return (
     <div className="max-w-3xl mx-auto px-6 py-10">
-      <div className="border border-red-200 bg-red-50 text-red-600 p-4 text-sm font-medium">{error}</div>
+      <div role="alert" className="border border-red-200 bg-red-50 text-red-600 p-4 text-sm font-medium">{error}</div>
+      {!!loadError && !deleteError && (
+        <button onClick={reload} className="mt-4 btn-primary px-5 py-2 text-sm">{t('common.retry')}</button>
+      )}
       <button onClick={() => navigate('/exercises')} className="mt-4 text-[11px] font-bold uppercase tracking-wider text-neutral-500 hover:text-neutral-900 transition-colors">
         <i className="bi bi-arrow-left mr-1" />{t('exercises.backToExercises')}
       </button>

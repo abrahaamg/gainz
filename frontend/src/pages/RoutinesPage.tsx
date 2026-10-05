@@ -1,40 +1,40 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
-import { Routine } from '../types/routine'
 import { GOAL_LABELS } from '../utils/labels'
+import { useAsync } from '../hooks/useAsync'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
+import Spinner from '../components/ui/Spinner'
+import ErrorState from '../components/ui/ErrorState'
 
 export default function RoutinesPage() {
   const { t } = useTranslation()
-  const [routines, setRoutines] = useState<Routine[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState<string | null>(null)
+  const { data, loading, error, reload, setData } = useAsync(() => routineService.getAll(), [])
+  const routines = data ?? []
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const navigate = useNavigate()
-
-  useEffect(() => {
-    routineService.getAll()
-      .then(setRoutines)
-      .catch(() => setError(t('routines.loadError')))
-      .finally(() => setLoading(false))
-  }, [])
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.preventDefault()
     if (!confirm(t('routines.deleteConfirm'))) return
-    await routineService.delete(id)
-    setRoutines(prev => prev.filter(r => r.id !== id))
+    setDeleteError(null)
+    try {
+      await routineService.delete(id)
+      setData(prev => prev?.filter(r => r.id !== id))
+    } catch {
+      setDeleteError(t('routines.deleteError'))
+    }
   }
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
-      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <Spinner />
     </div>
   )
 
-  if (error) return <div className="text-center py-16 text-red-500 text-sm font-medium">{error}</div>
+  if (error) return <ErrorState message={t('routines.loadError')} onRetry={reload} />
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
@@ -48,6 +48,10 @@ export default function RoutinesPage() {
           {t('routines.new')}
         </Link>
       </div>
+
+      {deleteError && (
+        <p role="alert" className="mb-4 text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">{deleteError}</p>
+      )}
 
       {routines.length === 0 ? (
         <div className="card border-dashed p-16 text-center">

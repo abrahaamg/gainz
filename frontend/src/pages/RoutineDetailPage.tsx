@@ -1,43 +1,53 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
-import { Routine, RoutineExercise } from '../types/routine'
 import { CATEGORY_LABELS, DIFFICULTY_LABELS, GOAL_LABELS, translateMuscle } from '../utils/labels'
+import { useAsync } from '../hooks/useAsync'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
+import Spinner from '../components/ui/Spinner'
+import ErrorState from '../components/ui/ErrorState'
+
+function parseMuscles(value: unknown): string[] {
+  if (Array.isArray(value)) return value
+  if (typeof value !== 'string') return []
+  try {
+    const parsed = JSON.parse(value || '[]')
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
 
 export default function RoutineDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [routine, setRoutine]     = useState<Routine | null>(null)
-  const [exercises, setExercises] = useState<RoutineExercise[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState<string | null>(null)
+  const { data: routine, loading, error, reload } = useAsync(() => routineService.getById(Number(id)), [id])
+  const exercises = routine?.exercises ?? []
   const [expandedId, setExpandedId] = useState<number | null>(null)
-
-  useEffect(() => {
-    routineService.getById(Number(id))
-      .then(r => { setRoutine(r); setExercises(r.exercises ?? []) })
-      .catch(() => setError(t('routines.routineNotFound')))
-      .finally(() => setLoading(false))
-  }, [id])
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleDelete = async () => {
     if (!confirm(t('routines.deleteConfirm'))) return
-    await routineService.delete(Number(id))
-    navigate('/routines')
+    setDeleteError(null)
+    try {
+      await routineService.delete(Number(id))
+      navigate('/routines')
+    } catch {
+      setDeleteError(t('routines.deleteError'))
+    }
   }
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
-      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <Spinner />
     </div>
   )
 
   if (error || !routine) return (
-    <div className="text-center py-16 text-red-500 text-sm font-medium">{error ?? 'Error'}</div>
+    <ErrorState message={t('routines.routineNotFound')} onRetry={reload} />
   )
 
   return (
@@ -45,6 +55,10 @@ export default function RoutineDetailPage() {
       <Link to="/routines" className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
         <i className="bi bi-arrow-left mr-1" />{t('nav.routines')}
       </Link>
+
+      {deleteError && (
+        <p role="alert" className="mb-4 text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">{deleteError}</p>
+      )}
 
       <GlowCard className="mb-6">
         <div className="p-6">
@@ -114,11 +128,7 @@ export default function RoutineDetailPage() {
         ) : (
           exercises.map((ex, i) => {
             const isOpen = expandedId === ex.re_id
-            const secondaryMuscles: string[] = Array.isArray(ex.secondary_muscles)
-              ? ex.secondary_muscles
-              : typeof ex.secondary_muscles === 'string'
-                ? JSON.parse(ex.secondary_muscles || '[]')
-                : []
+            const secondaryMuscles = parseMuscles(ex.secondary_muscles)
 
             return (
               <GlowCard key={ex.re_id}>

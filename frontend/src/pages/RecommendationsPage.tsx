@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import { useAsync } from '../hooks/useAsync'
+import { useAuth } from '../hooks/useAuth'
+import { isTrainingChanged, clearTrainingChanged } from '../utils/trainingFlag'
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -29,57 +32,59 @@ interface GeneratedRoutine {
 
 import { GOAL_LABELS, DIFFICULTY_LABELS as DIFF_LABELS } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
+import Spinner from '../components/ui/Spinner'
 
 /* ─── Component ──────────────────────────────────────────────── */
 
 export default function RecommendationsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [routines, setRoutines] = useState<GeneratedRoutine[]>([])
-  const [loading, setLoading]   = useState(true)
+  const { mysqlUser } = useAuth()
+  const uid = mysqlUser?.id
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(false)
   const [expanded, setExpanded] = useState<number | null>(null)
-  const [error, setError]       = useState<string | null>(null)
-  const [profileChanged, setProfileChanged] = useState(() => localStorage.getItem('gainz_training_changed') === '1')
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [profileChanged, setProfileChanged] = useState(() => isTrainingChanged(uid))
 
-  useEffect(() => {
-    api.get('/recommendations/generate')
-      .then(res => setRoutines(res.data.data))
-      .catch(() => setError(t('recommendations.generateError')))
-      .finally(() => setLoading(false))
-  }, [])
+  // Única función de carga: la usan el montaje, "Regenerar" y "Reintentar"
+  const { data, loading, error: loadError, reload: load } = useAsync(
+    async () => {
+      const res = await api.get<{ data: GeneratedRoutine[] }>('/recommendations/generate')
+      return res.data.data
+    },
+    [],
+  )
+  const routines = data ?? []
+  const error = actionError ?? (loadError ? t('recommendations.generateError') : null)
 
   const regenerate = () => {
-    setLoading(true); setError(null); setSaved(false); setExpanded(null)
-    setRoutines([])
-    localStorage.removeItem('gainz_training_changed')
+    if (loading) return
+    setActionError(null); setSaved(false); setExpanded(null)
+    clearTrainingChanged(uid)
     setProfileChanged(false)
-    api.get('/recommendations/generate')
-      .then(res => setRoutines(res.data.data))
-      .catch(() => setError(t('recommendations.generateError')))
-      .finally(() => setLoading(false))
+    load()
   }
 
   const acceptAll = async () => {
-    setSaving(true); setError(null)
+    setSaving(true); setActionError(null)
     try {
       await api.post('/recommendations/accept-all', { routines })
       setSaved(true)
     } catch {
-      setError(t('recommendations.saveAllError'))
+      setActionError(t('recommendations.saveAllError'))
     } finally {
       setSaving(false)
     }
   }
 
   const acceptOne = async (routine: GeneratedRoutine) => {
-    setSaving(true); setError(null)
+    setSaving(true); setActionError(null)
     try {
       const res = await api.post('/recommendations/accept', routine)
       navigate(`/routines/${res.data.data.id}`)
     } catch {
-      setError(t('recommendations.saveOneError'))
+      setActionError(t('recommendations.saveOneError'))
     } finally {
       setSaving(false)
     }
@@ -127,13 +132,17 @@ export default function RecommendationsPage() {
         </div>
       )}
 
+      {actionError && !loading && (
+        <p role="alert" className="mb-4 text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">{actionError}</p>
+      )}
+
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <div role="status" className="flex flex-col items-center justify-center py-16 gap-3">
+          <Spinner />
           <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-widest">{t('recommendations.analyzing')}</p>
         </div>
-      ) : error ? (
-        <div className="text-center py-16">
+      ) : loadError ? (
+        <div role="alert" className="text-center py-16">
           <p className="text-sm text-red-500 font-medium mb-4">{error}</p>
           <button onClick={regenerate} className="text-[11px] font-black uppercase tracking-wider text-accent hover:text-accent-dk">
             {t('common.retry')}

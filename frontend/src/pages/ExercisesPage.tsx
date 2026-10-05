@@ -1,23 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
 import { useDebounce } from '../hooks/useDebounce'
-import { Exercise, ExerciseCategory, Difficulty } from '../types/exercise'
+import { useAsync } from '../hooks/useAsync'
+import { ExerciseCategory, Difficulty } from '../types/exercise'
 import { translateMuscle } from '../utils/labels'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
+import ErrorState from '../components/ui/ErrorState'
 
 const CATEGORIES: ExerciseCategory[] = ['strength', 'cardio', 'flexibility', 'hiit', 'balance']
 
 export default function ExercisesPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [exercises, setExercises] = useState<Exercise[]>([])
-  const [total, setTotal]         = useState(0)
   const [page, setPage]           = useState(1)
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState<string | null>(null)
 
   const [search, setSearch]       = useState('')
   const [category, setCategory]   = useState<ExerciseCategory | ''>('')
@@ -26,23 +24,23 @@ export default function ExercisesPage() {
   const debouncedSearch = useDebounce(search, 300)
   const LIMIT = 12
 
-  useEffect(() => { setPage(1) }, [debouncedSearch, category, difficulty])
+  // Cada handler de filtro vuelve a la página 1 en el mismo evento (sin efecto aparte)
+  const changeSearch     = (v: string) => { setSearch(v); setPage(1) }
+  const changeCategory   = (v: ExerciseCategory | '') => { setCategory(v); setPage(1) }
+  const changeDifficulty = (v: Difficulty | '') => { setDifficulty(v); setPage(1) }
 
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
-    exerciseService.getAll({
+  const { data: result, loading, error, reload } = useAsync(
+    () => exerciseService.getAll({
       q: debouncedSearch || undefined,
       category: category || undefined,
       difficulty: difficulty || undefined,
       page,
       limit: LIMIT,
-    }).then(result => {
-      setExercises(result.data)
-      setTotal(result.pagination.total)
-    }).catch(() => setError(t('exercises.loadError')))
-    .finally(() => setLoading(false))
-  }, [debouncedSearch, category, difficulty, page])
+    }),
+    [debouncedSearch, category, difficulty, page],
+  )
+  const exercises = result?.data ?? []
+  const total = result?.pagination.total ?? 0
 
   const totalPages = Math.ceil(total / LIMIT)
 
@@ -67,14 +65,14 @@ export default function ExercisesPage() {
         type="text"
         placeholder={t('exercises.searchPlaceholder')}
         value={search}
-        onChange={e => setSearch(e.target.value)}
+        onChange={e => changeSearch(e.target.value)}
         className="w-full form-input mb-4"
       />
 
       {/* Category filter */}
       <div className="flex flex-wrap gap-2 mb-3">
         <button
-          onClick={() => setCategory('')}
+          onClick={() => changeCategory('')}
           className={`chip ${category === '' ? 'chip-active' : ''}`}
         >
           {t('common.allMasc')}
@@ -82,7 +80,7 @@ export default function ExercisesPage() {
         {CATEGORIES.map(cat => (
           <button
             key={cat}
-            onClick={() => setCategory(cat === category ? '' : cat)}
+            onClick={() => changeCategory(cat === category ? '' : cat)}
             className={`chip ${category === cat ? 'chip-active' : ''}`}
           >
             {t(`categories.${cat}`)}
@@ -95,7 +93,7 @@ export default function ExercisesPage() {
         {(['', 'easy', 'medium', 'hard'] as const).map(d => (
           <button
             key={d}
-            onClick={() => setDifficulty(d)}
+            onClick={() => changeDifficulty(d)}
             className={`chip ${difficulty === d ? 'chip-active' : ''}`}
           >
             {d === '' ? t('common.all') : t(`difficulty.${d}`)}
@@ -111,7 +109,7 @@ export default function ExercisesPage() {
         </div>
       )}
 
-      {error && <div className="border border-red-200 bg-red-50 text-red-600 p-4 text-sm font-medium rounded-2xl">{error}</div>}
+      {!!error && !loading && <ErrorState message={t('exercises.loadError')} onRetry={reload} />}
 
       {!loading && !error && exercises.length === 0 && (
         <div className="text-center py-16 text-neutral-400 text-sm font-medium">{t('exercises.notFound')}</div>

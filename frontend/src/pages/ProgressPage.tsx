@@ -7,11 +7,10 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { progressService } from '../services/progressService'
-import {
-  ChartsData, ExerciseOption, PersonalRecord,
-  ProgressionPoint, Badge, StreakStats,
-} from '../types/progress'
+import { useAsync } from '../hooks/useAsync'
 import GlowCard from '../components/ui/GlowCard'
+import Spinner from '../components/ui/Spinner'
+import ErrorState from '../components/ui/ErrorState'
 
 const PERIODS = [
   { label: '7d',  value: 7 },
@@ -36,15 +35,7 @@ export default function ProgressPage() {
   const [days, setDays]               = useState(30)
   const [visualDays, setVisualDays]   = useState(30)
   const deferRef = useRef<ReturnType<typeof setTimeout>>(null)
-  const [charts, setCharts]           = useState<ChartsData | null>(null)
-  const [exercises, setExercises]     = useState<ExerciseOption[]>([])
-  const [selectedEx, setSelectedEx]   = useState<number | null>(null)
-  const [progression, setProgression] = useState<ProgressionPoint[]>([])
-  const [records, setRecords]         = useState<PersonalRecord[]>([])
-  const [streak, setStreak]           = useState<StreakStats | null>(null)
-  const [badges, setBadges]           = useState<Badge[]>([])
-  const [oneRMData, setOneRMData]         = useState<ProgressionPoint[]>([])
-  const [loadingCharts, setLoadingCharts] = useState(true)
+  const [selectedExId, setSelectedExId] = useState<number | null>(null)
 
   const handlePeriodChange = useCallback((value: number) => {
     setVisualDays(value)
@@ -52,33 +43,45 @@ export default function ProgressPage() {
     deferRef.current = setTimeout(() => setDays(value), 350)
   }, [])
 
-  useEffect(() => {
-    setLoadingCharts(true)
-    progressService.getCharts(days).then(setCharts).finally(() => setLoadingCharts(false))
-  }, [days])
+  useEffect(() => () => { if (deferRef.current) clearTimeout(deferRef.current) }, [])
 
-  useEffect(() => {
-    progressService.getTrainedExercises().then(exs => {
-      setExercises(exs)
-      if (exs.length) {
-        setSelectedEx(exs[0].id)
-        progressService.getExerciseProgression(exs[0].id).then(setProgression)
-        progressService.get1RMProgression(exs[0].id).then(setOneRMData)
-      }
-    })
-    progressService.getRecords().then(setRecords)
-    progressService.getStats().then(({ streak: s, badges: b }) => { setStreak(s); setBadges(b) })
-  }, [])
+  const chartsQ    = useAsync(() => progressService.getCharts(days), [days])
+  const exercisesQ = useAsync(() => progressService.getTrainedExercises(), [])
+  const recordsQ   = useAsync(() => progressService.getRecords(), [])
+  const statsQ     = useAsync(() => progressService.getStats(), [])
+
+  const charts    = chartsQ.data
+  const exercises = exercisesQ.data ?? []
+  const records   = recordsQ.data ?? []
+  const streak    = statsQ.data?.streak ?? null
+  const badges    = statsQ.data?.badges ?? []
+
+  // Ejercicio seleccionado: el elegido por el usuario o, por defecto, el primero entrenado
+  const selectedEx = selectedExId ?? exercises[0]?.id ?? null
+
+  const progressionQ = useAsync(async () => {
+    if (selectedEx === null) return { progression: [], oneRM: [] }
+    const [progression, oneRM] = await Promise.all([
+      progressService.getExerciseProgression(selectedEx),
+      progressService.get1RMProgression(selectedEx),
+    ])
+    return { progression, oneRM }
+  }, [selectedEx])
+  const progression = progressionQ.data?.progression ?? []
+  const oneRMData   = progressionQ.data?.oneRM ?? []
+
+  const baseError = exercisesQ.error || recordsQ.error || statsQ.error
+  const retryBase = () => {
+    if (exercisesQ.error) exercisesQ.reload()
+    if (recordsQ.error) recordsQ.reload()
+    if (statsQ.error) statsQ.reload()
+  }
 
   const RECORD_LABELS: Record<string, string> = {
     max_weight: t('progress.maxWeight'), max_reps: t('progress.maxReps'), max_duration: t('progress.maxDuration'),
   }
 
-  const handleExerciseChange = (id: number) => {
-    setSelectedEx(id)
-    progressService.getExerciseProgression(id).then(setProgression)
-    progressService.get1RMProgression(id).then(setOneRMData)
-  }
+  const handleExerciseChange = (id: number) => setSelectedExId(id)
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
@@ -107,6 +110,8 @@ export default function ProgressPage() {
           ))}
         </div>
       </div>
+
+      {!!baseError && <ErrorState message={t('common.loadError')} onRetry={retryBase} />}
 
       {streak && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -147,10 +152,12 @@ export default function ProgressPage() {
         </section>
       )}
 
-      {loadingCharts ? (
+      {chartsQ.loading ? (
         <div className="flex justify-center py-12">
-          <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <Spinner />
         </div>
+      ) : chartsQ.error ? (
+        <ErrorState message={t('common.loadError')} onRetry={chartsQ.reload} />
       ) : charts && (
         <>
           <section>
@@ -240,6 +247,7 @@ export default function ProgressPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="section-title mb-0">{t('progress.exerciseProgression')}</h2>
           <select
+            aria-label={t('progress.exerciseProgression')}
             value={selectedEx ?? ''}
             onChange={e => handleExerciseChange(Number(e.target.value))}
             className="border border-neutral-300 shadow-input px-4 py-2 text-[11px] font-bold bg-white text-neutral-900 uppercase tracking-wider rounded-full"
@@ -248,6 +256,7 @@ export default function ProgressPage() {
             {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
           </select>
         </div>
+        {!!progressionQ.error && <ErrorState message={t('common.loadError')} onRetry={progressionQ.reload} />}
         <GlowCard>
           <div className="p-5">
             {progression.length === 0 ? <EmptyChart label={t('common.noData')} /> : (

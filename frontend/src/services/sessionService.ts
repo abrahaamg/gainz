@@ -1,5 +1,5 @@
 import api from './api'
-import { AddSetPayload, FinishSessionPayload, Session } from '../types/session'
+import { AddSetPayload, FinishSessionPayload, LastPerformance, Session } from '../types/session'
 
 export const sessionService = {
   create: async (routineId: number): Promise<{ id: number }> => {
@@ -17,10 +17,8 @@ export const sessionService = {
     return res.data.data
   },
 
-  getLastPerformance: async (
-    exerciseId: number
-  ): Promise<{ weight_kg: number | null; reps_done: number | null; rpe: number | null; plateau_detected: boolean }> => {
-    const res = await api.get<{ data: { weight_kg: number | null; reps_done: number | null; rpe: number | null; plateau_detected: boolean } }>(
+  getLastPerformance: async (exerciseId: number): Promise<LastPerformance> => {
+    const res = await api.get<{ data: LastPerformance }>(
       `/sessions/exercises/${exerciseId}/last-performance`
     )
     return res.data.data
