@@ -1,8 +1,6 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { signOut } from 'firebase/auth'
 import { useTranslation } from 'react-i18next'
-import { auth } from '../../config/firebase'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useLogout } from '../../hooks/useAuth'
 
 const NAV_KEYS = [
   { to: '/exercises',      key: 'exercises' },
@@ -18,14 +16,11 @@ export default function Navbar() {
   const { t } = useTranslation()
   const navigate  = useNavigate()
   const location  = useLocation()
-  const { clear } = useAuthStore()
+  const logout = useLogout()
   const isHome = location.pathname === '/'
 
   const handleLogout = async () => {
-    try {
-      if (auth.currentUser) await signOut(auth)
-    } catch { /* DEV mode — no Firebase */ }
-    clear()
+    await logout()
     navigate('/login', { replace: true })
   }
 

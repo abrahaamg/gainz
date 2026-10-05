@@ -4,9 +4,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import GlowCard from '../components/ui/GlowCard'
+import { DEV_MODE } from '../config/authMode'
+import { firebaseErrorKey } from '../utils/firebaseErrors'
 
 const googleProvider = new GoogleAuthProvider()
-const DEV_MODE = !import.meta.env.VITE_FIREBASE_PROJECT_ID
 
 export default function LoginPage() {
   const { t } = useTranslation()
@@ -28,16 +29,9 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await signInWithEmailAndPassword(auth, email, password)
-      navigate('/', { replace: true })
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code
-      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        setError(t('auth.wrongCredentials'))
-      } else if (code === 'auth/too-many-requests') {
-        setError(t('auth.tooManyAttempts'))
-      } else {
-        setError(t('auth.loginError'))
-      }
+      const key = firebaseErrorKey(err, 'auth.loginError')
+      if (key) setError(t(key))
     } finally {
       setLoading(false)
     }
@@ -54,12 +48,9 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await signInWithPopup(auth, googleProvider)
-      navigate('/', { replace: true })
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code
-      if (code !== 'auth/popup-closed-by-user') {
-        setError(t('auth.googleError'))
-      }
+      const key = firebaseErrorKey(err, 'auth.googleError')
+      if (key) setError(t(key))
     } finally {
       setLoading(false)
     }
@@ -80,8 +71,9 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.email')}</label>
+                <label htmlFor="login-email" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.email')}</label>
                 <input
+                  id="login-email"
                   type="email"
                   required
                   value={email}
@@ -92,8 +84,9 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.password')}</label>
+                <label htmlFor="login-password" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.password')}</label>
                 <input
+                  id="login-password"
                   type="password"
                   required
                   value={password}
@@ -104,7 +97,7 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <p className="text-xs text-red-400 font-semibold uppercase tracking-wide bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">
+                <p role="alert" className="text-xs text-red-400 font-semibold uppercase tracking-wide bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">
                   {error}
                 </p>
               )}

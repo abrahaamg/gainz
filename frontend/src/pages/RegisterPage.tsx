@@ -4,9 +4,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import GlowCard from '../components/ui/GlowCard'
+import { DEV_MODE } from '../config/authMode'
+import { firebaseErrorKey } from '../utils/firebaseErrors'
 
 const googleProvider = new GoogleAuthProvider()
-const DEV_MODE = !import.meta.env.VITE_FIREBASE_PROJECT_ID
 
 export default function RegisterPage() {
   const { t } = useTranslation()
@@ -38,16 +39,9 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await createUserWithEmailAndPassword(auth, email, password)
-      navigate('/onboarding', { replace: true })
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code
-      if (code === 'auth/email-already-in-use') {
-        setError(t('auth.emailInUse'))
-      } else if (code === 'auth/invalid-email') {
-        setError(t('auth.invalidEmail'))
-      } else {
-        setError(t('auth.createError'))
-      }
+      const key = firebaseErrorKey(err, 'auth.createError')
+      if (key) setError(t(key))
     } finally {
       setLoading(false)
     }
@@ -64,12 +58,9 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await signInWithPopup(auth, googleProvider)
-      navigate('/onboarding', { replace: true })
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code
-      if (code !== 'auth/popup-closed-by-user') {
-        setError(t('auth.registerGoogleError'))
-      }
+      const key = firebaseErrorKey(err, 'auth.registerGoogleError')
+      if (key) setError(t(key))
     } finally {
       setLoading(false)
     }
@@ -90,8 +81,9 @@ export default function RegisterPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.email')}</label>
+                <label htmlFor="register-email" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.email')}</label>
                 <input
+                  id="register-email"
                   type="email"
                   required
                   value={email}
@@ -102,8 +94,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.password')}</label>
+                <label htmlFor="register-password" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.password')}</label>
                 <input
+                  id="register-password"
                   type="password"
                   required
                   value={password}
@@ -114,8 +107,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.confirmPassword')}</label>
+                <label htmlFor="register-confirm" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.confirmPassword')}</label>
                 <input
+                  id="register-confirm"
                   type="password"
                   required
                   value={confirm}
@@ -125,7 +119,7 @@ export default function RegisterPage() {
               </div>
 
               {error && (
-                <p className="text-xs text-red-400 font-semibold uppercase tracking-wide bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">
+                <p role="alert" className="text-xs text-red-400 font-semibold uppercase tracking-wide bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">
                   {error}
                 </p>
               )}

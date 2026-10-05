@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore, MysqlUser } from '../store/useAuthStore'
 import api from '../services/api'
 import GlowCard from '../components/ui/GlowCard'
+import { setTrainingChanged } from '../utils/trainingFlag'
 
 const GOAL_KEYS: Record<string, string> = {
   fat_loss:         'onboarding.goalFatLoss',
@@ -94,7 +95,7 @@ export default function ProfilePage() {
       setMysqlUser(res.data.data as MysqlUser)
       // Si cambió entrenamiento, marcar flag para aviso en recomendaciones
       if (trainingChanged) {
-        localStorage.setItem('gainz_training_changed', '1')
+        setTrainingChanged(mysqlUser?.id)
       }
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -154,8 +155,8 @@ export default function ProfilePage() {
             <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-4">{t('profile.personalData')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.username')}</label>
-                <input
+                <label htmlFor="profile-1" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.username')}</label>
+                <input id="profile-1"
                   type="text"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
@@ -164,8 +165,8 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.email')}</label>
-                <input
+                <label htmlFor="profile-2" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.email')}</label>
+                <input id="profile-2"
                   type="email"
                   value={mysqlUser?.email ?? ''}
                   disabled
@@ -179,8 +180,8 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.birthDate')}</label>
-                <input
+                <label htmlFor="profile-3" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.birthDate')}</label>
+                <input id="profile-3"
                   type="date"
                   value={birthDate}
                   onChange={e => setBirthDate(e.target.value)}
@@ -204,8 +205,8 @@ export default function ProfilePage() {
             <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-4">{t('profile.bodyMeasures')}</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.weightKg')}</label>
-                <input
+                <label htmlFor="profile-4" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.weightKg')}</label>
+                <input id="profile-4"
                   type="number"
                   min={30}
                   max={300}
@@ -217,8 +218,8 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.heightCm')}</label>
-                <input
+                <label htmlFor="profile-5" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.heightCm')}</label>
+                <input id="profile-5"
                   type="number"
                   min={100}
                   max={250}
@@ -252,8 +253,8 @@ export default function ProfilePage() {
             <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-4">{t('profile.training')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.level')}</label>
-                <select
+                <label htmlFor="profile-6" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.level')}</label>
+                <select id="profile-6"
                   value={fitnessLevel}
                   onChange={e => setFitnessLevel(e.target.value)}
                   className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
@@ -265,8 +266,8 @@ export default function ProfilePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.experience')}</label>
-                <select
+                <label htmlFor="profile-7" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.experience')}</label>
+                <select id="profile-7"
                   value={experience}
                   onChange={e => setExperience(e.target.value)}
                   className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
@@ -278,8 +279,8 @@ export default function ProfilePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.mainGoal')}</label>
-                <select
+                <label htmlFor="profile-8" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.mainGoal')}</label>
+                <select id="profile-8"
                   value={primaryGoal}
                   onChange={e => setPrimaryGoal(e.target.value)}
                   className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
@@ -291,8 +292,8 @@ export default function ProfilePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.sessionDuration')}</label>
-                <select
+                <label htmlFor="profile-9" className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.sessionDuration')}</label>
+                <select id="profile-9"
                   value={sessionDuration}
                   onChange={e => setSessionDuration(e.target.value ? Number(e.target.value) : '')}
                   className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
@@ -319,7 +320,7 @@ export default function ProfilePage() {
 
         {/* Feedback */}
         {error && (
-          <p className="text-xs text-red-400 font-semibold uppercase tracking-wide bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">
+          <p role="alert" className="text-xs text-red-400 font-semibold uppercase tracking-wide bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">
             {error}
           </p>
         )}
@@ -334,7 +335,7 @@ export default function ProfilePage() {
             {saving ? t('common.saving') : t('profile.saveChanges')}
           </button>
           {saved && (
-            <span className="text-[11px] font-black text-green-400 uppercase tracking-wider bg-green-500/10 backdrop-blur px-3 py-2 rounded-full">
+            <span role="status" className="text-[11px] font-black text-green-400 uppercase tracking-wider bg-green-500/10 backdrop-blur px-3 py-2 rounded-full">
               <i className="bi bi-check-circle-fill mr-1" />{t('common.saved')}
             </span>
           )}
