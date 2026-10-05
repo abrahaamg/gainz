@@ -1,6 +1,11 @@
 {
   "common": {
     "loading": "Cargando...",
+    "errorGeneric": "Ha ocurrido un error. Inténtalo de nuevo.",
+    "error": "Error",
+    "loadError": "No se pudieron cargar los datos.",
+    "comingSoon": "Próximamente — en construcción",
+    "notFound": "404 — Página no encontrada",
     "saving": "Guardando...",
     "save": "Guardar",
     "cancel": "Cancelar",
@@ -32,10 +37,10 @@
     "retry": "Reintentar",
     "saved": "Guardado",
     "deleting": "Eliminando...",
-    "error": "Error",
-    "noData": "Sin datos"
+    "noData": "Sin datos",
+    "menu": "Menú",
+    "openMenu": "Abrir menú"
   },
-
   "nav": {
     "exercises": "Ejercicios",
     "routines": "Rutinas",
@@ -45,9 +50,12 @@
     "recommendations": "Recomendaciones",
     "glossary": "Glosario",
     "profile": "Perfil",
-    "logout": "Salir"
+    "logout": "Salir",
+    "home": "Inicio",
+    "more": "Más",
+    "main": "Navegación principal",
+    "tabs": "Navegación inferior"
   },
-
   "auth": {
     "login": "Iniciar sesión",
     "register": "Crear cuenta",
@@ -78,9 +86,13 @@
     "invalidEmail": "Email inválido",
     "createError": "Error al crear la cuenta. Inténtalo de nuevo.",
     "passwordMismatch": "Las contraseñas no coinciden",
-    "passwordTooShort": "La contraseña debe tener al menos 6 caracteres"
+    "passwordTooShort": "La contraseña debe tener al menos 6 caracteres",
+    "networkError": "Sin conexión. Revisa tu red e inténtalo de nuevo.",
+    "popupBlocked": "El navegador ha bloqueado la ventana de Google. Permite las ventanas emergentes.",
+    "userDisabled": "Esta cuenta está deshabilitada",
+    "profileLoadError": "No se pudo cargar tu perfil.",
+    "configMissing": "Falta la configuración de autenticación (Firebase). Contacta con el administrador."
   },
-
   "dashboard": {
     "activity30d": "Actividad 30 d",
     "noSessions": "Sin sesiones en los últimos 30 días",
@@ -95,9 +107,13 @@
     "noRoutines": "Sin rutinas todavía",
     "createFirst": "Crear primera rutina",
     "timesCompleted": "x completada",
-    "startWorkout": "Empezar entrenamiento"
+    "startWorkout": "Empezar entrenamiento",
+    "nextWorkout": "Siguiente entrenamiento",
+    "nextWorkoutHint": "La rutina que menos has completado",
+    "exercisesCount": "{{count}} ejercicios",
+    "loadError": "No se pudo cargar tu panel.",
+    "noRoutinesHint": "Crea una rutina y empieza a registrar tu progreso."
   },
-
   "exercises": {
     "title": "Ejercicios",
     "inCatalog": "en el catálogo",
@@ -162,10 +178,11 @@
       "hypertrophyEndurance": "Hipertrofia–Resistencia",
       "endurance": "Resistencia muscular",
       "warmup": "Calentamiento"
-    }
+    },
+    "notFoundHint": "Prueba con otra búsqueda o quita algún filtro."
   },
-
   "routines": {
+    "deleteError": "No se pudo eliminar la rutina. Inténtalo de nuevo.",
     "title": "Mis Rutinas",
     "new": "+ Nueva",
     "deleteConfirm": "¿Eliminar esta rutina?",
@@ -207,7 +224,6 @@
     "saveError": "Error al guardar la rutina",
     "nameRequired": "El nombre es obligatorio"
   },
-
   "progress": {
     "title": "Progreso",
     "subtitle": "Estadísticas de entrenamientos",
@@ -236,9 +252,11 @@
     "value": "Valor",
     "date": "Fecha",
     "maxReps": "Reps máx",
-    "maxDuration": "Duración máx"
+    "maxDuration": "Duración máx",
+    "loadError": "No se pudieron cargar tus estadísticas.",
+    "noChartData": "Todavía no hay datos para esta gráfica.",
+    "noChartHint": "Completa un entrenamiento para verlos aquí."
   },
-
   "equipment": {
     "title": "Mi Equipamiento",
     "elements": "elementos",
@@ -269,7 +287,6 @@
     "noCategory": "sin categoría",
     "customNamePlaceholder": "ej. \"Disco de 2.5kg\""
   },
-
   "recommendations": {
     "title": "Recomendaciones",
     "subtitle": "Rutinas generadas a partir de tu perfil y equipamiento",
@@ -294,7 +311,6 @@
     "saveAllError": "Error al guardar las rutinas",
     "saveOneError": "Error al guardar la rutina"
   },
-
   "history": {
     "title": "Historial",
     "sessionsRegistered": "sesiones registradas",
@@ -314,7 +330,6 @@
     "viewSummary": "Ver resumen completo",
     "freeSession": "Sesión libre"
   },
-
   "glossary": {
     "title": "Glosario",
     "subtitle": "Terminología esencial del entrenamiento de fuerza",
@@ -327,36 +342,170 @@
     "terms": "términos",
     "noResults": "No se encontraron términos para esta búsqueda.",
     "termsData": [
-      { "name": "1RM", "category": "metrics", "definition": "Repetición máxima. El peso máximo que puedes levantar una sola vez con buena técnica.", "example": "Si tu 1RM de sentadilla es 120kg, significa que puedes hacer una repetición con ese peso." },
-      { "name": "Serie", "category": "training", "definition": "Conjunto de repeticiones consecutivas de un ejercicio sin descanso.", "example": "3 series de 10 repeticiones de press de banca." },
-      { "name": "Repetición (Rep)", "category": "training", "definition": "Una ejecución completa de un ejercicio, desde la posición inicial hasta el final y vuelta.", "example": "Bajar y subir la barra una vez en press de banca = 1 repetición." },
-      { "name": "RPE", "category": "metrics", "definition": "Rate of Perceived Exertion. Escala del 1 al 10 que mide el esfuerzo percibido.", "example": "RPE 7 = podrías haber hecho 3 reps más. RPE 10 = fallo muscular." },
-      { "name": "Supino", "category": "anatomy", "definition": "Agarre con las palmas hacia arriba (mirando al techo).", "example": "El curl de bíceps se hace con agarre supino." },
-      { "name": "Prono", "category": "anatomy", "definition": "Agarre con las palmas hacia abajo (mirando al suelo).", "example": "El remo con agarre prono enfatiza más la espalda alta." },
-      { "name": "ROM", "category": "metrics", "definition": "Range of Motion. Rango completo de movimiento de una articulación durante un ejercicio.", "example": "Hacer sentadilla profunda tiene más ROM que media sentadilla." },
-      { "name": "TUT", "category": "metrics", "definition": "Time Under Tension. Tiempo total que el músculo está bajo carga durante una serie.", "example": "Bajar en 3s y subir en 1s = 4s de TUT por rep. En 10 reps = 40s TUT." },
-      { "name": "DOMS", "category": "training", "definition": "Delayed Onset Muscle Soreness. Dolor muscular que aparece 24-72h después del ejercicio.", "example": "Es normal tener DOMS después de entrenar piernas por primera vez en semanas." },
-      { "name": "Deload", "category": "training", "definition": "Semana de descarga. Período planificado de reducción de volumen/intensidad para favorecer la recuperación.", "example": "Cada 4-6 semanas de entrenamiento intenso, programa un deload." },
-      { "name": "Mesociclo", "category": "training", "definition": "Bloque de entrenamiento de 3-6 semanas con un objetivo específico.", "example": "Un mesociclo de hipertrofia de 4 semanas seguido de un deload." },
-      { "name": "Superserie", "category": "training", "definition": "Realizar dos ejercicios seguidos sin descanso entre ellos.", "example": "Superserie de curl de bíceps + extensión de tríceps." },
-      { "name": "Drop set", "category": "training", "definition": "Técnica donde reduces el peso al llegar al fallo y sigues haciendo repeticiones.", "example": "Press con 80kg al fallo, bajar a 60kg y seguir, bajar a 40kg y seguir." },
-      { "name": "Fallo muscular", "category": "training", "definition": "Punto en el que no puedes completar otra repetición con buena técnica.", "example": "Si en la rep 8 no puedes subir la barra, has llegado al fallo." },
-      { "name": "Volumen", "category": "metrics", "definition": "Cantidad total de trabajo: series × reps × peso.", "example": "3 series × 10 reps × 80kg = 2400kg de volumen." },
-      { "name": "Intensidad", "category": "metrics", "definition": "Porcentaje del peso respecto a tu 1RM.", "example": "Si tu 1RM es 100kg y trabajas con 80kg, estás al 80% de intensidad." },
-      { "name": "Compuesto", "category": "training", "definition": "Ejercicio que involucra múltiples articulaciones y grupos musculares.", "example": "Sentadilla, peso muerto, press de banca son ejercicios compuestos." },
-      { "name": "Aislamiento", "category": "training", "definition": "Ejercicio que trabaja un solo grupo muscular con una articulación.", "example": "Curl de bíceps, extensión de cuádriceps son ejercicios de aislamiento." },
-      { "name": "Hipertrofia", "category": "training", "definition": "Aumento del tamaño muscular mediante entrenamiento y nutrición adecuada.", "example": "Rangos de 8-12 repeticiones con carga moderada favorecen la hipertrofia." },
-      { "name": "Concéntrica", "category": "anatomy", "definition": "Fase del movimiento donde el músculo se acorta al contraerse.", "example": "En el curl de bíceps, la fase concéntrica es al subir la mancuerna." },
-      { "name": "Excéntrica", "category": "anatomy", "definition": "Fase del movimiento donde el músculo se alarga bajo tensión.", "example": "En el curl de bíceps, bajar la mancuerna controladamente es la fase excéntrica." },
-      { "name": "Isométrica", "category": "anatomy", "definition": "Contracción muscular sin cambio de longitud del músculo.", "example": "Mantener una plancha es un ejercicio isométrico." },
-      { "name": "Sobrecarga progresiva", "category": "training", "definition": "Principio de aumentar gradualmente el estímulo de entrenamiento para seguir progresando.", "example": "Añadir 2.5kg a la barra cada semana o hacer 1 rep más que la sesión anterior." },
-      { "name": "Déficit calórico", "category": "nutrition", "definition": "Consumir menos calorías de las que gastas, necesario para perder grasa.", "example": "Si gastas 2500 kcal y comes 2000 kcal, tienes un déficit de 500 kcal." },
-      { "name": "Superávit calórico", "category": "nutrition", "definition": "Consumir más calorías de las que gastas, necesario para ganar músculo.", "example": "Un superávit de 300-500 kcal sobre tu mantenimiento es ideal para ganar masa muscular." },
-      { "name": "Proteína", "category": "nutrition", "definition": "Macronutriente esencial para la reparación y crecimiento muscular.", "example": "Se recomienda 1.6-2.2g de proteína por kg de peso corporal para ganar músculo." },
-      { "name": "Periodización", "category": "training", "definition": "Planificación sistemática del entrenamiento en ciclos con objetivos diferentes.", "example": "4 semanas de fuerza → 4 semanas de hipertrofia → 1 semana de deload." }
+      {
+        "name": "1RM",
+        "category": "metrics",
+        "definition": "Repetición máxima. El peso máximo que puedes levantar una sola vez con buena técnica.",
+        "example": "Si tu 1RM de sentadilla es 120kg, significa que puedes hacer una repetición con ese peso."
+      },
+      {
+        "name": "Serie",
+        "category": "training",
+        "definition": "Conjunto de repeticiones consecutivas de un ejercicio sin descanso.",
+        "example": "3 series de 10 repeticiones de press de banca."
+      },
+      {
+        "name": "Repetición (Rep)",
+        "category": "training",
+        "definition": "Una ejecución completa de un ejercicio, desde la posición inicial hasta el final y vuelta.",
+        "example": "Bajar y subir la barra una vez en press de banca = 1 repetición."
+      },
+      {
+        "name": "RPE",
+        "category": "metrics",
+        "definition": "Rate of Perceived Exertion. Escala del 1 al 10 que mide el esfuerzo percibido.",
+        "example": "RPE 7 = podrías haber hecho 3 reps más. RPE 10 = fallo muscular."
+      },
+      {
+        "name": "Supino",
+        "category": "anatomy",
+        "definition": "Agarre con las palmas hacia arriba (mirando al techo).",
+        "example": "El curl de bíceps se hace con agarre supino."
+      },
+      {
+        "name": "Prono",
+        "category": "anatomy",
+        "definition": "Agarre con las palmas hacia abajo (mirando al suelo).",
+        "example": "El remo con agarre prono enfatiza más la espalda alta."
+      },
+      {
+        "name": "ROM",
+        "category": "metrics",
+        "definition": "Range of Motion. Rango completo de movimiento de una articulación durante un ejercicio.",
+        "example": "Hacer sentadilla profunda tiene más ROM que media sentadilla."
+      },
+      {
+        "name": "TUT",
+        "category": "metrics",
+        "definition": "Time Under Tension. Tiempo total que el músculo está bajo carga durante una serie.",
+        "example": "Bajar en 3s y subir en 1s = 4s de TUT por rep. En 10 reps = 40s TUT."
+      },
+      {
+        "name": "DOMS",
+        "category": "training",
+        "definition": "Delayed Onset Muscle Soreness. Dolor muscular que aparece 24-72h después del ejercicio.",
+        "example": "Es normal tener DOMS después de entrenar piernas por primera vez en semanas."
+      },
+      {
+        "name": "Deload",
+        "category": "training",
+        "definition": "Semana de descarga. Período planificado de reducción de volumen/intensidad para favorecer la recuperación.",
+        "example": "Cada 4-6 semanas de entrenamiento intenso, programa un deload."
+      },
+      {
+        "name": "Mesociclo",
+        "category": "training",
+        "definition": "Bloque de entrenamiento de 3-6 semanas con un objetivo específico.",
+        "example": "Un mesociclo de hipertrofia de 4 semanas seguido de un deload."
+      },
+      {
+        "name": "Superserie",
+        "category": "training",
+        "definition": "Realizar dos ejercicios seguidos sin descanso entre ellos.",
+        "example": "Superserie de curl de bíceps + extensión de tríceps."
+      },
+      {
+        "name": "Drop set",
+        "category": "training",
+        "definition": "Técnica donde reduces el peso al llegar al fallo y sigues haciendo repeticiones.",
+        "example": "Press con 80kg al fallo, bajar a 60kg y seguir, bajar a 40kg y seguir."
+      },
+      {
+        "name": "Fallo muscular",
+        "category": "training",
+        "definition": "Punto en el que no puedes completar otra repetición con buena técnica.",
+        "example": "Si en la rep 8 no puedes subir la barra, has llegado al fallo."
+      },
+      {
+        "name": "Volumen",
+        "category": "metrics",
+        "definition": "Cantidad total de trabajo: series × reps × peso.",
+        "example": "3 series × 10 reps × 80kg = 2400kg de volumen."
+      },
+      {
+        "name": "Intensidad",
+        "category": "metrics",
+        "definition": "Porcentaje del peso respecto a tu 1RM.",
+        "example": "Si tu 1RM es 100kg y trabajas con 80kg, estás al 80% de intensidad."
+      },
+      {
+        "name": "Compuesto",
+        "category": "training",
+        "definition": "Ejercicio que involucra múltiples articulaciones y grupos musculares.",
+        "example": "Sentadilla, peso muerto, press de banca son ejercicios compuestos."
+      },
+      {
+        "name": "Aislamiento",
+        "category": "training",
+        "definition": "Ejercicio que trabaja un solo grupo muscular con una articulación.",
+        "example": "Curl de bíceps, extensión de cuádriceps son ejercicios de aislamiento."
+      },
+      {
+        "name": "Hipertrofia",
+        "category": "training",
+        "definition": "Aumento del tamaño muscular mediante entrenamiento y nutrición adecuada.",
+        "example": "Rangos de 8-12 repeticiones con carga moderada favorecen la hipertrofia."
+      },
+      {
+        "name": "Concéntrica",
+        "category": "anatomy",
+        "definition": "Fase del movimiento donde el músculo se acorta al contraerse.",
+        "example": "En el curl de bíceps, la fase concéntrica es al subir la mancuerna."
+      },
+      {
+        "name": "Excéntrica",
+        "category": "anatomy",
+        "definition": "Fase del movimiento donde el músculo se alarga bajo tensión.",
+        "example": "En el curl de bíceps, bajar la mancuerna controladamente es la fase excéntrica."
+      },
+      {
+        "name": "Isométrica",
+        "category": "anatomy",
+        "definition": "Contracción muscular sin cambio de longitud del músculo.",
+        "example": "Mantener una plancha es un ejercicio isométrico."
+      },
+      {
+        "name": "Sobrecarga progresiva",
+        "category": "training",
+        "definition": "Principio de aumentar gradualmente el estímulo de entrenamiento para seguir progresando.",
+        "example": "Añadir 2.5kg a la barra cada semana o hacer 1 rep más que la sesión anterior."
+      },
+      {
+        "name": "Déficit calórico",
+        "category": "nutrition",
+        "definition": "Consumir menos calorías de las que gastas, necesario para perder grasa.",
+        "example": "Si gastas 2500 kcal y comes 2000 kcal, tienes un déficit de 500 kcal."
+      },
+      {
+        "name": "Superávit calórico",
+        "category": "nutrition",
+        "definition": "Consumir más calorías de las que gastas, necesario para ganar músculo.",
+        "example": "Un superávit de 300-500 kcal sobre tu mantenimiento es ideal para ganar masa muscular."
+      },
+      {
+        "name": "Proteína",
+        "category": "nutrition",
+        "definition": "Macronutriente esencial para la reparación y crecimiento muscular.",
+        "example": "Se recomienda 1.6-2.2g de proteína por kg de peso corporal para ganar músculo."
+      },
+      {
+        "name": "Periodización",
+        "category": "training",
+        "definition": "Planificación sistemática del entrenamiento en ciclos con objetivos diferentes.",
+        "example": "4 semanas de fuerza → 4 semanas de hipertrofia → 1 semana de deload."
+      }
     ]
   },
-
   "profile": {
     "title": "Mi Perfil",
     "personalData": "Datos personales",
@@ -395,9 +544,15 @@
     "select": "Seleccionar",
     "saveError": "Error al guardar los cambios"
   },
-
   "session": {
     "completed": "Sesión completada",
+    "loadError": "No se pudo iniciar la sesión.",
+    "saveSetError": "No se pudo guardar la serie. Revisa tu conexión y reinténtalo.",
+    "finishError": "No se pudo guardar la sesión. Inténtalo de nuevo.",
+    "abandonError": "No se pudo abandonar la sesión. Inténtalo de nuevo.",
+    "startTimer": "Iniciar",
+    "announceSet": "Serie {{set}} de {{total}}",
+    "announceRest": "Descanso de {{seconds}} segundos",
     "notFound": "Sesión no encontrada.",
     "duration": "Duración",
     "volume": "Volumen (kg)",
@@ -443,10 +598,25 @@
     "noExercises": "No hay ejercicios en esta rutina.",
     "exerciseFallback": "Ejercicio {{index}}",
     "shoulderPainPlaceholder": "ej. \"Me dolió el hombro izquierdo\"",
-    "goodWorkoutPlaceholder": "ej. \"Buen entreno, aumentar peso la próxima\""
+    "goodWorkoutPlaceholder": "ej. \"Buen entreno, aumentar peso la próxima\"",
+    "menu": "Opciones de la sesión",
+    "repsLabel": "Reps",
+    "weightLabel": "Peso (kg)",
+    "repsTarget": "Objetivo: {{reps}}",
+    "weightTarget": "Sugerido: {{kg}} kg",
+    "repsDown": "Una repetición menos",
+    "repsUp": "Una repetición más",
+    "weightDown": "Bajar 2,5 kg",
+    "weightUp": "Subir 2,5 kg",
+    "rpeValue": "RPE {{value}}",
+    "rpeHint": "1 = muy fácil · 10 = esfuerzo máximo",
+    "nextExerciseUp": "Siguiente",
+    "endRoutine": "Fin de la rutina"
   },
-
   "onboarding": {
+    "equipmentPartial": "Tu perfil se ha guardado, pero no se pudo guardar este equipo: {{items}}. Pulsa de nuevo para reintentar o añádelo más tarde en Equipamiento.",
+    "continueAnyway": "Continuar sin ese equipo",
+    "catalogError": "No se pudo cargar el catálogo de equipamiento.",
     "step": "Paso",
     "of4": "de 4 —",
     "profileStep": "Perfil",
@@ -521,7 +691,6 @@
     "saveError": "Error al guardar el perfil. Inténtalo de nuevo.",
     "startTraining": "Empezar a entrenar"
   },
-
   "accessibility": {
     "title": "Accesibilidad",
     "openPanel": "Accesibilidad (Alt+A)",
@@ -547,7 +716,6 @@
     "shortcutEsc": "Cerrar panel / modal",
     "resetAll": "Restablecer todo"
   },
-
   "categories": {
     "strength": "Fuerza",
     "cardio": "Cardio",
@@ -555,7 +723,6 @@
     "hiit": "HIIT",
     "balance": "Equilibrio"
   },
-
   "muscles": {
     "chest": "Pecho",
     "back": "Espalda",
@@ -574,7 +741,6 @@
     "arms": "Brazos",
     "full_body": "Cuerpo completo"
   },
-
   "goals": {
     "strength": "Fuerza",
     "hypertrophy": "Hipertrofia",
@@ -590,13 +756,11 @@
     "v_shape": "Forma en V",
     "improve_lifts": "Mejorar levantamientos"
   },
-
   "difficulty": {
     "easy": "Fácil",
     "medium": "Media",
     "hard": "Difícil"
   },
-
   "equipmentCategories": {
     "free_weights": "Pesos libres",
     "benches": "Bancos y soportes",
@@ -604,10 +768,15 @@
     "cardio": "Cardio",
     "accessories": "Accesorios"
   },
-
   "hero": {
     "title": "Tu entrenamiento,",
     "subtitle": "Controla tus rutinas, registra tu progreso y supera tus marcas. Cada serie cuenta.",
-    "rotating": ["a otro nivel", "sin excusas", "con datos", "cada día", "en serio"]
+    "rotating": [
+      "a otro nivel",
+      "sin excusas",
+      "con datos",
+      "cada día",
+      "en serio"
+    ]
   }
 }

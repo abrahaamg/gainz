@@ -3,7 +3,7 @@ import { User as FirebaseUser } from 'firebase/auth'
 
 export interface MysqlUser {
   id: number
-  email: string
+  email: string | null
   username: string
   sex: string | null
   age: number | null
@@ -25,9 +25,13 @@ interface AuthState {
   firebaseUser: FirebaseUser | null
   mysqlUser:    MysqlUser | null
   loading:      boolean
+  authError:    boolean
+  retryToken:   number
   setFirebaseUser: (user: FirebaseUser | null) => void
   setMysqlUser:    (user: MysqlUser | null)    => void
   setLoading:      (v: boolean)                => void
+  setAuthError:    (v: boolean)                => void
+  retryAuth:       ()                          => void
   clear:           ()                          => void
 }
 
@@ -35,9 +39,13 @@ export const useAuthStore = create<AuthState>(set => ({
   firebaseUser: null,
   mysqlUser:    null,
   loading:      true,
+  authError:    false,
+  retryToken:   0,
 
   setFirebaseUser: user    => set({ firebaseUser: user }),
   setMysqlUser:    user    => set({ mysqlUser: user }),
   setLoading:      loading => set({ loading }),
-  clear: () => set({ firebaseUser: null, mysqlUser: null, loading: false }),
+  setAuthError:    authError => set({ authError }),
+  retryAuth:       () => set(s => ({ retryToken: s.retryToken + 1, authError: false, loading: true })),
+  clear: () => set({ firebaseUser: null, mysqlUser: null, loading: false, authError: false }),
 }))

@@ -1,27 +1,52 @@
-import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { Navigate } from 'react-router-dom'
+import { useLogout } from '../../hooks/useAuth'
+import { useAuthStore } from '../../store/useAuthStore'
+import { AUTH_CONFIG_MISSING, DEV_MODE } from '../../config/authMode'
+import Spinner from '../ui/Spinner'
+import ErrorState from '../ui/ErrorState'
+import { useTranslation } from 'react-i18next'
 
-const DEV_MODE = !import.meta.env.VITE_FIREBASE_PROJECT_ID
+interface Props {
+  children: React.ReactNode
+  /** Permite entrar sin onboarding completado (solo para /onboarding). */
+  allowIncompleteOnboarding?: boolean
+}
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { firebaseUser, mysqlUser, loading } = useAuth()
-  const location = useLocation()
+export default function ProtectedRoute({ children, allowIncompleteOnboarding = false }: Props) {
+  const { t } = useTranslation()
+  const { firebaseUser, mysqlUser, loading, authError, retryAuth } = useAuthStore()
+  const logout = useLogout()
+
+  if (AUTH_CONFIG_MISSING) return <Navigate to="/login" replace />
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <Spinner />
       </div>
     )
   }
 
-  // Auth check (skip in DEV)
+  // Sin sesión de Firebase → login (en DEV no se exige Firebase)
   if (!DEV_MODE && !firebaseUser) {
     return <Navigate to="/login" replace />
   }
 
-  // Onboarding check — redirect if not completed (skip if already on /onboarding)
-  if (mysqlUser && !mysqlUser.onboarding_done && location.pathname !== '/onboarding') {
+  // Sesión válida pero el perfil no se pudo cargar: error con reintento, no se abre la app
+  if (!mysqlUser) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <ErrorState message={authError ? t('auth.profileLoadError') : t('common.errorGeneric')} onRetry={retryAuth} />
+        {!DEV_MODE && (
+          <button type="button" onClick={logout} className="text-xs text-neutral-500 underline hover:text-accent">
+            {t('nav.logout')}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  if (!mysqlUser.onboarding_done && !allowIncompleteOnboarding) {
     return <Navigate to="/onboarding" replace />
   }
 

@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  loadPref, savePref, applyTheme, applyContrast, applyReducedMotion, applyFontSize,
+  type FontSize, type Theme, type Contrast,
+} from '../../utils/a11yPrefs'
 
-type FontSize = 'normal' | 'grande' | 'muy-grande'
-type Theme = 'claro' | 'oscuro'
-type Contrast = 'normal' | 'alto'
-
-const FONT_SIZE_VALUES: { value: FontSize; labelKey: string; scale: string }[] = [
-  { value: 'normal',     labelKey: 'accessibility.normal',    scale: '100%' },
-  { value: 'grande',     labelKey: 'accessibility.large',     scale: '115%' },
-  { value: 'muy-grande', labelKey: 'accessibility.veryLarge', scale: '130%' },
+const FONT_SIZE_VALUES: { value: FontSize; labelKey: string }[] = [
+  { value: 'normal',     labelKey: 'accessibility.normal' },
+  { value: 'grande',     labelKey: 'accessibility.large' },
+  { value: 'muy-grande', labelKey: 'accessibility.veryLarge' },
 ]
 
 const SHORTCUT_KEYS: { keys: string; actionKey: string }[] = [
@@ -22,16 +22,6 @@ const SHORTCUT_KEYS: { keys: string; actionKey: string }[] = [
   { keys: 'Escape',  actionKey: 'accessibility.shortcutEsc' },
 ]
 
-function loadPref<T>(key: string, fallback: T): T {
-  try {
-    const v = localStorage.getItem(`gainz_a11y_${key}`)
-    return v ? (JSON.parse(v) as T) : fallback
-  } catch { return fallback }
-}
-function savePref(key: string, value: unknown) {
-  localStorage.setItem(`gainz_a11y_${key}`, JSON.stringify(value))
-}
-
 export default function AccessibilityPanel() {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -42,26 +32,25 @@ export default function AccessibilityPanel() {
 
   // ── Apply font size ──
   useEffect(() => {
-    const scale = FONT_SIZE_VALUES.find(f => f.value === fontSize)?.scale ?? '100%'
-    document.documentElement.style.fontSize = scale
+    applyFontSize(fontSize)
     savePref('fontSize', fontSize)
   }, [fontSize])
 
   // ── Apply theme ──
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'oscuro')
+    applyTheme(theme)
     savePref('theme', theme)
   }, [theme])
 
   // ── Apply contrast ──
   useEffect(() => {
-    document.documentElement.classList.toggle('high-contrast', contrast === 'alto')
+    applyContrast(contrast)
     savePref('contrast', contrast)
   }, [contrast])
 
   // ── Apply reduced motion ──
   useEffect(() => {
-    document.documentElement.classList.toggle('reduce-motion', reducedMotion)
+    applyReducedMotion(reducedMotion)
     savePref('reducedMotion', reducedMotion)
   }, [reducedMotion])
 
@@ -129,14 +118,14 @@ export default function AccessibilityPanel() {
         onClick={() => setOpen(v => !v)}
         aria-label={t('accessibility.title')}
         title={t('accessibility.openPanel')}
-        className="fixed bottom-5 right-5 z-50 w-12 h-12 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-105"
+        className="fixed z-[60] top-0.5 right-2 md:top-auto md:bottom-5 md:right-5 w-11 h-11 md:w-12 md:h-12 text-neutral-300 hover:text-accent md:bg-neutral-900 md:dark:bg-white md:text-white md:dark:text-neutral-900 md:shadow-lg md:hover:shadow-xl rounded-full transition-all duration-200 flex items-center justify-center"
       >
         <i className="bi bi-universal-access text-xl" />
       </button>
 
       {/* ── Panel ── */}
       {open && (
-        <div className="fixed bottom-20 right-5 z-50 w-80 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border border-neutral-100 dark:border-neutral-700 shadow-modal rounded-apple max-h-[80vh] overflow-y-auto">
+        <div className="fixed top-14 md:top-auto md:bottom-20 right-4 md:right-5 z-[60] w-[min(20rem,calc(100vw-2rem))] bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border border-neutral-100 dark:border-neutral-700 shadow-modal rounded-apple max-h-[80vh] overflow-y-auto">
           <div className="p-5">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-black text-neutral-900 dark:text-white tracking-tight">
@@ -159,7 +148,7 @@ export default function AccessibilityPanel() {
                   <button
                     key={f.value}
                     onClick={() => setFontSize(f.value)}
-                    className={`flex-1 chip text-[10px] py-1.5 ${fontSize === f.value ? 'chip-active' : 'dark:border-neutral-600 dark:text-neutral-400'}`}
+                    className={`flex-1 chip text-xs py-1.5 ${fontSize === f.value ? 'chip-active' : 'dark:border-neutral-600 dark:text-neutral-400'}`}
                   >
                     {t(f.labelKey)}
                   </button>
@@ -224,10 +213,10 @@ export default function AccessibilityPanel() {
               <div className="space-y-2">
                 {SHORTCUT_KEYS.map(s => (
                   <div key={s.keys} className="flex items-center justify-between text-xs">
-                    <kbd className="bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 px-2 py-0.5 font-mono text-[10px] font-bold text-neutral-700 dark:text-neutral-300">
+                    <kbd className="bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 px-2 py-0.5 font-mono text-xs font-bold text-neutral-700 dark:text-neutral-300">
                       {s.keys}
                     </kbd>
-                    <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{t(s.actionKey)}</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 text-xs">{t(s.actionKey)}</span>
                   </div>
                 ))}
               </div>
@@ -241,7 +230,7 @@ export default function AccessibilityPanel() {
                 setContrast('normal')
                 setReducedMotion(false)
               }}
-              className="w-full mt-4 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors py-2"
+              className="w-full mt-4 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors py-2"
             >
               <i className="bi bi-arrow-counterclockwise mr-1" />{t('accessibility.resetAll')}
             </button>

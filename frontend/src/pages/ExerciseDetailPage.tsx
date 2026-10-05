@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
-import { Exercise } from '../types/exercise'
+import { apiErrorMessage } from '../utils/apiError'
+import { useAsync } from '../hooks/useAsync'
 import OneRMCalculator from '../components/exercises/OneRMCalculator'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import { translateMuscle } from '../utils/labels'
@@ -12,33 +13,30 @@ export default function ExerciseDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [exercise, setExercise] = useState<Exercise | null>(null)
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState<string | null>(null)
+  const { data: exercise, loading, error: loadError, reload } = useAsync(
+    () => exerciseService.getById(parseInt(id!, 10)),
+    [id],
+  )
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-
-  useEffect(() => {
-    exerciseService.getById(parseInt(id!, 10))
-      .then(setExercise)
-      .catch(() => setError(t('exercises.exerciseNotFound')))
-      .finally(() => setLoading(false))
-  }, [id])
+  const error = deleteError ?? (loadError ? t('exercises.exerciseNotFound') : null)
 
   const handleDelete = async () => {
     if (!exercise) return
     if (!confirm(t('exercises.deleteConfirm', { name: exercise.name }))) return
     setDeleting(true)
+    setDeleteError(null)
     try {
       await exerciseService.delete(exercise.id)
       navigate('/exercises')
-    } catch {
-      setError(t('exercises.deleteError'))
+    } catch (err: unknown) {
+      setDeleteError(apiErrorMessage(err, t('exercises.deleteError')))
       setDeleting(false)
     }
   }
 
   if (loading) return (
-    <div className="max-w-3xl mx-auto px-6 py-10 space-y-4">
+    <div className="space-y-4">
       <div className="h-8 bg-neutral-200 animate-pulse w-1/2" />
       <div className="h-4 bg-neutral-200 animate-pulse w-1/3" />
       <div className="h-32 bg-neutral-200 animate-pulse" />
@@ -46,9 +44,12 @@ export default function ExerciseDetailPage() {
   )
 
   if (error || !exercise) return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
-      <div className="border border-red-200 bg-red-50 text-red-600 p-4 text-sm font-medium">{error}</div>
-      <button onClick={() => navigate('/exercises')} className="mt-4 text-[11px] font-bold uppercase tracking-wider text-neutral-500 hover:text-neutral-900 transition-colors">
+    <div>
+      <div role="alert" className="border border-red-200 bg-red-50 text-red-600 p-4 text-sm font-medium">{error}</div>
+      {!!loadError && !deleteError && (
+        <button onClick={reload} className="mt-4 btn-primary px-5 py-2 text-sm">{t('common.retry')}</button>
+      )}
+      <button onClick={() => navigate('/exercises')} className="mt-4 text-xs font-bold text-neutral-500 hover:text-neutral-900 transition-colors">
         <i className="bi bi-arrow-left mr-1" />{t('exercises.backToExercises')}
       </button>
     </div>
@@ -59,21 +60,21 @@ export default function ExerciseDetailPage() {
     : []
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
-      <button onClick={() => navigate('/exercises')} className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
+    <div>
+      <button onClick={() => navigate('/exercises')} className="text-xs font-medium text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
         <i className="bi bi-arrow-left mr-1" />{t('exercises.title')}
       </button>
 
       <div className="flex items-start justify-between mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-white bg-neutral-900 px-3 py-1 rounded-full">
+            <span className="text-xs font-bold text-white bg-neutral-900 px-3 py-1 rounded-full">
               {t(`categories.${exercise.category}`)}
             </span>
             <DifficultyDots level={exercise.difficulty} />
           </div>
           <h1 className="page-title">{exercise.name}</h1>
-          <p className="text-neutral-400 text-[11px] font-bold uppercase tracking-widest mt-1">
+          <p className="text-neutral-400 text-xs font-medium mt-1">
             {translateMuscle(exercise.muscle_group)}
           </p>
         </div>
@@ -119,11 +120,11 @@ export default function ExerciseDetailPage() {
       <div className="mb-8">
         <h2 className="section-title">{t('exercises.involvedMuscles')}</h2>
         <div className="flex flex-wrap gap-2">
-          <span className="bg-accent/15 border border-accent/30 px-3 py-1.5 text-[11px] font-black text-accent uppercase tracking-wider rounded-full">
+          <span className="bg-accent/15 border border-accent/30 px-3 py-1.5 text-xs font-bold text-accent rounded-full">
             {translateMuscle(exercise.muscle_group)}
           </span>
           {exercise.secondary_muscles.map(m => (
-            <span key={m} className="border border-neutral-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-600 uppercase tracking-wider rounded-full">
+            <span key={m} className="border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-600 rounded-full">
               {translateMuscle(m)}
             </span>
           ))}
@@ -135,13 +136,13 @@ export default function ExerciseDetailPage() {
         {exercise.requires_equipment && exercise.equipment.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {exercise.equipment.map(eq => (
-              <span key={eq} className="border border-accent/40 bg-accent/10 px-3 py-1.5 text-[11px] font-bold text-accent-dk uppercase tracking-wider rounded-full">
+              <span key={eq} className="border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent-dk rounded-full">
                 {eq}
               </span>
             ))}
           </div>
         ) : (
-          <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{t('exercises.noEquipment')}</span>
+          <span className="text-xs font-semibold text-neutral-500">{t('exercises.noEquipment')}</span>
         )}
       </div>
 
@@ -149,7 +150,7 @@ export default function ExerciseDetailPage() {
         <div className="mb-8">
           <GlowCard>
             <div className="p-5">
-              <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-2">{t('exercises.note')}</h2>
+              <h2 className="section-title mb-2">{t('exercises.note')}</h2>
               <p className="text-neutral-400 text-sm leading-relaxed">{exercise.notes}</p>
             </div>
           </GlowCard>
@@ -159,7 +160,7 @@ export default function ExerciseDetailPage() {
       {exercise.video_url && (
         <div className="mb-8">
           <a href={exercise.video_url} target="_blank" rel="noreferrer"
-            className="text-[11px] font-black uppercase tracking-wider text-accent hover:text-accent-dk transition-colors">
+            className="text-xs font-bold text-accent hover:text-accent-dk transition-colors">
             {t('exercises.watchVideo')} <i className="bi bi-arrow-right" />
           </a>
         </div>

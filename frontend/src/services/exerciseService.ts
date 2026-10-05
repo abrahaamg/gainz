@@ -7,6 +7,8 @@ import {
   PaginatedExercises,
 } from '../types/exercise'
 
+// Contrato del backend: el detalle, la creación y la edición devuelven { data: Exercise };
+// DELETE devuelve { data: { deleted: true } }; el listado, { data: Exercise[], pagination }.
 export const exerciseService = {
   async getAll(filters: ExerciseFilters = {}): Promise<PaginatedExercises> {
     const { data } = await api.get<PaginatedExercises>('/exercises', { params: filters })
@@ -14,21 +16,21 @@ export const exerciseService = {
   },
 
   async getById(id: number): Promise<Exercise> {
-    const { data } = await api.get<Exercise>(`/exercises/${id}`)
-    return data
+    const res = await api.get<{ data: Exercise }>(`/exercises/${id}`)
+    return res.data.data
   },
 
   async create(dto: CreateExerciseDTO): Promise<Exercise> {
-    const { data } = await api.post<Exercise>('/exercises', dto)
-    return data
+    const res = await api.post<{ data: Exercise }>('/exercises', dto)
+    return res.data.data
   },
 
   async update(id: number, dto: UpdateExerciseDTO): Promise<Exercise> {
-    const { data } = await api.put<Exercise>(`/exercises/${id}`, dto)
-    return data
+    const res = await api.put<{ data: Exercise }>(`/exercises/${id}`, dto)
+    return res.data.data
   },
 
   async delete(id: number): Promise<void> {
-    await api.delete(`/exercises/${id}`)
+    await api.delete<{ data: { deleted: true } }>(`/exercises/${id}`)
   },
 }

@@ -20,6 +20,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { routineService } from '../services/routineService'
 import { exerciseService } from '../services/exerciseService'
+import { apiErrorMessage } from '../utils/apiError'
 import { RoutineExerciseForm } from '../types/routine'
 import { Exercise } from '../types/exercise'
 import useDebounce from '../hooks/useDebounce'
@@ -73,7 +74,7 @@ function SortableExerciseCard({
         <button
           {...attributes}
           {...listeners}
-          className="mt-1 text-neutral-500 hover:text-accent cursor-grab active:cursor-grabbing text-lg"
+          className="mt-1 text-neutral-400 hover:text-accent cursor-grab active:cursor-grabbing text-lg"
           aria-label={t('routines.drag')}
         >
           <i className="bi bi-grip-vertical" />
@@ -82,12 +83,12 @@ function SortableExerciseCard({
         <div className="flex-1">
           <div className="flex justify-between items-start">
             <div>
-              <p className="font-black text-white">{ex.exercise_name}</p>
+              <p className="font-bold text-white">{ex.exercise_name}</p>
               <div className="flex gap-2 mt-1">
-                <span className={`text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider rounded-full ${CATEGORY_COLORS[ex.category] ?? 'bg-white/10 text-neutral-300'}`}>
+                <span className={`text-xs font-bold px-2 py-0.5 uppercase tracking-wider rounded-full ${CATEGORY_COLORS[ex.category] ?? 'bg-white/10 text-neutral-300'}`}>
                   {ex.category}
                 </span>
-                <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{t(`muscles.${ex.muscle_group}`)}</span>
+                <span className="text-xs font-medium text-neutral-400">{t(`muscles.${ex.muscle_group}`)}</span>
               </div>
             </div>
             <button onClick={() => onRemove(ex.id)} className="text-red-400 hover:text-red-300 text-lg leading-none font-bold">×</button>
@@ -316,8 +317,8 @@ export default function RoutineBuilderPage() {
         await routineService.create(payload)
       }
       navigate('/routines')
-    } catch {
-      setError(t('routines.saveError'))
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, t('routines.saveError')))
     } finally {
       setSaving(false)
     }
@@ -326,8 +327,8 @@ export default function RoutineBuilderPage() {
   const estimatedDuration = calcDuration(exercises)
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
-      <button onClick={() => navigate('/routines')} className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
+    <div>
+      <button onClick={() => navigate('/routines')} className="text-xs font-medium text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
         <i className="bi bi-arrow-left mr-1" />{t('nav.routines')}
       </button>
 
@@ -338,7 +339,7 @@ export default function RoutineBuilderPage() {
       {/* ── Metadata ── */}
       <GlowCard className="mb-6">
         <section className="p-6 space-y-5">
-        <h2 className="text-sm font-black text-white uppercase tracking-wider">{t('routines.generalInfo')}</h2>
+        <h2 className="text-sm font-bold text-white">{t('routines.generalInfo')}</h2>
 
         <div>
           <label className="form-label">{t('exercises.name')}</label>
@@ -417,7 +418,7 @@ export default function RoutineBuilderPage() {
       {/* ── Exercise search ── */}
       <GlowCard className="mb-6">
         <section className="p-6">
-        <h2 className="text-sm font-black text-white uppercase tracking-wider mb-4">{t('routines.addExercises')}</h2>
+        <h2 className="text-sm font-bold text-white mb-4">{t('routines.addExercises')}</h2>
         <div className="relative">
           <input
             value={searchQuery}
@@ -440,9 +441,9 @@ export default function RoutineBuilderPage() {
                 >
                   <span>
                     <span className="font-bold text-white">{ex.name}</span>
-                    <span className="text-neutral-500 ml-2 text-[11px] uppercase tracking-wider">{t(`muscles.${ex.muscle_group}`)}</span>
+                    <span className="text-neutral-400 ml-2 text-xs">{t(`muscles.${ex.muscle_group}`)}</span>
                   </span>
-                  <span className="text-accent font-black text-[11px] uppercase tracking-wider">{t('exercises.add')}</span>
+                  <span className="text-accent font-bold text-xs">{t('exercises.add')}</span>
                 </button>
               </li>
             ))}
@@ -454,7 +455,7 @@ export default function RoutineBuilderPage() {
       {/* ── Sortable exercise list ── */}
       {exercises.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-sm font-black uppercase tracking-wider mb-4 text-neutral-700">
+          <h2 className="text-sm font-bold mb-4 text-neutral-400">
             {t('common.exercises')} ({exercises.length})
           </h2>
           <DndContext

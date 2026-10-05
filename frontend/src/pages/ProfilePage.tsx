@@ -1,8 +1,11 @@
 import { useState, FormEvent, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore, MysqlUser } from '../store/useAuthStore'
-import api from '../services/api'
+import { useAuthStore } from '../store/useAuthStore'
+import { authService } from '../services/authService'
+import { apiErrorMessage } from '../utils/apiError'
 import GlowCard from '../components/ui/GlowCard'
+import PageHeader from '../components/ui/PageHeader'
+import { setTrainingChanged } from '../utils/trainingFlag'
 
 const GOAL_KEYS: Record<string, string> = {
   fat_loss:         'onboarding.goalFatLoss',
@@ -80,7 +83,7 @@ export default function ProfilePage() {
     setError(null)
     setSaved(false)
     try {
-      const res = await api.patch('/auth/me', {
+      const updated = await authService.updateProfile({
         username: username || null,
         birth_date: birthDate || null,
         age: age,
@@ -91,96 +94,92 @@ export default function ProfilePage() {
         primary_goal: primaryGoal || null,
         session_duration_min: sessionDuration ? Number(sessionDuration) : null,
       })
-      setMysqlUser(res.data.data as MysqlUser)
+      setMysqlUser(updated)
       // Si cambió entrenamiento, marcar flag para aviso en recomendaciones
       if (trainingChanged) {
-        localStorage.setItem('gainz_training_changed', '1')
+        setTrainingChanged(mysqlUser?.id)
       }
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
-    } catch {
-      setError(t('profile.saveError'))
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, t('profile.saveError')))
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10">
-      {/* Header */}
-      <div className="card header-gradient px-8 py-8 mb-8 border-none">
-        <div className="flex items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center text-2xl font-black text-accent ring-2 ring-accent/30">
+    <div>
+      <PageHeader
+        leading={
+          <div aria-hidden="true" className="w-14 h-14 shrink-0 rounded-full bg-accent/20 flex items-center justify-center text-xl font-bold text-accent ring-2 ring-accent/30">
             {(mysqlUser?.username?.[0] ?? mysqlUser?.email?.[0] ?? 'U').toUpperCase()}
           </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white tracking-tight">
-              {mysqlUser?.username || t('profile.title')}
-            </h1>
-            <p className="text-neutral-500 text-xs mt-0.5">{mysqlUser?.email}</p>
-          </div>
-          {/* Quick stats */}
+        }
+        title={mysqlUser?.username || t('profile.title')}
+        subtitle={mysqlUser?.email ?? undefined}
+        actions={
           <div className="hidden sm:flex items-center gap-6">
             {age !== null && (
               <div className="text-center">
-                <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">{t('profile.calculatedAge').replace(':', '')}</p>
-                <p className="text-sm font-black text-accent mt-0.5">{age} {t('common.years')}</p>
+                <p className="text-xs font-medium text-neutral-400">{t('profile.calculatedAge').replace(':', '')}</p>
+                <p className="text-sm font-bold text-accent mt-0.5">{age} {t('common.years')}</p>
               </div>
             )}
             {mysqlUser?.fitness_level && (
               <div className="text-center">
-                <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">{t('profile.level')}</p>
-                <p className="text-sm font-black text-accent mt-0.5">
+                <p className="text-xs font-medium text-neutral-400">{t('profile.level')}</p>
+                <p className="text-sm font-bold text-accent mt-0.5">
                   {FITNESS_LEVELS.find(f => f.value === mysqlUser.fitness_level)?.label ?? mysqlUser.fitness_level}
                 </p>
               </div>
             )}
             {mysqlUser?.primary_goal && (
               <div className="text-center">
-                <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">{t('profile.mainGoal')}</p>
-                <p className="text-sm font-black text-accent mt-0.5">
+                <p className="text-xs font-medium text-neutral-400">{t('profile.mainGoal')}</p>
+                <p className="text-sm font-bold text-accent mt-0.5">
                   {GOAL_KEYS[mysqlUser.primary_goal] ? t(GOAL_KEYS[mysqlUser.primary_goal]) : mysqlUser.primary_goal}
                 </p>
               </div>
             )}
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Datos personales */}
         <GlowCard>
           <div className="p-6">
-            <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-4">{t('profile.personalData')}</h2>
+            <h2 className="section-title mb-4">{t('profile.personalData')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.username')}</label>
-                <input
+                <label htmlFor="profile-1" className="form-label">{t('profile.username')}</label>
+                <input id="profile-1"
                   type="text"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   placeholder={t('profile.usernamePlaceholder')}
-                  className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white placeholder-neutral-600 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
+                  className="form-input form-input-dark"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('auth.email')}</label>
-                <input
+                <label htmlFor="profile-2" className="form-label">{t('auth.email')}</label>
+                <input id="profile-2"
                   type="email"
                   value={mysqlUser?.email ?? ''}
                   disabled
-                  className="w-full px-4 py-3 text-sm rounded-2xl bg-white/3 border border-white/5 text-neutral-600 cursor-not-allowed"
+                  className="w-full px-4 py-3 text-sm rounded-2xl bg-white/3 border border-white/5 text-neutral-400 cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.sex')}</label>
+                <label className="form-label">{t('profile.sex')}</label>
                 <div className="w-full px-4 py-3 text-sm rounded-2xl bg-white/3 border border-white/5 text-neutral-400 cursor-not-allowed">
                   {SEX_OPTIONS.find(o => o.value === mysqlUser?.sex)?.label ?? t('profile.notDefined')}
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.birthDate')}</label>
-                <input
+                <label htmlFor="profile-3" className="form-label">{t('profile.birthDate')}</label>
+                <input id="profile-3"
                   type="date"
                   value={birthDate}
                   onChange={e => setBirthDate(e.target.value)}
@@ -190,8 +189,8 @@ export default function ProfilePage() {
               </div>
               {age !== null && (
                 <div className="flex items-center gap-2 sm:col-span-2">
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{t('profile.calculatedAge')}</span>
-                  <span className="text-sm font-black text-accent">{age} {t('common.years')}</span>
+                  <span className="text-xs font-medium text-neutral-400">{t('profile.calculatedAge')}</span>
+                  <span className="text-sm font-bold text-accent">{age} {t('common.years')}</span>
                 </div>
               )}
             </div>
@@ -201,11 +200,11 @@ export default function ProfilePage() {
         {/* Medidas corporales */}
         <GlowCard>
           <div className="p-6">
-            <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-4">{t('profile.bodyMeasures')}</h2>
+            <h2 className="section-title mb-4">{t('profile.bodyMeasures')}</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.weightKg')}</label>
-                <input
+                <label htmlFor="profile-4" className="form-label">{t('profile.weightKg')}</label>
+                <input id="profile-4"
                   type="number"
                   min={30}
                   max={300}
@@ -213,19 +212,19 @@ export default function ProfilePage() {
                   value={weightKg}
                   onChange={e => setWeightKg(e.target.value ? Number(e.target.value) : '')}
                   placeholder="75"
-                  className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white placeholder-neutral-600 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
+                  className="form-input form-input-dark"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.heightCm')}</label>
-                <input
+                <label htmlFor="profile-5" className="form-label">{t('profile.heightCm')}</label>
+                <input id="profile-5"
                   type="number"
                   min={100}
                   max={250}
                   value={heightCm}
                   onChange={e => setHeightCm(e.target.value ? Number(e.target.value) : '')}
                   placeholder="175"
-                  className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white placeholder-neutral-600 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
+                  className="form-input form-input-dark"
                 />
               </div>
             </div>
@@ -236,10 +235,10 @@ export default function ProfilePage() {
               return (
                 <div className="mt-4 bg-accent/5 border border-accent/10 px-4 py-3 rounded-2xl flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{t('profile.bmi')}</p>
-                    <p className="text-2xl font-black text-white mt-0.5">{imc.toFixed(1)}</p>
+                    <p className="text-xs font-medium text-neutral-400">{t('profile.bmi')}</p>
+                    <p className="text-2xl font-bold text-white mt-0.5">{imc.toFixed(1)}</p>
                   </div>
-                  <span className={`text-[11px] font-black uppercase tracking-wider ${imcColor}`}>{imcLabel}</span>
+                  <span className={`text-xs font-black uppercase tracking-wider ${imcColor}`}>{imcLabel}</span>
                 </div>
               )
             })() : null}
@@ -249,11 +248,11 @@ export default function ProfilePage() {
         {/* Entrenamiento */}
         <GlowCard>
           <div className="p-6">
-            <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.12em] mb-4">{t('profile.training')}</h2>
+            <h2 className="section-title mb-4">{t('profile.training')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.level')}</label>
-                <select
+                <label htmlFor="profile-6" className="form-label">{t('profile.level')}</label>
+                <select id="profile-6"
                   value={fitnessLevel}
                   onChange={e => setFitnessLevel(e.target.value)}
                   className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
@@ -265,8 +264,8 @@ export default function ProfilePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.experience')}</label>
-                <select
+                <label htmlFor="profile-7" className="form-label">{t('profile.experience')}</label>
+                <select id="profile-7"
                   value={experience}
                   onChange={e => setExperience(e.target.value)}
                   className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
@@ -278,8 +277,8 @@ export default function ProfilePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.mainGoal')}</label>
-                <select
+                <label htmlFor="profile-8" className="form-label">{t('profile.mainGoal')}</label>
+                <select id="profile-8"
                   value={primaryGoal}
                   onChange={e => setPrimaryGoal(e.target.value)}
                   className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
@@ -291,8 +290,8 @@ export default function ProfilePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">{t('profile.sessionDuration')}</label>
-                <select
+                <label htmlFor="profile-9" className="form-label">{t('profile.sessionDuration')}</label>
+                <select id="profile-9"
                   value={sessionDuration}
                   onChange={e => setSessionDuration(e.target.value ? Number(e.target.value) : '')}
                   className="w-full px-4 py-3 text-sm rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
@@ -319,7 +318,7 @@ export default function ProfilePage() {
 
         {/* Feedback */}
         {error && (
-          <p className="text-xs text-red-400 font-semibold uppercase tracking-wide bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">
+          <p role="alert" className="text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">
             {error}
           </p>
         )}
@@ -334,7 +333,7 @@ export default function ProfilePage() {
             {saving ? t('common.saving') : t('profile.saveChanges')}
           </button>
           {saved && (
-            <span className="text-[11px] font-black text-green-400 uppercase tracking-wider bg-green-500/10 backdrop-blur px-3 py-2 rounded-full">
+            <span role="status" className="text-xs font-bold text-green-400 bg-green-500/10 backdrop-blur px-3 py-2 rounded-full">
               <i className="bi bi-check-circle-fill mr-1" />{t('common.saved')}
             </span>
           )}

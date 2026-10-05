@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { equipmentService } from '../services/equipmentService'
 import { exerciseService } from '../services/exerciseService'
+import { apiErrorMessage } from '../utils/apiError'
 import { CatalogItem, Equipment } from '../types/equipment'
 import type { Exercise } from '../types/exercise'
-import { MUSCLE_LABELS, EQUIPMENT_CATEGORY_LABELS as CATEGORY_LABELS } from '../utils/labels'
+import { label } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
+import PageHeader from '../components/ui/PageHeader'
+import Modal from '../components/ui/Modal'
 
 const LOCATION_KEYS = ['home', 'gym', 'outdoor'] as const
 
@@ -94,8 +97,8 @@ export default function EquipmentPage() {
       })
       await load()
       setShowModal(false)
-    } catch {
-      setError(t('equipment.saveError'))
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, t('equipment.saveError')))
     } finally {
       setSaving(false)
     }
@@ -115,16 +118,16 @@ export default function EquipmentPage() {
   }, {})
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
-      <div className="card header-gradient px-8 py-8 mb-8 flex items-center justify-between border-none">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{t('equipment.title')}</h1>
-          <p className="text-neutral-500 text-xs mt-1">{items.length} {t('equipment.elements')}</p>
-        </div>
-        <button onClick={openCreate} className="btn-primary">
-          {t('equipment.addNew')}
-        </button>
-      </div>
+    <div>
+      <PageHeader
+        title={t('equipment.title')}
+        subtitle={`${items.length} ${t('equipment.elements')}`}
+        actions={
+          <button onClick={openCreate} className="btn-primary">
+            {t('equipment.addNew')}
+          </button>
+        }
+      />
 
       {!loading && (
         <div className="flex flex-col sm:flex-row items-start gap-3 mb-8">
@@ -142,22 +145,22 @@ export default function EquipmentPage() {
               }}
               className="w-full px-4 py-3 flex items-center gap-3 text-left"
             >
-              <span className="text-[11px] font-black uppercase tracking-wider text-white flex-1">
+              <span className="text-xs font-bold text-white flex-1">
                 {t('equipment.bodyweight')} <span className="text-accent">{bodyweight} {t('common.exercises')}</span>
               </span>
-              <i className={`bi bi-chevron-down text-neutral-500 text-xs transition-transform duration-300 ${showBodyweightList ? 'rotate-180' : ''}`} />
+              <i className={`bi bi-chevron-down text-neutral-400 text-xs transition-transform duration-300 ${showBodyweightList ? 'rotate-180' : ''}`} />
             </button>
             <div className={`dropdown-panel ${showBodyweightList ? 'open' : ''}`}>
               <div>
                 <div className="border-t border-white/10 px-4 py-3 max-h-52 overflow-y-auto">
                   {loadingBW ? (
-                    <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{t('common.loading')}</p>
+                    <p className="text-xs font-medium text-neutral-400">{t('common.loading')}</p>
                   ) : (
                     <ul className="space-y-1.5">
                       {bodyweightExercises.map(ex => (
                         <li key={ex.id} className="text-xs flex justify-between">
                           <span className="text-neutral-300 font-medium">{ex.name}</span>
-                          <span className="text-neutral-500 uppercase tracking-wider text-[11px] font-semibold">{MUSCLE_LABELS[ex.muscle_group] ?? ex.muscle_group}</span>
+                          <span className="text-neutral-400 text-xs font-medium">{label('muscles', ex.muscle_group)}</span>
                         </li>
                       ))}
                     </ul>
@@ -182,22 +185,22 @@ export default function EquipmentPage() {
                 }}
                 className="w-full px-4 py-3 flex items-center gap-3 text-left"
               >
-                <span className="text-[11px] font-black uppercase tracking-wider text-white flex-1">
+                <span className="text-xs font-bold text-white flex-1">
                   {t('equipment.withEquipment')} <span className="text-accent">{accessible} {t('common.exercises')}</span>
                 </span>
-                <i className={`bi bi-chevron-down text-neutral-500 text-xs transition-transform duration-300 ${showEquipmentList ? 'rotate-180' : ''}`} />
+                <i className={`bi bi-chevron-down text-neutral-400 text-xs transition-transform duration-300 ${showEquipmentList ? 'rotate-180' : ''}`} />
               </button>
               <div className={`dropdown-panel ${showEquipmentList ? 'open' : ''}`}>
                 <div>
                   <div className="border-t border-white/10 px-4 py-3 max-h-52 overflow-y-auto">
                     {loadingEQ ? (
-                      <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{t('common.loading')}</p>
+                      <p className="text-xs font-medium text-neutral-400">{t('common.loading')}</p>
                     ) : (
                       <ul className="space-y-1.5">
                         {equipmentExercises.map(ex => (
                           <li key={ex.id} className="text-xs flex justify-between">
                             <span className="text-neutral-300 font-medium">{ex.name}</span>
-                            <span className="text-neutral-500 uppercase tracking-wider text-[11px] font-semibold">{MUSCLE_LABELS[ex.muscle_group] ?? ex.muscle_group}</span>
+                            <span className="text-neutral-400 text-xs font-medium">{label('muscles', ex.muscle_group)}</span>
                           </li>
                         ))}
                       </ul>
@@ -217,12 +220,12 @@ export default function EquipmentPage() {
       ) : items.length === 0 ? (
         <div className="text-center py-16 card border-dashed">
           <p className="text-neutral-400 text-sm font-medium mb-1">{t('equipment.noEquipment')}</p>
-          <p className="text-neutral-300 text-[11px] font-semibold uppercase tracking-wider">{t('equipment.noEquipmentHint')}</p>
+          <p className="text-neutral-300 text-xs font-semibold">{t('equipment.noEquipmentHint')}</p>
         </div>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([cat, catItems]) => {
-            const catLabel = CATEGORY_LABELS[cat] ?? cat
+            const catLabel = label('equipmentCategories', cat)
             return (
               <div key={cat}>
                 <h2 className="section-title">{catLabel}</h2>
@@ -231,8 +234,8 @@ export default function EquipmentPage() {
                     <GlowCard key={item.id}>
                       <div className="px-4 py-3 flex items-center justify-between">
                         <div>
-                          <p className="font-black text-white">{item.name}</p>
-                          <div className="flex gap-3 mt-0.5 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                          <p className="font-bold text-white">{item.name}</p>
+                          <div className="flex gap-3 mt-0.5 text-xs font-medium text-neutral-400">
                             <span>{t(`equipment.${item.location}`, { defaultValue: item.location })}</span>
                             {item.quantity > 1 && <span>x{item.quantity}</span>}
                             {item.weight_kg && <span>{item.weight_kg} kg</span>}
@@ -250,12 +253,10 @@ export default function EquipmentPage() {
       )}
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md max-h-[85vh] overflow-y-auto">
+      <Modal open={showModal} onClose={() => setShowModal(false)} labelledBy="equipment-modal-title" className="max-h-[85vh] overflow-y-auto">
             <GlowCard>
               <div className="p-6">
-            <h2 className="text-xl font-bold text-white tracking-tight mb-6">{t('equipment.addEquipment')}</h2>
+            <h2 id="equipment-modal-title" className="text-xl font-bold text-white tracking-tight mb-6">{t('equipment.addEquipment')}</h2>
 
             {/* Catalog selector */}
             {!isCustom && (
@@ -263,7 +264,7 @@ export default function EquipmentPage() {
                 {Object.entries(catalogGrouped).map(([cat, catItems]) => (
                   <div key={cat}>
                     <p className="section-title mb-2">
-                      {CATEGORY_LABELS[cat] ?? cat}
+                      {label('equipmentCategories', cat)}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {catItems.map(item => (
@@ -280,7 +281,7 @@ export default function EquipmentPage() {
                 ))}
 
                 {availableCatalog.length === 0 && (
-                  <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider text-center py-4">
+                  <p className="text-xs font-medium text-neutral-400 text-center py-4">
                     {t('equipment.allCatalog')}
                   </p>
                 )}
@@ -290,7 +291,7 @@ export default function EquipmentPage() {
             {/* Custom toggle */}
             <button
               onClick={() => { setIsCustom(v => !v); setSelectedCatalogId(null) }}
-              className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-accent transition-colors mb-4"
+              className="text-xs font-medium text-neutral-400 hover:text-accent transition-colors mb-4"
             >
               {isCustom ? <><i className="bi bi-arrow-left mr-1" />{t('equipment.backToCatalog')}</> : <><i className="bi bi-plus mr-1" />{t('equipment.customEquipment')}</>}
             </button>
@@ -298,8 +299,8 @@ export default function EquipmentPage() {
             {isCustom && (
               <div className="mb-4 space-y-3">
                 <div>
-                  <label className="form-label">{t('equipment.nameRequired')}</label>
-                  <input
+                  <label htmlFor="eq-1" className="form-label">{t('equipment.nameRequired')}</label>
+                  <input id="eq-1"
                     value={customName}
                     onChange={e => setCustomName(e.target.value)}
                     placeholder={t('equipment.customNamePlaceholder')}
@@ -311,7 +312,7 @@ export default function EquipmentPage() {
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       onClick={() => setCatalogLink(null)}
-                      className={`chip text-[10px] py-1.5 ${catalogLink === null ? 'chip-active' : ''}`}
+                      className={`chip text-xs py-1.5 ${catalogLink === null ? 'chip-active' : ''}`}
                     >
                       {t('common.none')}
                     </button>
@@ -319,13 +320,13 @@ export default function EquipmentPage() {
                       <button
                         key={c.id}
                         onClick={() => setCatalogLink(c.name)}
-                        className={`chip text-[10px] py-1.5 ${catalogLink === c.name ? 'chip-accent' : ''}`}
+                        className={`chip text-xs py-1.5 ${catalogLink === c.name ? 'chip-accent' : ''}`}
                       >
                         {c.name}
                       </button>
                     ))}
                   </div>
-                  <p className="text-[10px] font-medium text-neutral-500 mt-2 leading-relaxed">
+                  <p className="text-xs font-medium text-neutral-400 mt-2 leading-relaxed">
                     <i className="bi bi-info-circle mr-1" />
                     {catalogLink
                       ? t('equipment.linkedTo', { name: catalogLink })
@@ -339,14 +340,14 @@ export default function EquipmentPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="form-label">{t('equipment.location')}</label>
-                  <select value={location} onChange={e => setLocation(e.target.value)} className="form-input">
+                  <label htmlFor="eq-2" className="form-label">{t('equipment.location')}</label>
+                  <select id="eq-2" value={location} onChange={e => setLocation(e.target.value)} className="form-input">
                     {LOCATION_KEYS.map(k => <option key={k} value={k}>{t(`equipment.${k}`)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="form-label">{t('equipment.quantity')}</label>
-                  <input
+                  <label htmlFor="eq-3" className="form-label">{t('equipment.quantity')}</label>
+                  <input id="eq-3"
                     type="number" min={1}
                     value={quantity}
                     onChange={e => setQuantity(Number(e.target.value))}
@@ -354,8 +355,8 @@ export default function EquipmentPage() {
                   />
                 </div>
                 <div>
-                  <label className="form-label">{t('equipment.weight')}</label>
-                  <input
+                  <label htmlFor="eq-4" className="form-label">{t('equipment.weight')}</label>
+                  <input id="eq-4"
                     type="number" min={0} step={0.5}
                     value={weightKg ?? ''}
                     onChange={e => setWeightKg(e.target.value ? Number(e.target.value) : null)}
@@ -365,8 +366,8 @@ export default function EquipmentPage() {
                 </div>
               </div>
               <div>
-                <label className="form-label">{t('equipment.notes')}</label>
-                <input
+                <label htmlFor="eq-5" className="form-label">{t('equipment.notes')}</label>
+                <input id="eq-5"
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   className="form-input"
@@ -374,12 +375,12 @@ export default function EquipmentPage() {
               </div>
             </div>
 
-            {error && <p className="text-xs text-red-400 font-semibold mt-3 uppercase tracking-wider">{error}</p>}
+            {error && <p role="alert" className="text-xs text-red-400 font-semibold mt-3">{error}</p>}
 
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-full transition-all"
+                className="flex-1 border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs px-6 py-2.5 rounded-full transition-all"
               >
                 {t('common.cancel')}
               </button>
@@ -393,9 +394,7 @@ export default function EquipmentPage() {
             </div>
               </div>
             </GlowCard>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

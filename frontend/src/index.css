@@ -4,13 +4,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   TOKENS DE TEMA — el modo oscuro solo cambia estas variables
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --surface:        #fafafa;   /* fondo de página */
+  --surface-raised: #ffffff;   /* tarjetas claras */
+  --surface-field:  rgba(255, 255, 255, 0.8);
+  --text:           #171717;
+  --text-muted:     #737373;
+  --border:         #e5e5e5;
+  --border-soft:    #f5f5f5;
+  --card-shadow:    0 2px 15px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+html.dark {
+  --surface:        #0a0a0a;
+  --surface-raised: #141414;
+  --surface-field:  #1a1a1a;
+  --text:           #f5f5f5;
+  --text-muted:     #a3a3a3;
+  --border:         rgba(255, 255, 255, 0.06);
+  --border-soft:    rgba(255, 255, 255, 0.06);
+  --card-shadow:    0 2px 15px rgba(0, 0, 0, 0.3);
+}
+
 @layer base {
   body {
-    @apply bg-neutral-50 text-neutral-900 antialiased;
+    @apply antialiased;
+    background-color: var(--surface);
+    color: var(--text);
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
   * {
-    @apply border-neutral-200;
+    border-color: var(--border);
+  }
+
+  /* ─── Foco visible global ─── */
+  :focus-visible {
+    outline: 2px solid #F5C400;
+    outline-offset: 2px;
+  }
+  /* Sobre fondo claro el dorado no llega a 3:1: se usa el dorado oscuro (accent-text) */
+  html:not(.dark) :focus-visible {
+    outline-color: #8A6D00;
+  }
+  html:not(.dark) nav :focus-visible,
+  html:not(.dark) .glow-card :focus-visible,
+  html:not(.dark) [role="dialog"] :focus-visible {
+    outline-color: #F5C400;
   }
 
   /* ─── Premium input styles ─── */
@@ -21,7 +62,10 @@
   input[type="search"],
   textarea,
   select {
-    @apply border border-neutral-200 bg-white/80 shadow-input rounded-2xl transition-all duration-200;
+    @apply border shadow-input rounded-2xl transition-all duration-200;
+    border-color: var(--border);
+    background-color: var(--surface-field);
+    color: var(--text);
   }
   input[type="text"]:focus,
   input[type="email"]:focus,
@@ -30,34 +74,51 @@
   input[type="search"]:focus,
   textarea:focus,
   select:focus {
-    @apply outline-none border-accent ring-2 ring-accent/10;
+    @apply outline-none border-accent ring-2 ring-accent/40;
+  }
+  html.dark input[type="text"],
+  html.dark input[type="email"],
+  html.dark input[type="password"],
+  html.dark input[type="number"],
+  html.dark input[type="search"],
+  html.dark textarea,
+  html.dark select {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+  }
+  html.dark input::placeholder,
+  html.dark textarea::placeholder {
+    color: #a3a3a3;
   }
 }
 
 @layer components {
   /* ── Card container — Apple style ── */
   .card {
-    @apply bg-white border border-neutral-100 shadow-soft rounded-apple;
+    @apply border shadow-soft rounded-apple;
+    background-color: var(--surface-raised);
+    border-color: var(--border-soft);
+    box-shadow: var(--card-shadow);
   }
 
-  /* ── Hover card effect — lift + glow ── */
+  /* ── Hover card effect — lift + glow (solo con puntero real) ── */
   .card-hover {
     @apply transition-all duration-300 ease-out;
   }
-  .card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(245, 196, 0, 0.08);
-  }
-
-  /* ── Accent glow on hover — lift + glow + outline dorado ── */
   .glow-hover {
     @apply transition-all duration-300 ease-out;
   }
-  .glow-hover:hover {
-    transform: translateY(-4px) scale(1.01);
-    box-shadow: 0 0 0 1px rgba(245, 196, 0, 0.3), 0 0 20px rgba(245, 196, 0, 0.10), 0 8px 30px rgba(245, 196, 0, 0.12);
-    outline: 2px solid rgba(245, 196, 0, 0.15);
-    outline-offset: 2px;
+  @media (hover: hover) {
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(245, 196, 0, 0.08);
+    }
+    .glow-hover:hover {
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 0 0 0 1px rgba(245, 196, 0, 0.3), 0 0 20px rgba(245, 196, 0, 0.10), 0 8px 30px rgba(245, 196, 0, 0.12);
+      outline: 2px solid rgba(245, 196, 0, 0.15);
+      outline-offset: 2px;
+    }
   }
 
   /* ── Smooth expand/collapse for dropdowns ── */
@@ -92,7 +153,15 @@
     pointer-events: none;
   }
 
-  /* ── Scale button effect ── */
+  /* ── Botones: base común (área táctil ≥ 44px) ── */
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost-dark,
+  .btn-danger-dark {
+    @apply inline-flex items-center justify-center min-h-[44px] rounded-full
+           text-xs uppercase tracking-wider transition-all duration-200;
+  }
   .btn-press {
     @apply transition-all duration-150;
   }
@@ -100,70 +169,126 @@
     transform: scale(0.97);
   }
 
-  /* ── Primary button — gradient glow pill + translateY + glow ── */
+  /* ── Primary — pill dorado ── */
   .btn-primary {
-    @apply text-neutral-900 font-bold text-xs uppercase tracking-wider
-           px-6 py-2.5 rounded-full transition-all duration-300;
+    @apply text-neutral-900 font-bold px-6 py-2.5;
     background: linear-gradient(135deg, #F5C400 0%, #E0B200 50%, #C9A200 100%);
-    box-shadow: 0 2px 10px rgba(245, 196, 0, 0.25), 0 1px 3px rgba(0,0,0,0.06);
-  }
-  .btn-primary:hover {
-    background: linear-gradient(135deg, #FFD633 0%, #F5C400 50%, #C9A200 100%);
-    box-shadow: 0 0 25px rgba(245, 196, 0, 0.5), 0 4px 20px rgba(245, 196, 0, 0.3);
-    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 2px 10px rgba(245, 196, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.06);
   }
   .btn-primary:active {
-    transform: scale(0.96) translateY(0);
-    box-shadow: 0 0 10px rgba(245, 196, 0, 0.3);
+    transform: scale(0.98);
+    box-shadow: 0 0 8px rgba(245, 196, 0, 0.3);
+  }
+  .btn-primary:disabled,
+  .btn-ghost-dark:disabled,
+  .btn-danger-dark:disabled {
+    cursor: not-allowed;
   }
 
-  /* ── Secondary button — pill outline + scale ── */
+  /* ── Secondary — pill outline (superficie clara) ── */
   .btn-secondary {
-    @apply border border-neutral-200 bg-white text-neutral-600 font-semibold text-xs uppercase tracking-wider
-           px-6 py-2.5 rounded-full transition-all duration-300 hover:border-neutral-400 hover:text-neutral-900;
-  }
-  .btn-secondary:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+    @apply border border-neutral-200 bg-white text-neutral-600 font-semibold px-6 py-2.5
+           hover:border-neutral-400 hover:text-neutral-900;
   }
   .btn-secondary:active {
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
 
-  /* ── Danger button — pill + skew sutil ── */
+  /* ── Danger — pill rojo (superficie clara) ── */
   .btn-danger {
-    @apply border border-red-200 text-red-500 font-semibold text-xs uppercase tracking-wider
-           px-5 py-2 rounded-full transition-all duration-300 hover:bg-red-50 hover:border-red-400;
-  }
-  .btn-danger:hover {
-    transform: translateY(-2px) skewX(-2deg);
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
+    @apply border border-red-200 text-red-500 font-semibold px-5 py-2 hover:bg-red-50 hover:border-red-400;
   }
   .btn-danger:active {
-    transform: scale(0.97) skewX(0);
+    transform: scale(0.98);
   }
 
-  /* ── Section title ── */
+  /* ── Ghost oscuro — acción secundaria sobre superficie oscura ── */
+  .btn-ghost-dark {
+    @apply border border-white/15 bg-white/5 text-neutral-300 font-semibold px-6 py-2.5
+           hover:bg-white/10 hover:text-white disabled:opacity-40;
+  }
+  .btn-ghost-dark:active {
+    transform: scale(0.98);
+  }
+
+  /* ── Danger oscuro — acción destructiva sobre superficie oscura ── */
+  .btn-danger-dark {
+    @apply border border-red-500/40 bg-red-500/10 text-red-400 font-semibold px-5 py-2.5
+           hover:bg-red-500/20 hover:text-red-300 disabled:opacity-40;
+  }
+  .btn-danger-dark:active {
+    transform: scale(0.98);
+  }
+
+  /* El movimiento al pasar el cursor solo existe con puntero real (no en táctil) */
+  @media (hover: hover) {
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #FFD633 0%, #F5C400 50%, #C9A200 100%);
+      box-shadow: 0 0 12px rgba(245, 196, 0, 0.4), 0 2px 10px rgba(245, 196, 0, 0.25);
+      transform: translateY(-1px);
+    }
+    .btn-secondary:hover,
+    .btn-ghost-dark:hover,
+    .btn-danger-dark:hover,
+    .btn-danger:hover {
+      transform: translateY(-1px);
+    }
+    .btn-primary:disabled:hover,
+    .btn-secondary:disabled:hover,
+    .btn-ghost-dark:disabled:hover,
+    .btn-danger-dark:disabled:hover,
+    .btn-danger:disabled:hover {
+      transform: none;
+    }
+    .chip:hover {
+      transform: translateY(-1px);
+    }
+    .card-action-edit:hover,
+    .card-action-delete:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  /* ── Section title (único sitio con mayúsculas + tracking) ── */
   .section-title {
-    @apply text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-4;
+    @apply text-xs font-semibold uppercase tracking-[0.12em] mb-4;
+    color: var(--text-muted);
   }
 
   /* ── Page heading ── */
   .page-title {
-    @apply text-3xl font-bold text-neutral-900 tracking-tight;
+    @apply text-3xl font-bold tracking-tight;
+    color: var(--text);
   }
   .page-subtitle {
-    @apply text-neutral-400 text-xs uppercase tracking-widest mt-1;
+    @apply text-xs mt-1;
+    color: var(--text-muted);
   }
 
   /* ── Form label ── */
   .form-label {
-    @apply block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5;
+    @apply block text-xs font-medium normal-case tracking-normal mb-1.5;
+    color: var(--text-muted);
+  }
+  .glow-card .form-label {
+    @apply text-neutral-400;
   }
 
   /* ── Form input (add on top of base styles) ── */
   .form-input {
     @apply w-full px-4 py-3 text-sm rounded-2xl;
+  }
+  /* Variante oscura: campos dentro de tarjetas y pantallas oscuras */
+  input.form-input-dark,
+  textarea.form-input-dark,
+  select.form-input-dark {
+    @apply bg-white/5 border-white/10 text-white placeholder:text-neutral-400;
+    box-shadow: none;
+  }
+  input.form-input-dark:focus,
+  textarea.form-input-dark:focus,
+  select.form-input-dark:focus {
+    @apply border-accent ring-2 ring-accent/50;
   }
 
   /* ── Styled select (custom arrow) ── */
@@ -175,21 +300,19 @@
     padding-right: 2.5rem;
   }
 
-  /* ── Chip / pill tag + scale ── */
+  /* ── Chip / pill tag ── */
   .chip {
-    @apply border border-neutral-200 px-4 py-2 text-xs font-semibold uppercase tracking-wider
-           rounded-full transition-all duration-300 cursor-pointer text-neutral-500 hover:border-neutral-300;
-  }
-  .chip:hover {
-    transform: translateY(-2px) scale(1.04);
+    @apply inline-flex items-center justify-center min-h-[44px] border border-neutral-200 px-4 py-2
+           text-xs font-semibold rounded-full transition-all duration-200 cursor-pointer
+           text-neutral-600 hover:border-neutral-400;
   }
   .chip:active {
-    transform: scale(0.96);
+    transform: scale(0.97);
   }
   .chip-active {
     @apply border-accent text-neutral-900 font-bold;
-    background: linear-gradient(135deg, #F5C400 0%, #E0B200 50%, #C9A200 100%) !important;
-    box-shadow: 0 2px 10px rgba(245, 196, 0, 0.25), 0 0 12px rgba(245, 196, 0, 0.2);
+    background: linear-gradient(135deg, #F5C400 0%, #E0B200 50%, #C9A200 100%);
+    box-shadow: 0 2px 10px rgba(245, 196, 0, 0.25);
   }
   .chip-accent {
     @apply border-accent/30 bg-accent/10 font-bold text-neutral-900;
@@ -223,19 +346,33 @@
     @apply w-2 h-2 rounded-full;
   }
 
-  /* ── GlowCard — GPU-accelerated, zero re-renders ── */
+  /* ── GlowCard — variante por defecto sobria ── */
   .glow-card {
-    background-color: #0e100f;
-    box-shadow: 0 -8px 80px 8px rgba(245, 196, 0, 0.12), 0 0 8px 0 rgba(0, 0, 0, 0.4);
+    background-color: #0a0a0a;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  html.dark .glow-card {
+    background-color: #141414;
+  }
+
+  /* ── GlowCard con efecto (prop glow): máximo una por pantalla ── */
+  .glow-card--glow {
+    box-shadow: 0 -8px 80px 8px rgba(245, 196, 0, 0.08), 0 0 8px 0 rgba(0, 0, 0, 0.4);
     will-change: transform;
     transition: transform 0.25s cubic-bezier(0.33, 1, 0.68, 1);
     /* CSS variable defaults */
-    --glow-opacity: 0.7;
-    --glow-center-opacity: 0.6;
-    --glass-opacity: 0.4;
-    --line-opacity: 0.8;
-    --line-shadow: 0 0 15px 3px rgba(245,196,0,0.5), 0 0 25px 5px rgba(201,162,0,0.3);
-    --edge-shadow: 0 0 10px 2px rgba(245,196,0,0.3);
+    --glow-opacity: 0.35;
+    --glow-center-opacity: 0.3;
+    --glass-opacity: 0.3;
+    --line-opacity: 0.7;
+    --line-shadow: 0 0 12px 2px rgba(245,196,0,0.4), 0 0 20px 4px rgba(201,162,0,0.2);
+    --edge-shadow: 0 0 8px 2px rgba(245,196,0,0.25);
+  }
+  /* Sin puntero real no hay inclinación */
+  @media (hover: none) {
+    .glow-card--glow {
+      transform: none !important;
+    }
   }
   .glow-card__glass {
     background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 40%, transparent 80%, rgba(255,255,255,0.03) 100%);
@@ -270,176 +407,133 @@
 
   /* ── Card action links (Editar / Eliminar dentro de GlowCard) ── */
   .card-action {
-    @apply text-[11px] font-semibold uppercase tracking-wider
+    @apply inline-flex items-center min-h-[44px] text-xs font-semibold
            px-3 py-1.5 rounded-full transition-all duration-200;
   }
   .card-action-edit {
-    @apply text-neutral-500;
+    @apply text-neutral-400;
   }
   .card-action-edit:hover {
     @apply text-accent bg-accent/10;
-    transform: translateY(-1px);
   }
   .card-action-delete {
-    @apply text-red-400/70;
+    @apply text-red-400/80;
   }
   .card-action-delete:hover {
     @apply text-red-400 bg-red-500/10;
-    transform: translateY(-1px);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   DARK MODE
+   MODO OSCURO
+   Las superficies y bordes salen de las variables de arriba; aquí
+   solo se remapean las utilidades "claras" que no usan variables.
    ═══════════════════════════════════════════════════════════════ */
-html.dark body {
-  background-color: #0a0a0a !important;
-  color: #f5f5f5 !important;
-}
-html.dark * {
-  border-color: rgba(255, 255, 255, 0.06) !important;
-}
 html.dark .bg-neutral-50,
-html.dark .bg-neutral-100,
-html.dark .bg-white {
-  background-color: #0a0a0a !important;
+html.dark .bg-white,
+html.dark .bg-neutral-900 {
+  background-color: var(--surface);
 }
-html.dark .card,
+html.dark .bg-neutral-100,
 html.dark .bg-white.border {
-  background-color: #141414 !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
-  box-shadow: 0 2px 15px rgba(0,0,0,0.3) !important;
+  background-color: var(--surface-raised);
+}
+html.dark .border-neutral-100,
+html.dark .border-neutral-200,
+html.dark .border-neutral-300,
+html.dark .divide-neutral-100 > :not(:last-child) {
+  border-color: var(--border);
 }
 html.dark .card-hover:hover {
-  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(245, 196, 0, 0.1) !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(245, 196, 0, 0.1);
 }
-html.dark .glow-hover:hover {
-  box-shadow: 0 0 0 1px rgba(245, 196, 0, 0.3), 0 8px 30px rgba(245, 196, 0, 0.15), 0 0 20px rgba(245, 196, 0, 0.08) !important;
+
+/* Texto secundario sobre fondo CLARO (modo claro): neutral-400 no llega a 4.5:1,
+   así que fuera de las superficies oscuras (tarjetas, cabeceras, nav, modales) usa --text-muted. */
+html:not(.dark) .text-neutral-400:not(.glow-card *, .header-gradient *, nav *, [role="dialog"] *, .bg-neutral-900 *, .bg-surface *) {
+  color: var(--text-muted);
 }
-/* Text colors */
+
+/* Texto */
 html.dark .text-neutral-900,
-html.dark .font-bold.text-neutral-900,
-html.dark .font-black.text-neutral-900,
 html.dark .page-title {
-  color: #ffffff !important;
+  color: #ffffff;
 }
 html.dark .text-neutral-800 {
-  color: #e5e5e5 !important;
+  color: #e5e5e5;
 }
 html.dark .text-neutral-700 {
-  color: #d4d4d4 !important;
+  color: #d4d4d4;
 }
-html.dark .text-neutral-600 {
-  color: #a3a3a3 !important;
-}
+html.dark .text-neutral-600,
 html.dark .text-neutral-500,
-html.dark .page-subtitle,
-html.dark .section-title,
-html.dark .form-label {
-  color: #737373 !important;
-}
 html.dark .text-neutral-400 {
-  color: #525252 !important;
+  color: #a3a3a3;
 }
 html.dark .text-neutral-300 {
-  color: #404040 !important;
+  color: #d4d4d4;
 }
-/* Nav — already dark by default, no overrides needed in dark mode */
-html.dark nav {
-  background-color: #0a0a0a !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
+html.dark .text-accent-text {
+  color: #F5C400;
 }
-/* Inputs */
-html.dark input[type="text"],
-html.dark input[type="email"],
-html.dark input[type="password"],
-html.dark input[type="number"],
-html.dark input[type="search"],
-html.dark textarea,
-html.dark select {
-  background-color: #1a1a1a !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  color: #f5f5f5 !important;
-  box-shadow: none !important;
-}
-html.dark input:focus,
-html.dark textarea:focus,
-html.dark select:focus {
-  border-color: #F5C400 !important;
-  box-shadow: 0 0 0 2px rgba(245,196,0,0.15) !important;
-}
-html.dark input::placeholder,
-html.dark textarea::placeholder {
-  color: #525252 !important;
-}
-/* Buttons */
+
+/* Botones y chips (superficie clara → oscura) */
 html.dark .btn-secondary {
-  background-color: #1a1a1a !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: #a3a3a3 !important;
+  background-color: #1a1a1a;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #d4d4d4;
 }
 html.dark .btn-secondary:hover {
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 html.dark .btn-danger {
-  border-color: #7f1d1d !important;
-  color: #f87171 !important;
+  border-color: #7f1d1d;
+  color: #f87171;
 }
 html.dark .btn-danger:hover {
-  background-color: rgba(127, 29, 29, 0.2) !important;
+  background-color: rgba(127, 29, 29, 0.2);
 }
-/* Chips */
 html.dark .chip {
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: #a3a3a3 !important;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #d4d4d4;
 }
 html.dark .chip:hover {
-  border-color: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 html.dark .chip-active {
-  border-color: #F5C400 !important;
-  background-color: #F5C400 !important;
-  color: #0a0a0a !important;
+  border-color: #F5C400;
+  background: #F5C400;
+  color: #0a0a0a;
 }
 html.dark .chip-accent {
-  border-color: rgba(245, 196, 0, 0.3) !important;
-  background-color: rgba(245,196,0,0.08) !important;
-  color: #F5C400 !important;
-}
-/* Backgrounds */
-html.dark .bg-neutral-900 {
-  background-color: #0a0a0a !important;
-}
-html.dark .bg-neutral-50,
-html.dark .bg-neutral-100 {
-  background-color: #141414 !important;
+  border-color: rgba(245, 196, 0, 0.3);
+  background-color: rgba(245,196,0,0.08);
+  color: #F5C400;
 }
 html.dark .bg-accent\/5,
 html.dark .bg-accent\/10 {
-  background-color: rgba(245,196,0,0.06) !important;
+  background-color: rgba(245,196,0,0.06);
 }
-/* Glass modal */
+
+/* Modales */
 html.dark .glass-modal {
-  background-color: rgba(20, 20, 20, 0.8) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(20, 20, 20, 0.8);
+  border-color: rgba(255, 255, 255, 0.08);
 }
-/* Modal overlay */
 html.dark .bg-black\/60 {
-  background-color: rgba(0,0,0,0.8) !important;
+  background-color: rgba(0,0,0,0.8);
 }
 html.dark .shadow-modal {
-  box-shadow: 0 25px 60px rgba(0,0,0,0.5) !important;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.5);
 }
-/* Tables */
+
+/* Tablas */
 html.dark thead {
-  background-color: #141414 !important;
+  background-color: var(--surface-raised);
 }
 html.dark tbody tr:hover {
-  background-color: #1a1a1a !important;
-}
-html.dark .divide-neutral-100 > :not(:last-child) {
-  border-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: #1a1a1a;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -547,13 +641,15 @@ html.high-contrast .btn-primary {
   color: #000000 !important;
   box-shadow: none !important;
 }
-html.high-contrast .btn-secondary {
+html.high-contrast .btn-secondary,
+html.high-contrast .btn-ghost-dark {
   border: 3px solid #000000 !important;
   background: #ffffff !important;
   color: #000000 !important;
   box-shadow: none !important;
 }
-html.high-contrast .btn-danger {
+html.high-contrast .btn-danger,
+html.high-contrast .btn-danger-dark {
   border: 3px solid #dc2626 !important;
   background: #ffffff !important;
   color: #dc2626 !important;
@@ -789,13 +885,15 @@ html.dark.high-contrast .btn-primary {
   color: #000000 !important;
   box-shadow: none !important;
 }
-html.dark.high-contrast .btn-secondary {
+html.dark.high-contrast .btn-secondary,
+html.dark.high-contrast .btn-ghost-dark {
   border: 3px solid #ffffff !important;
   background: #000000 !important;
   color: #ffffff !important;
   box-shadow: none !important;
 }
-html.dark.high-contrast .btn-danger {
+html.dark.high-contrast .btn-danger,
+html.dark.high-contrast .btn-danger-dark {
   border: 3px solid #f87171 !important;
   background: #000000 !important;
   color: #f87171 !important;
@@ -893,6 +991,28 @@ html.dark.high-contrast [style*="background-color"] {
 /* DifficultyDots */
 html.dark.high-contrast .difficulty-dot {
   border: 2px solid #ffffff !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ALTO CONTRASTE — tokens de superficie (bg-surface*) y campos oscuros
+   ═══════════════════════════════════════════════════════════════ */
+html.high-contrast [class*="bg-surface"],
+html.high-contrast .bg-neutral-900\/90 {
+  background-color: #ffffff !important;
+}
+html.dark.high-contrast [class*="bg-surface"],
+html.dark.high-contrast .bg-neutral-900\/90 {
+  background-color: #000000 !important;
+}
+html.high-contrast input.form-input-dark,
+html.high-contrast textarea.form-input-dark {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+html.dark.high-contrast input.form-input-dark,
+html.dark.high-contrast textarea.form-input-dark {
+  background-color: #000000 !important;
+  color: #ffffff !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════

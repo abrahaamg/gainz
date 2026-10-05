@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
+import { apiErrorMessage } from '../utils/apiError'
 import { ExerciseCategory, Difficulty, CreateExerciseDTO } from '../types/exercise'
 
 const CATEGORIES: { value: ExerciseCategory; labelKey: string }[] = [
@@ -111,7 +112,7 @@ export default function ExerciseFormPage() {
         navigate(`/exercises/${created.id}`)
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t('exercises.saveError')
+      const msg = apiErrorMessage(err, t('exercises.saveError'))
       setError(msg)
     } finally {
       setLoading(false)
@@ -120,7 +121,7 @@ export default function ExerciseFormPage() {
 
   if (fetchLoading) {
     return (
-      <div className="max-w-2xl mx-auto px-6 py-10 space-y-4">
+      <div className="space-y-4">
         <div className="h-8 bg-neutral-200 animate-pulse w-1/2" />
         <div className="h-48 bg-neutral-200 animate-pulse" />
       </div>
@@ -128,8 +129,8 @@ export default function ExerciseFormPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10">
-      <button onClick={() => navigate('/exercises')} className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
+    <div>
+      <button onClick={() => navigate('/exercises')} className="text-xs font-medium text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
         <i className="bi bi-arrow-left mr-1" />{t('exercises.backToExercises')}
       </button>
 
@@ -291,10 +292,10 @@ export default function ExerciseFormPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {(form.equipment ?? []).map((eq) => (
-                <span key={eq} className="border border-accent/30 bg-accent/10 text-neutral-800 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 rounded-full">
+                <span key={eq} className="border border-accent/30 bg-accent/10 text-neutral-800 px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded-full">
                   {eq}
                   <button type="button" onClick={() => removeEquipment(eq)}
-                    className="ml-1 text-neutral-500 hover:text-red-600 font-black leading-none">×</button>
+                    className="ml-1 text-neutral-500 hover:text-red-600 font-bold leading-none">×</button>
                 </span>
               ))}
             </div>

@@ -1,62 +1,65 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
-import { Routine } from '../types/routine'
-import { GOAL_LABELS } from '../utils/labels'
+import { label } from '../utils/labels'
+import { useAsync } from '../hooks/useAsync'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
+import PageHeader from '../components/ui/PageHeader'
+import EmptyState from '../components/ui/EmptyState'
+import Spinner from '../components/ui/Spinner'
+import ErrorState from '../components/ui/ErrorState'
 
 export default function RoutinesPage() {
   const { t } = useTranslation()
-  const [routines, setRoutines] = useState<Routine[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState<string | null>(null)
+  const { data, loading, error, reload, setData } = useAsync(() => routineService.getAll(), [])
+  const routines = data ?? []
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const navigate = useNavigate()
-
-  useEffect(() => {
-    routineService.getAll()
-      .then(setRoutines)
-      .catch(() => setError(t('routines.loadError')))
-      .finally(() => setLoading(false))
-  }, [])
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.preventDefault()
     if (!confirm(t('routines.deleteConfirm'))) return
-    await routineService.delete(id)
-    setRoutines(prev => prev.filter(r => r.id !== id))
+    setDeleteError(null)
+    try {
+      await routineService.delete(id)
+      setData(prev => prev?.filter(r => r.id !== id))
+    } catch {
+      setDeleteError(t('routines.deleteError'))
+    }
   }
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
-      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <Spinner />
     </div>
   )
 
-  if (error) return <div className="text-center py-16 text-red-500 text-sm font-medium">{error}</div>
+  if (error) return <ErrorState message={t('routines.loadError')} onRetry={reload} />
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10">
-      {/* Header */}
-      <div className="card header-gradient px-8 py-8 mb-8 flex items-center justify-between border-none">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{t('routines.title')}</h1>
-          <p className="text-neutral-500 text-xs mt-1">{routines.length} {t('common.routines')}</p>
-        </div>
-        <Link to="/routines/new" className="btn-primary">
-          {t('routines.new')}
-        </Link>
-      </div>
+    <div>
+      <PageHeader
+        title={t('routines.title')}
+        subtitle={`${routines.length} ${t('common.routines')}`}
+        actions={
+          <Link to="/routines/new" className="btn-primary">
+            {t('routines.new')}
+          </Link>
+        }
+      />
+
+      {deleteError && (
+        <p role="alert" className="mb-4 text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">{deleteError}</p>
+      )}
 
       {routines.length === 0 ? (
-        <div className="card border-dashed p-16 text-center">
-          <i className="bi bi-journal-plus text-3xl text-neutral-300 mb-3 block" />
-          <p className="text-neutral-400 text-sm font-medium mb-4">{t('routines.noRoutines')}</p>
-          <Link to="/routines/new" className="text-[11px] font-black uppercase tracking-wider text-accent hover:text-accent-dk">
-            {t('routines.createFirst')} <i className="bi bi-arrow-right" />
-          </Link>
-        </div>
+        <EmptyState
+          icon="bi-journal-plus"
+          title={t('routines.noRoutines')}
+          action={<Link to="/routines/new" className="btn-primary">{t('routines.createFirst')}</Link>}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {routines.map(routine => (
@@ -66,22 +69,22 @@ export default function RoutinesPage() {
                 className="block p-5 flex flex-col h-full gap-3"
               >
                 <div className="flex justify-between items-start">
-                  <h2 className="font-black text-white leading-tight">{routine.name}</h2>
+                  <h2 className="font-bold text-white leading-tight">{routine.name}</h2>
                   <DifficultyDots level={routine.difficulty} />
                 </div>
 
                 {/* Goal + Duration pills */}
                 <div className="flex flex-wrap items-center gap-2">
                   {routine.goal && (
-                    <span className="text-[10px] font-bold text-accent uppercase tracking-wider bg-accent/10 px-2.5 py-1 rounded-full">{GOAL_LABELS[routine.goal] ?? routine.goal}</span>
+                    <span className="text-xs font-bold text-accent bg-accent/10 px-2.5 py-1 rounded-full">{label('goals', routine.goal)}</span>
                   )}
                   {routine.estimated_duration_min && (
-                    <span className="text-[10px] font-semibold text-neutral-500 bg-white/5 px-2.5 py-1 rounded-full">{routine.estimated_duration_min} min</span>
+                    <span className="text-xs font-semibold text-neutral-400 bg-white/5 px-2.5 py-1 rounded-full">{routine.estimated_duration_min} min</span>
                   )}
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-4 text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">
+                <div className="flex items-center gap-4 text-xs font-medium text-neutral-400">
                   {routine.exercise_count !== undefined && (
                     <span><strong className="text-accent">{routine.exercise_count}</strong> {t('common.exercises')}</span>
                   )}
@@ -89,7 +92,7 @@ export default function RoutinesPage() {
                 </div>
 
                 {routine.description && (
-                  <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed italic">{routine.description}</p>
+                  <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed italic">{routine.description}</p>
                 )}
 
                 <div className="flex justify-between items-center mt-auto pt-3 border-t border-white/10">
