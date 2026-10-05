@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { isAxiosError } from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
@@ -6,6 +7,7 @@ import { useAuthStore } from '../store/useAuthStore'
 import api from '../services/api'
 import { equipmentService } from '../services/equipmentService'
 import { CatalogItem } from '../types/equipment'
+import type { MysqlUser } from '../store/useAuthStore'
 
 /* ─── Constants ─────────────────────────────────────────────── */
 
@@ -92,6 +94,10 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [equipmentFailed, setEquipmentFailed] = useState<string[]>([])
+  const pendingUser = useRef<MysqlUser | null>(null)
+  const [catalogError, setCatalogError] = useState(false)
+  const [catalogAttempt, setCatalogAttempt] = useState(0)
 
   // Step 1 — Profile
   const [username, setUsername] = useState(mysqlUser?.username ?? '')
@@ -116,12 +122,21 @@ export default function OnboardingPage() {
   const [injuries, setInjuries] = useState<string[]>([])
 
   useEffect(() => {
-    equipmentService.getCatalog().then(setCatalog).catch(() => {})
-  }, [])
+    let cancelled = false
+    equipmentService.getCatalog()
+      .then(items => { if (!cancelled) { setCatalog(items); setCatalogError(false) } })
+      .catch(() => { if (!cancelled) setCatalogError(true) })
+    return () => { cancelled = true }
+  }, [catalogAttempt])
+
+  const retryCatalog = () => {
+    setCatalogError(false)
+    setCatalogAttempt(a => a + 1)
+  }
 
   useEffect(() => {
     if (mysqlUser?.onboarding_done) navigate('/', { replace: true })
-  }, [mysqlUser?.onboarding_done])
+  }, [mysqlUser?.onboarding_done, navigate])
 
   const toggleGoal = (g: string) => {
     setGoals(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])
@@ -131,7 +146,8 @@ export default function OnboardingPage() {
   const toggleEquipment = (id: number) => {
     setSelectedEquipment(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
@@ -152,8 +168,13 @@ export default function OnboardingPage() {
     return false
   }
 
+  const continueAnyway = () => {
+    if (pendingUser.current) setMysqlUser(pendingUser.current)
+    navigate('/', { replace: true })
+  }
+
   const handleFinish = async () => {
-    setSaving(true); setError(null)
+    setSaving(true); setError(null); setEquipmentFailed([])
     try {
       // 1. Save profile
       const profileRes = await api.patch('/auth/me', {
@@ -172,26 +193,34 @@ export default function OnboardingPage() {
         onboarding_done: true,
       })
 
-      // 2. Save equipment (ignore individual errors — may already exist)
+      // 2. Save equipment: un 409 es equipo ya existente (se ignora); cualquier otro fallo se informa
+      const failed: string[] = []
       for (const catId of selectedEquipment) {
         const item = catalog.find(c => c.id === catId)
-        if (item) {
-          try {
-            await equipmentService.create({
-              name: item.name,
-              catalog_name: item.name,
-              category: item.category,
-              location: 'gym',
-            })
-          } catch { /* equipo duplicado, ignorar */ }
+        if (!item) continue
+        try {
+          await equipmentService.create({
+            name: item.name,
+            catalog_name: item.name,
+            category: item.category,
+            location: 'gym',
+          })
+        } catch (err) {
+          if (!(isAxiosError(err) && err.response?.status === 409)) failed.push(item.name)
         }
       }
 
-      // 3. Update local state and navigate
-      setMysqlUser({ ...profileRes.data.data, onboarding_done: true })
+      // 3. Si algo del equipo no se guardó, se avisa antes de salir (se puede reintentar o continuar)
+      // (guardar el usuario con onboarding_done redirige solo, por eso se retiene si hay avisos)
+      const savedUser = { ...profileRes.data.data, onboarding_done: true } as MysqlUser
+      if (failed.length > 0) {
+        pendingUser.current = savedUser
+        setEquipmentFailed(failed)
+        return
+      }
+      setMysqlUser(savedUser)
       navigate('/', { replace: true })
-    } catch (err) {
-      console.error('Onboarding error:', err)
+    } catch {
       setError(t('onboarding.saveError'))
     } finally {
       setSaving(false)
@@ -235,8 +264,8 @@ export default function OnboardingPage() {
 
               <div className="space-y-3">
                 <div>
-                  <label className="form-label">{t('onboarding.username')}</label>
-                  <input
+                  <label htmlFor="onb-1" className="form-label">{t('onboarding.username')}</label>
+                  <input id="onb-1"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                     placeholder={t('onboarding.usernamePlaceholder')}
@@ -265,8 +294,8 @@ export default function OnboardingPage() {
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="form-label">{t('onboarding.age')}</label>
-                    <input
+                    <label htmlFor="onb-2" className="form-label">{t('onboarding.age')}</label>
+                    <input id="onb-2"
                       type="number" min={14} max={99}
                       value={age}
                       onChange={e => setAge(e.target.value ? Number(e.target.value) : '')}
@@ -275,8 +304,8 @@ export default function OnboardingPage() {
                     />
                   </div>
                   <div>
-                    <label className="form-label">{t('onboarding.weightKg')}</label>
-                    <input
+                    <label htmlFor="onb-3" className="form-label">{t('onboarding.weightKg')}</label>
+                    <input id="onb-3"
                       type="number" min={30} max={250} step={0.1}
                       value={weightKg}
                       onChange={e => setWeightKg(e.target.value ? Number(e.target.value) : '')}
@@ -285,8 +314,8 @@ export default function OnboardingPage() {
                     />
                   </div>
                   <div>
-                    <label className="form-label">{t('onboarding.heightCm')}</label>
-                    <input
+                    <label htmlFor="onb-4" className="form-label">{t('onboarding.heightCm')}</label>
+                    <input id="onb-4"
                       type="number" min={100} max={250}
                       value={heightCm}
                       onChange={e => setHeightCm(e.target.value ? Number(e.target.value) : '')}
@@ -384,6 +413,15 @@ export default function OnboardingPage() {
               <p className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider mb-4">
                 {t('onboarding.equipmentHint')}
               </p>
+
+              {catalogError && (
+                <div role="alert" className="mb-3 text-xs text-red-600 font-semibold">
+                  <p>{t('onboarding.catalogError')}</p>
+                  <button type="button" onClick={retryCatalog} className="mt-1 underline uppercase tracking-wide">
+                    {t('common.retry')}
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-5 max-h-[50vh] overflow-y-auto pr-1">
                 {Object.entries(catalogGrouped).map(([cat, catItems]) => (
@@ -486,7 +524,19 @@ export default function OnboardingPage() {
           )}
 
           {/* ─── Error ─── */}
-          {error && <p className="text-xs text-red-600 font-semibold mt-5 uppercase tracking-wide">{error}</p>}
+          {error && <p role="alert" className="text-xs text-red-600 font-semibold mt-5 uppercase tracking-wide">{error}</p>}
+          {equipmentFailed.length > 0 && (
+            <div role="alert" className="mt-5 text-xs text-red-600 font-semibold">
+              <p>{t('onboarding.equipmentPartial', { items: equipmentFailed.join(', ') })}</p>
+              <button
+                type="button"
+                onClick={continueAnyway}
+                className="mt-2 underline uppercase tracking-wide"
+              >
+                {t('onboarding.continueAnyway')}
+              </button>
+            </div>
+          )}
 
           {/* ─── Navigation ─── */}
           <div className="flex gap-3 mt-5">

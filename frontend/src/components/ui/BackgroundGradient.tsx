@@ -40,7 +40,6 @@ export default function BackgroundGradient({
   const curY = useRef(0)
   const tgX = useRef(0)
   const tgY = useRef(0)
-  const animFrameRef = useRef<number>(0)
 
   // Aplicar variables CSS al contenedor
   useEffect(() => {
@@ -59,22 +58,20 @@ export default function BackgroundGradient({
   }, [gradientBackgroundStart, gradientBackgroundEnd, firstColor, secondColor, thirdColor, fourthColor, fifthColor, pointerColor, size, blendingValue])
 
   // Animación del cursor con requestAnimationFrame
-  const move = useCallback(() => {
-    if (!interactiveRef.current) {
-      animFrameRef.current = requestAnimationFrame(move)
-      return
-    }
-    curX.current += (tgX.current - curX.current) / 20
-    curY.current += (tgY.current - curY.current) / 20
-    interactiveRef.current.style.transform = `translate(${Math.round(curX.current)}px, ${Math.round(curY.current)}px)`
-    animFrameRef.current = requestAnimationFrame(move)
-  }, [])
-
   useEffect(() => {
     if (!interactive) return
-    animFrameRef.current = requestAnimationFrame(move)
-    return () => cancelAnimationFrame(animFrameRef.current)
-  }, [interactive, move])
+    let frame = 0
+    function step() {
+      if (interactiveRef.current) {
+        curX.current += (tgX.current - curX.current) / 20
+        curY.current += (tgY.current - curY.current) / 20
+        interactiveRef.current.style.transform = `translate(${Math.round(curX.current)}px, ${Math.round(curY.current)}px)`
+      }
+      frame = requestAnimationFrame(step)
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [interactive])
 
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     if (interactiveRef.current) {
@@ -84,10 +81,7 @@ export default function BackgroundGradient({
     }
   }, [])
 
-  const [isSafari, setIsSafari] = useState(false)
-  useEffect(() => {
-    setIsSafari(/^((?!chrome|android).)*safari/i.test(navigator.userAgent))
-  }, [])
+  const [isSafari] = useState(() => /^((?!chrome|android).)*safari/i.test(navigator.userAgent))
 
   return (
     <div
