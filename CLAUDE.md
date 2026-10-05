@@ -22,13 +22,13 @@
 - Alias de imports: `@/` → `src/` (configurado en `vite.config.ts` + `tsconfig.app.json`)
 - Utilidad `cn()` en `@/lib/utils.ts` (clsx + tailwind-merge) para merge condicional de clases
 - Componentes reutilizables en `src/components/ui/` — nunca código raw repetido en páginas
-- Dependencias UI: `framer-motion` (animaciones), `clsx` + `tailwind-merge` (clases), `bootstrap-icons` (iconos), `recharts` (gráficas)
+- Dependencias UI: animaciones en CSS (sin framer-motion), `clsx` + `tailwind-merge` (clases), `bootstrap-icons` (iconos), `recharts` (gráficas)
 - Patrón: cada componente UI acepta `className?` como prop para composición
 
 ### Componentes UI existentes (`src/components/ui/`)
 | Componente | Propósito |
 |---|---|
-| `AnimatedHero` | Hero del dashboard con texto rotativo animado (framer-motion) |
+| `AnimatedHero` | Hero del dashboard con texto rotativo animado (CSS) |
 | `DifficultyDots` | 1-3 puntos de color según dificultad (green/amber/red) |
 
 ### Sistema de diseño (Tailwind + CSS)
