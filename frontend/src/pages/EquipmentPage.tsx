@@ -6,6 +6,7 @@ import { CatalogItem, Equipment } from '../types/equipment'
 import type { Exercise } from '../types/exercise'
 import { MUSCLE_LABELS, EQUIPMENT_CATEGORY_LABELS as CATEGORY_LABELS } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
+import Modal from '../components/ui/Modal'
 
 const LOCATION_KEYS = ['home', 'gym', 'outdoor'] as const
 
@@ -250,12 +251,10 @@ export default function EquipmentPage() {
       )}
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md max-h-[85vh] overflow-y-auto">
+      <Modal open={showModal} onClose={() => setShowModal(false)} labelledBy="equipment-modal-title" className="max-h-[85vh] overflow-y-auto">
             <GlowCard>
               <div className="p-6">
-            <h2 className="text-xl font-bold text-white tracking-tight mb-6">{t('equipment.addEquipment')}</h2>
+            <h2 id="equipment-modal-title" className="text-xl font-bold text-white tracking-tight mb-6">{t('equipment.addEquipment')}</h2>
 
             {/* Catalog selector */}
             {!isCustom && (
@@ -298,8 +297,8 @@ export default function EquipmentPage() {
             {isCustom && (
               <div className="mb-4 space-y-3">
                 <div>
-                  <label className="form-label">{t('equipment.nameRequired')}</label>
-                  <input
+                  <label htmlFor="eq-1" className="form-label">{t('equipment.nameRequired')}</label>
+                  <input id="eq-1"
                     value={customName}
                     onChange={e => setCustomName(e.target.value)}
                     placeholder={t('equipment.customNamePlaceholder')}
@@ -339,14 +338,14 @@ export default function EquipmentPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="form-label">{t('equipment.location')}</label>
-                  <select value={location} onChange={e => setLocation(e.target.value)} className="form-input">
+                  <label htmlFor="eq-2" className="form-label">{t('equipment.location')}</label>
+                  <select id="eq-2" value={location} onChange={e => setLocation(e.target.value)} className="form-input">
                     {LOCATION_KEYS.map(k => <option key={k} value={k}>{t(`equipment.${k}`)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="form-label">{t('equipment.quantity')}</label>
-                  <input
+                  <label htmlFor="eq-3" className="form-label">{t('equipment.quantity')}</label>
+                  <input id="eq-3"
                     type="number" min={1}
                     value={quantity}
                     onChange={e => setQuantity(Number(e.target.value))}
@@ -354,8 +353,8 @@ export default function EquipmentPage() {
                   />
                 </div>
                 <div>
-                  <label className="form-label">{t('equipment.weight')}</label>
-                  <input
+                  <label htmlFor="eq-4" className="form-label">{t('equipment.weight')}</label>
+                  <input id="eq-4"
                     type="number" min={0} step={0.5}
                     value={weightKg ?? ''}
                     onChange={e => setWeightKg(e.target.value ? Number(e.target.value) : null)}
@@ -365,8 +364,8 @@ export default function EquipmentPage() {
                 </div>
               </div>
               <div>
-                <label className="form-label">{t('equipment.notes')}</label>
-                <input
+                <label htmlFor="eq-5" className="form-label">{t('equipment.notes')}</label>
+                <input id="eq-5"
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   className="form-input"
@@ -374,7 +373,7 @@ export default function EquipmentPage() {
               </div>
             </div>
 
-            {error && <p className="text-xs text-red-400 font-semibold mt-3 uppercase tracking-wider">{error}</p>}
+            {error && <p role="alert" className="text-xs text-red-400 font-semibold mt-3 uppercase tracking-wider">{error}</p>}
 
             <div className="flex gap-3 mt-6">
               <button
@@ -393,9 +392,7 @@ export default function EquipmentPage() {
             </div>
               </div>
             </GlowCard>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

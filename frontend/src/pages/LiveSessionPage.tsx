@@ -1,17 +1,16 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { routineService } from '../services/routineService'
 import { sessionService } from '../services/sessionService'
 import { RoutineExercise } from '../types/routine'
+import type { AddSetPayload, LastPerformance } from '../types/session'
+import { useWorkoutSession } from '../hooks/useWorkoutSession'
+import { useRestTimer, useStopwatch } from '../hooks/useRestTimer'
+import { fmtTime } from '../utils/time'
 import GlowCard from '../components/ui/GlowCard'
-
-// ─── helpers ─────────────────────────────────────────────────
-function fmtTime(secs: number): string {
-  const m = Math.floor(secs / 60).toString().padStart(2, '0')
-  const s = (secs % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
-}
+import Modal from '../components/ui/Modal'
+import Spinner from '../components/ui/Spinner'
+import ErrorState from '../components/ui/ErrorState'
 
 type Phase = 'working' | 'resting' | 'timing'
 
@@ -28,41 +27,49 @@ interface CompletedSet {
   new_pr: boolean
 }
 
+// Serie pendiente de guardar: se conserva tal cual si falla para poder reintentarla
+interface PendingSet {
+  payload: AddSetPayload
+  exercise: RoutineExercise
+  exIdx: number
+  setNumber: number
+  rpe: number
+}
+
+const DEFAULT_INPUT: SetInput = { reps: 10, weight_kg: '', rpe: 7, notes: '' }
+
+// Remonta la sesión entera al cambiar de rutina (estado limpio, nueva sesión)
 export default function LiveSessionPage() {
   const { routineId } = useParams<{ routineId: string }>()
+  return <LiveSession key={routineId} routineId={Number(routineId)} />
+}
+
+function LiveSession({ routineId }: { routineId: number }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
-  // Session data
-  const sessionIdRef              = useRef<number | null>(null)
-  const sessionCreated            = useRef(false)
-  const [exercises, setExercises] = useState<RoutineExercise[]>([])
-  const [routineName, setRoutineName] = useState('')
-  const [loading, setLoading]     = useState(true)
+  const session = useWorkoutSession(routineId)
+  const { status, exercises, routineName, retry } = session
 
   // Navigation
   const [exIdx, setExIdx]   = useState(0)
   const [setIdx, setSetIdx] = useState(1)
-
-  // Timers
-  const [globalSecs, setGlobalSecs]   = useState(0)
-  const [restSecs, setRestSecs]       = useState(0)
-  const [exerciseSecs, setExerciseSecs] = useState(0)
-  const [phase, setPhase]             = useState<Phase>('working')
-
-  const globalTimer   = useRef<ReturnType<typeof setInterval> | null>(null)
-  const restTimer     = useRef<ReturnType<typeof setInterval> | null>(null)
-  const exerciseTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [phase, setPhase]   = useState<Phase>('working')
 
   // Set inputs
-  const [setInput, setSetInput] = useState<SetInput>({ reps: 10, weight_kg: '', rpe: 7, notes: '' })
+  const [setInput, setSetInput] = useState<SetInput>(DEFAULT_INPUT)
 
   // Completed sets tracking
   const [completedSets, setCompletedSets] = useState<CompletedSet[]>([])
   const [newPRs, setNewPRs]               = useState<string[]>([])
+  const [savingSet, setSavingSet]         = useState(false)
+  const [failedSet, setFailedSet]         = useState<PendingSet | null>(null)
+  const savingSetRef = useRef(false)
 
-  // Adaptive rest message
+  // Mensajes
   const [adaptiveRestMsg, setAdaptiveRestMsg] = useState('')
+  const [announcement, setAnnouncement]       = useState('')
+  const [actionError, setActionError]         = useState<string | null>(null)
 
   // Overload suggestion
   const [showOverloadPopover, setShowOverloadPopover] = useState(false)
@@ -73,88 +80,64 @@ export default function LiveSessionPage() {
   const [finishNotes, setFinishNotes]   = useState('')
   const [finishRating, setFinishRating] = useState(4)
   const [saving, setSaving]             = useState(false)
+  const [finishError, setFinishError]   = useState<string | null>(null)
 
   // Smart Fill: last performance data + plateau
-  const [lastPerf, setLastPerf] = useState<{ weight_kg: number | null; reps_done: number | null; rpe: number | null; plateau_detected: boolean } | null>(null)
+  const [lastPerf, setLastPerf] = useState<LastPerformance | null>(null)
 
   const currentEx = exercises[exIdx] as RoutineExercise | undefined
   const isTimed   = currentEx ? currentEx.duration_seconds !== null : false
 
-  // ── Smart Fill: fetch last performance for an exercise
-  const fetchSmartFill = useCallback(async (exerciseId: number, fallbackReps: number | null, fallbackWeight: number | null) => {
-    try {
-      const perf = await sessionService.getLastPerformance(exerciseId)
-      setLastPerf(perf)
-      if (perf) {
-        setSetInput({
-          reps: perf.reps_done ?? fallbackReps ?? 10,
-          weight_kg: perf.weight_kg?.toString() ?? fallbackWeight?.toString() ?? '',
-          rpe: 7,
-          notes: '',
-        })
-      } else {
-        setSetInput({
-          reps: fallbackReps ?? 10,
-          weight_kg: fallbackWeight?.toString() ?? '',
-          rpe: 7,
-          notes: '',
-        })
-      }
-    } catch {
-      setLastPerf(null)
-      setSetInput({
-        reps: fallbackReps ?? 10,
-        weight_kg: fallbackWeight?.toString() ?? '',
-        rpe: 7,
-        notes: '',
-      })
-    }
-  }, [])
+  // ── Temporizadores: el fin es un timestamp y los callbacks se leen siempre actuales
+  const handlers = useRef({ onRestEnd: () => {}, onTimeUp: () => {} })
+  const rest      = useRestTimer(() => handlers.current.onRestEnd())
+  const exTimer   = useRestTimer(() => handlers.current.onTimeUp())
+  const globalSecs = useStopwatch(session.inProgress)
 
-  // ── Global stopwatch
-  const startGlobalTimer = useCallback(() => {
-    if (globalTimer.current) return
-    globalTimer.current = setInterval(() => setGlobalSecs(s => s + 1), 1000)
-  }, [])
-
-  // ── Init: fetch routine + create session
+  // Timeouts de avisos: se limpian al desmontar
+  const timeouts = useRef(new Set<ReturnType<typeof setTimeout>>())
+  const adaptiveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    if (sessionCreated.current) return
-    sessionCreated.current = true
-
-    const init = async () => {
-      try {
-        const routine = await routineService.getById(Number(routineId))
-        setRoutineName(routine.name)
-        const exs = routine.exercises ?? []
-        setExercises(exs)
-
-        const { id } = await sessionService.create(Number(routineId))
-        sessionIdRef.current = id
-
-        if (exs.length > 0) {
-          await fetchSmartFill(exs[0].exercise_id, exs[0].reps, exs[0].weight_suggestion)
-          if (exs[0].duration_seconds) {
-            setExerciseSecs(exs[0].duration_seconds)
-          }
-        }
-
-        startGlobalTimer()
-      } finally {
-        setLoading(false)
-      }
-    }
-    init()
-
+    const pending = timeouts.current
     return () => {
-      if (globalTimer.current)   clearInterval(globalTimer.current)
-      if (restTimer.current)     clearInterval(restTimer.current)
-      if (exerciseTimer.current) clearInterval(exerciseTimer.current)
+      pending.forEach(clearTimeout)
+      pending.clear()
+      if (adaptiveTimeout.current) clearTimeout(adaptiveTimeout.current)
     }
-  }, [routineId, startGlobalTimer])
+  }, [])
+  const later = (fn: () => void, ms: number) => {
+    const id = setTimeout(() => { timeouts.current.delete(id); fn() }, ms)
+    timeouts.current.add(id)
+  }
+
+  // ── Smart Fill: al cambiar de ejercicio, última marca y valores iniciales (con cancelación)
+  useEffect(() => {
+    if (!currentEx) return
+    let cancelled = false
+    const fallback: SetInput = {
+      reps: currentEx.reps ?? 10,
+      weight_kg: currentEx.weight_suggestion?.toString() ?? '',
+      rpe: 7,
+      notes: '',
+    }
+    sessionService.getLastPerformance(currentEx.exercise_id)
+      .then(perf => {
+        if (cancelled) return
+        setLastPerf(perf)
+        setSetInput(perf
+          ? { ...fallback, reps: perf.reps_done ?? fallback.reps, weight_kg: perf.weight_kg?.toString() ?? fallback.weight_kg }
+          : fallback)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setLastPerf(null)
+        setSetInput(fallback)
+      })
+    return () => { cancelled = true }
+  }, [currentEx])
 
   // ── Move to next set or exercise
-  const goNext = useCallback(() => {
+  const goNext = () => {
     if (!currentEx) return
     const isLastSet = setIdx >= currentEx.sets
     const isLastEx  = exIdx >= exercises.length - 1
@@ -165,150 +148,150 @@ export default function LiveSessionPage() {
     }
 
     if (isLastSet) {
-      const nextIdx = exIdx + 1
-      const next    = exercises[nextIdx]
-      setExIdx(nextIdx)
+      setExIdx(exIdx + 1)
       setSetIdx(1)
-      fetchSmartFill(next.exercise_id, next.reps, next.weight_suggestion)
-      if (next.duration_seconds) {
-        setExerciseSecs(next.duration_seconds)
-        setPhase('timing')
-        startExerciseTimer(next.duration_seconds)
-      } else {
-        setPhase('working')
-      }
+      setAnnouncement(exercises[exIdx + 1].exercise_name)
     } else {
-      setSetIdx(s => s + 1)
-      setPhase('working')
+      setSetIdx(setIdx + 1)
+      setAnnouncement(t('session.announceSet', { set: setIdx + 1, total: currentEx.sets }))
     }
-  }, [currentEx, setIdx, exIdx, exercises])
-
-  // ── Start rest timer
-  const startRest = useCallback((restDuration: number) => {
-    if (restTimer.current) clearInterval(restTimer.current)
-    setRestSecs(restDuration)
-    setPhase('resting')
-    restTimer.current = setInterval(() => {
-      setRestSecs(prev => {
-        if (prev <= 1) {
-          clearInterval(restTimer.current!)
-          restTimer.current = null
-          if ('vibrate' in navigator) navigator.vibrate([200, 100, 200])
-          goNext()
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-  }, [goNext])
-
-  // ── Start exercise countdown timer (timed exercises)
-  const startExerciseTimer = (duration: number) => {
-    if (exerciseTimer.current) clearInterval(exerciseTimer.current)
-    setExerciseSecs(duration)
-    setPhase('timing')
-    exerciseTimer.current = setInterval(() => {
-      setExerciseSecs(prev => {
-        if (prev <= 1) {
-          clearInterval(exerciseTimer.current!)
-          exerciseTimer.current = null
-          handleCompleteSet(duration)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
+    setPhase('working')
   }
 
-  // ── Complete a set
-  const handleCompleteSet = useCallback(async (durationDone?: number) => {
-    if (!currentEx || !sessionIdRef.current) return
+  const startRest = (restDuration: number) => {
+    rest.start(restDuration)
+    setPhase('resting')
+    setAnnouncement(t('session.announceRest', { seconds: restDuration }))
+  }
 
+  // ── Guardar una serie; si falla se conserva para reintentar
+  const persistSet = async (snap: PendingSet) => {
+    if (savingSetRef.current) return
+    savingSetRef.current = true
+    setSavingSet(true)
+    setActionError(null)
     try {
-      const result = await sessionService.addSet(sessionIdRef.current, {
-        exercise_id:      currentEx.exercise_id,
-        set_number:       setIdx,
-        reps_done:        isTimed ? null : Number(setInput.reps),
-        weight_kg:        setInput.weight_kg ? Number(setInput.weight_kg) : null,
-        duration_done_sec: durationDone ?? null,
-        rpe:              setInput.rpe || null,
-        notes:            setInput.notes || null,
-      })
-
+      const result = await session.saveSet(snap.payload)
+      setFailedSet(null)
       setCompletedSets(prev => [
         ...prev,
-        { exercise_id: currentEx.exercise_id, set_number: setIdx, new_pr: result.new_pr },
+        { exercise_id: snap.exercise.exercise_id, set_number: snap.setNumber, new_pr: result.new_pr },
       ])
 
       if (result.new_pr) {
-        setNewPRs(prev => [...prev, currentEx.exercise_name])
-        setTimeout(() => setNewPRs(prev => prev.slice(1)), 3000)
+        setNewPRs(prev => [...prev, snap.exercise.exercise_name])
+        later(() => setNewPRs(prev => prev.slice(1)), 3000)
       }
 
-      const isLastSet = setIdx >= currentEx.sets
-      const isLastEx  = exIdx >= exercises.length - 1
+      const isLastSet = snap.setNumber >= snap.exercise.sets
+      const isLastEx  = snap.exIdx >= exercises.length - 1
 
       if (isLastSet && isLastEx) {
         setShowModal(true)
       } else {
         // Adaptive rest: +30s if RPE 10
-        const baseRest = currentEx.rest_seconds || 60
-        if (setInput.rpe >= 10) {
+        const baseRest = snap.exercise.rest_seconds || 60
+        if (adaptiveTimeout.current) clearTimeout(adaptiveTimeout.current)
+        if (snap.rpe >= 10) {
           setAdaptiveRestMsg(t('session.rpe10Detected'))
-          setTimeout(() => setAdaptiveRestMsg(''), 4000)
+          adaptiveTimeout.current = setTimeout(() => setAdaptiveRestMsg(''), 4000)
           startRest(baseRest + 30)
         } else {
           setAdaptiveRestMsg('')
           startRest(baseRest)
         }
       }
-    } catch (err) {
-      console.error('Error saving set:', err)
+    } catch {
+      setFailedSet(snap)
+    } finally {
+      savingSetRef.current = false
+      setSavingSet(false)
     }
-  }, [currentEx, setIdx, setInput, isTimed, exIdx, exercises.length, startRest, t])
+  }
+
+  // ── Complete a set
+  const handleCompleteSet = (durationDone?: number) => {
+    if (!currentEx) return
+    exTimer.stop()
+    return persistSet({
+      exercise: currentEx,
+      exIdx,
+      setNumber: setIdx,
+      rpe: setInput.rpe,
+      payload: {
+        exercise_id:       currentEx.exercise_id,
+        set_number:        setIdx,
+        reps_done:         isTimed ? null : Number(setInput.reps),
+        weight_kg:         setInput.weight_kg ? Number(setInput.weight_kg) : null,
+        duration_done_sec: durationDone ?? null,
+        rpe:               setInput.rpe || null,
+        notes:             setInput.notes || null,
+      },
+    })
+  }
+
+  // ── Start exercise countdown timer (timed exercises)
+  const startExerciseTimer = () => {
+    if (!currentEx?.duration_seconds) return
+    exTimer.start(currentEx.duration_seconds)
+    setPhase('timing')
+  }
+
+  // Los temporizadores llaman siempre a la última versión de estos callbacks
+  useEffect(() => {
+    handlers.current = {
+      onRestEnd: () => {
+        if ('vibrate' in navigator) navigator.vibrate([200, 100, 200])
+        goNext()
+      },
+      onTimeUp: () => {
+        if (currentEx?.duration_seconds) handleCompleteSet(currentEx.duration_seconds)
+      },
+    }
+  })
 
   // ── Skip rest
   const skipRest = () => {
-    if (restTimer.current) { clearInterval(restTimer.current); restTimer.current = null }
+    rest.stop()
     goNext()
   }
 
   // ── Skip exercise
   const skipExercise = () => {
-    if (restTimer.current) { clearInterval(restTimer.current); restTimer.current = null }
+    rest.stop()
+    exTimer.stop()
     const isLastEx = exIdx >= exercises.length - 1
     if (isLastEx) { setShowModal(true); return }
-    const nextIdx = exIdx + 1
-    const next    = exercises[nextIdx]
-    setExIdx(nextIdx)
+    setExIdx(exIdx + 1)
     setSetIdx(1)
     setPhase('working')
-    fetchSmartFill(next.exercise_id, next.reps, next.weight_suggestion)
   }
 
   // ── Jump to exercise
   const jumpTo = (idx: number) => {
-    if (restTimer.current) { clearInterval(restTimer.current); restTimer.current = null }
-    const ex = exercises[idx]
+    rest.stop()
+    exTimer.stop()
     setExIdx(idx)
     setSetIdx(1)
     setPhase('working')
-    fetchSmartFill(ex.exercise_id, ex.reps, ex.weight_suggestion)
   }
 
   // ── Finish session
   const handleFinish = async () => {
-    if (!sessionIdRef.current) return
     setSaving(true)
+    setFinishError(null)
     try {
-      await sessionService.finish(sessionIdRef.current, {
+      await session.finish({
         status:           'completed',
         notes:            finishNotes || null,
         rating:           finishRating,
         duration_seconds: globalSecs,
       })
-      if (globalTimer.current) clearInterval(globalTimer.current)
-      navigate(`/session/${sessionIdRef.current}/summary`)
+      rest.stop()
+      exTimer.stop()
+      navigate(`/session/${session.sessionId}/summary`)
+    } catch {
+      setFinishError(t('session.finishError'))
     } finally {
       setSaving(false)
     }
@@ -317,13 +300,14 @@ export default function LiveSessionPage() {
   // ── Abandon session
   const handleAbandon = async () => {
     if (!confirm(t('session.abandonConfirm'))) return
-    if (!sessionIdRef.current) { navigate('/routines'); return }
-    await sessionService.finish(sessionIdRef.current, {
-      status: 'abandoned',
-      duration_seconds: globalSecs,
-    })
-    if (globalTimer.current) clearInterval(globalTimer.current)
-    navigate('/routines')
+    if (session.sessionId === null) { navigate('/routines'); return }
+    setActionError(null)
+    try {
+      await session.finish({ status: 'abandoned', duration_seconds: globalSecs })
+      navigate('/routines')
+    } catch {
+      setActionError(t('session.abandonError'))
+    }
   }
 
   // ── Computed progress
@@ -334,10 +318,14 @@ export default function LiveSessionPage() {
   const setsCompletedForEx = (exerciseId: number) =>
     completedSets.filter(s => s.exercise_id === exerciseId).length
 
-  if (loading) return (
+  if (status === 'loading') return (
     <div className="flex justify-center items-center h-screen">
-      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <Spinner />
     </div>
+  )
+
+  if (status === 'error') return (
+    <ErrorState message={t('session.loadError')} onRetry={retry} className="h-screen justify-center" />
   )
 
   if (!currentEx) return (
@@ -349,16 +337,23 @@ export default function LiveSessionPage() {
 
       {/* ── PR Toast ── */}
       {newPRs.length > 0 && (
-        <div className="fixed top-4 right-4 bg-accent text-neutral-900 px-5 py-3 shadow-modal font-bold z-50 animate-bounce rounded-2xl">
+        <div role="status" className="fixed top-4 right-4 bg-accent text-neutral-900 px-5 py-3 shadow-modal font-bold z-50 animate-bounce rounded-2xl">
           <i className="bi bi-trophy-fill mr-2" />{t('session.newPR')} {newPRs[0]}!
         </div>
       )}
 
       {/* ── Adaptive Rest Toast ── */}
       {adaptiveRestMsg && (
-        <div className="fixed top-4 left-4 bg-blue-600 text-white px-5 py-3 shadow-modal font-bold z-50 rounded-2xl">
+        <div role="status" className="fixed top-4 left-4 bg-blue-600 text-white px-5 py-3 shadow-modal font-bold z-50 rounded-2xl">
           <i className="bi bi-clock-history mr-2" />{adaptiveRestMsg}
         </div>
+      )}
+
+      {/* Anuncios para lectores de pantalla (cambios de serie y descansos) */}
+      <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
+
+      {actionError && (
+        <p role="alert" className="mb-4 text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">{actionError}</p>
       )}
 
       {/* ── Header ── */}
@@ -367,7 +362,7 @@ export default function LiveSessionPage() {
           <div className="flex justify-between items-center">
             <h1 className="text-xl font-black text-white truncate">{routineName}</h1>
             <div className="flex items-center gap-3">
-              <span className="font-mono text-2xl font-black text-accent">{fmtTime(globalSecs)}</span>
+              <span role="timer" aria-live="off" className="font-mono text-2xl font-black text-accent">{fmtTime(globalSecs)}</span>
               <button onClick={handleAbandon} className="btn-danger py-1.5">
                 {t('session.abandon')}
               </button>
@@ -394,6 +389,19 @@ export default function LiveSessionPage() {
 
         {/* ── Main panel ── */}
         <div className="flex-1 space-y-4">
+
+          {failedSet && (
+            <div role="alert" className="flex items-center justify-between gap-3 text-red-400 bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-2xl">
+              <p className="text-xs font-semibold">{t('session.saveSetError')}</p>
+              <button
+                onClick={() => persistSet(failedSet)}
+                disabled={savingSet}
+                className="btn-primary py-1.5 px-4 shrink-0 disabled:opacity-50"
+              >
+                {t('common.retry')}
+              </button>
+            </div>
+          )}
 
           {/* Exercise header */}
           <GlowCard>
@@ -435,11 +443,11 @@ export default function LiveSessionPage() {
                 <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-3">
                   <i className="bi bi-pause-circle mr-1" />{t('session.rest')}
                 </p>
-                <p className="text-6xl font-bold text-white mb-4">{fmtTime(restSecs)}</p>
+                <p role="timer" aria-live="off" className="text-6xl font-bold text-white mb-4">{fmtTime(rest.remaining)}</p>
                 <div className="h-1 bg-white/10 rounded-full overflow-hidden mb-5">
                   <div
                     className="h-full bg-accent transition-all"
-                    style={{ width: `${(restSecs / (currentEx.rest_seconds || 60)) * 100}%` }}
+                    style={{ width: `${Math.min(100, (rest.remaining / (currentEx.rest_seconds || 60)) * 100)}%` }}
                   />
                 </div>
                 <button onClick={skipRest} className="btn-primary">
@@ -456,21 +464,34 @@ export default function LiveSessionPage() {
                 <p className="text-[11px] font-bold text-accent uppercase tracking-widest mb-3">
                   <i className="bi bi-stopwatch mr-1" />{t('session.exerciseTime')}
                 </p>
-                <p className="text-6xl font-bold text-white mb-4">{fmtTime(exerciseSecs)}</p>
+                <p role="timer" aria-live="off" className="text-6xl font-bold text-white mb-4">{fmtTime(exTimer.remaining)}</p>
                 <div className="h-1 bg-white/10 rounded-full overflow-hidden mb-5">
                   <div
                     className="h-full bg-accent transition-all"
-                    style={{ width: `${(exerciseSecs / (currentEx.duration_seconds || 30)) * 100}%` }}
+                    style={{ width: `${(exTimer.remaining / (currentEx.duration_seconds || 30)) * 100}%` }}
                   />
                 </div>
                 <button
-                  onClick={() => {
-                    if (exerciseTimer.current) { clearInterval(exerciseTimer.current); exerciseTimer.current = null }
-                    handleCompleteSet(currentEx.duration_seconds! - exerciseSecs)
-                  }}
-                  className="btn-primary"
+                  onClick={() => handleCompleteSet(currentEx.duration_seconds! - exTimer.remaining)}
+                  disabled={savingSet}
+                  className="btn-primary disabled:opacity-50"
                 >
                   {t('session.finishEarly')}
+                </button>
+              </div>
+            </GlowCard>
+          )}
+
+          {/* ── Inicio de la cuenta atrás (ejercicio por tiempo) ── */}
+          {phase === 'working' && isTimed && (
+            <GlowCard>
+              <div className="p-6 text-center">
+                <p className="text-[11px] font-bold text-accent uppercase tracking-widest mb-3">
+                  <i className="bi bi-stopwatch mr-1" />{t('session.exerciseTime')}
+                </p>
+                <p className="text-6xl font-bold text-white mb-5">{fmtTime(currentEx.duration_seconds ?? 0)}</p>
+                <button onClick={startExerciseTimer} className="btn-primary">
+                  {t('session.startTimer')}
                 </button>
               </div>
             </GlowCard>
@@ -509,8 +530,8 @@ export default function LiveSessionPage() {
                       </p>
                       <div className="flex gap-2 items-end">
                         <div className="flex-1">
-                          <label className="form-label">{t('session.increment')}</label>
-                          <input
+                          <label htmlFor="live-1" className="form-label">{t('session.increment')}</label>
+                          <input id="live-1"
                             type="number" min={0} step={0.5}
                             value={overloadIncrement}
                             onChange={e => setOverloadIncrement(e.target.value)}
@@ -536,10 +557,10 @@ export default function LiveSessionPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="form-label">
+                  <label htmlFor="live-2" className="form-label">
                     {t('session.repsGoal')} {currentEx.reps ?? '—'})
                   </label>
-                  <input
+                  <input id="live-2"
                     type="number" min={0}
                     value={setInput.reps}
                     onChange={e => setSetInput(p => ({ ...p, reps: Number(e.target.value) }))}
@@ -547,10 +568,10 @@ export default function LiveSessionPage() {
                   />
                 </div>
                 <div>
-                  <label className="form-label">
+                  <label htmlFor="live-3" className="form-label">
                     {t('session.weightSuggested')} {currentEx.weight_suggestion ? `${currentEx.weight_suggestion})` : ')'}
                   </label>
-                  <input
+                  <input id="live-3"
                     type="number" min={0} step={0.5}
                     value={setInput.weight_kg}
                     onChange={e => setSetInput(p => ({ ...p, weight_kg: e.target.value }))}
@@ -561,10 +582,10 @@ export default function LiveSessionPage() {
               </div>
 
               <div>
-                <label className="form-label">
+                <label htmlFor="live-4" className="form-label">
                   {t('session.rpeLabel')} <strong className="text-accent">{setInput.rpe}</strong>/10
                 </label>
-                <input
+                <input id="live-4"
                   type="range" min={1} max={10}
                   value={setInput.rpe}
                   onChange={e => setSetInput(p => ({ ...p, rpe: Number(e.target.value) }))}
@@ -576,8 +597,8 @@ export default function LiveSessionPage() {
               </div>
 
               <div>
-                <label className="form-label">{t('session.setNote')}</label>
-                <input
+                <label htmlFor="live-5" className="form-label">{t('session.setNote')}</label>
+                <input id="live-5"
                   type="text"
                   value={setInput.notes}
                   onChange={e => setSetInput(p => ({ ...p, notes: e.target.value }))}
@@ -588,7 +609,8 @@ export default function LiveSessionPage() {
 
                 <button
                   onClick={() => handleCompleteSet()}
-                  className="w-full btn-primary py-3.5 font-bold text-sm uppercase tracking-wider"
+                  disabled={savingSet}
+                  className="w-full btn-primary py-3.5 font-bold text-sm uppercase tracking-wider disabled:opacity-50"
                 >
                   <i className="bi bi-check-lg mr-2" />{t('session.setCompleted')}
                 </button>
@@ -602,7 +624,8 @@ export default function LiveSessionPage() {
               <div className="p-3 flex gap-3">
                 <button
                   onClick={skipExercise}
-                  className="flex-1 border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-full transition-all"
+                  disabled={savingSet || !!failedSet}
+                  className="flex-1 disabled:opacity-40 border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-full transition-all"
                 >
                   <i className="bi bi-skip-forward-fill mr-1" />{t('session.skipExercise')}
                 </button>
@@ -630,7 +653,9 @@ export default function LiveSessionPage() {
                   <li key={ex.re_id}>
                     <button
                       onClick={() => !isCurrentEx && jumpTo(i)}
-                      className={`w-full text-left px-3 py-2 text-sm transition-colors rounded-xl ${
+                      disabled={savingSet || !!failedSet}
+                      aria-current={isCurrentEx ? 'true' : undefined}
+                      className={`w-full disabled:opacity-60 text-left px-3 py-2 text-sm transition-colors rounded-xl ${
                         isCurrentEx
                           ? 'bg-accent/10 border border-accent/40 font-bold text-accent'
                           : done >= total
@@ -655,12 +680,10 @@ export default function LiveSessionPage() {
       </div>
 
       {/* ── Finish modal ── */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md">
+      <Modal open={showModal} onClose={() => setShowModal(false)} labelledBy="finish-session-title">
             <GlowCard>
               <div className="p-6">
-                <h2 className="text-xl font-bold text-white mb-1">{t('session.finishSession')}</h2>
+                <h2 id="finish-session-title" className="text-xl font-bold text-white mb-1">{t('session.finishSession')}</h2>
                 <p className="text-sm text-neutral-400 mb-5">
                   {doneSets} {t('session.completedSets')} · {fmtTime(globalSecs)}
                 </p>
@@ -672,6 +695,9 @@ export default function LiveSessionPage() {
                     {[1, 2, 3, 4, 5].map(star => (
                       <button
                         key={star}
+                        type="button"
+                        aria-label={`${star}`}
+                        aria-pressed={star <= finishRating}
                         onClick={() => setFinishRating(star)}
                         className={`text-2xl transition-transform hover:scale-110 ${
                           star <= finishRating ? 'text-accent' : 'text-neutral-700'
@@ -684,8 +710,8 @@ export default function LiveSessionPage() {
                 </div>
 
                 <div className="mb-5">
-                  <label className="form-label">{t('session.workoutNotes')}</label>
-                  <textarea
+                  <label htmlFor="live-6" className="form-label">{t('session.workoutNotes')}</label>
+                  <textarea id="live-6"
                     rows={3}
                     value={finishNotes}
                     onChange={e => setFinishNotes(e.target.value)}
@@ -693,6 +719,10 @@ export default function LiveSessionPage() {
                     className="form-input resize-none"
                   />
                 </div>
+
+                {finishError && (
+                  <p role="alert" className="mb-4 text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">{finishError}</p>
+                )}
 
                 <div className="flex gap-3">
                   <button
@@ -711,9 +741,7 @@ export default function LiveSessionPage() {
                 </div>
               </div>
             </GlowCard>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }
