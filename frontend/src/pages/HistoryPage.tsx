@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { sessionService } from '../services/sessionService'
 import { Session } from '../types/session'
 import GlowCard from '../components/ui/GlowCard'
+import PageHeader from '../components/ui/PageHeader'
+import EmptyState from '../components/ui/EmptyState'
 
 function fmtTime(secs: number): string {
   const h = Math.floor(secs / 3600)
@@ -69,14 +71,11 @@ export default function HistoryPage() {
   )
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
-      {/* Header */}
-      <div className="card header-gradient px-8 py-8 mb-8 flex items-center justify-between border-none">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{t('history.title')}</h1>
-          <p className="text-neutral-500 text-xs mt-1">{sessions.length} {t('history.sessionsRegistered')}</p>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title={t('history.title')}
+        subtitle={`${sessions.length} ${t('history.sessionsRegistered')}`}
+      />
 
       {/* Stats resumen */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
@@ -88,8 +87,8 @@ export default function HistoryPage() {
         ].map(({ label, value }) => (
           <GlowCard key={label}>
             <div className="p-4 text-center">
-              <p className="text-2xl font-black text-white">{value}</p>
-              <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mt-1">{label}</p>
+              <p className="text-2xl font-bold text-white">{value}</p>
+              <p className="text-xs font-medium text-neutral-400 mt-1">{label}</p>
             </div>
           </GlowCard>
         ))}
@@ -115,13 +114,11 @@ export default function HistoryPage() {
 
       {/* Lista */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <i className="bi bi-journal-x text-3xl text-neutral-600 mb-3 block" />
-          <p className="text-neutral-500 text-sm font-medium">{t('history.noSessions')}</p>
-          <Link to="/routines" className="mt-4 inline-block text-[11px] font-black uppercase tracking-wider text-accent hover:text-white transition-colors">
-            {t('history.goToRoutines')} <i className="bi bi-arrow-right" />
-          </Link>
-        </div>
+        <EmptyState
+          icon="bi-journal-x"
+          title={t('history.noSessions')}
+          action={<Link to="/routines" className="btn-primary">{t('history.goToRoutines')}</Link>}
+        />
       ) : (
         <div className="space-y-3">
           {filtered.map(session => {
@@ -136,14 +133,14 @@ export default function HistoryPage() {
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
-                        <h2 className="font-black text-white truncate">
+                        <h2 className="font-bold text-white truncate">
                           {session.routine_name ?? t('history.freeSession')}
                         </h2>
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${STATUS_COLORS[session.status]}`}>
+                        <span className={`text-xs font-bold uppercase tracking-wider ${STATUS_COLORS[session.status]}`}>
                           {STATUS_LABELS[session.status]}
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-4 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                      <div className="flex flex-wrap gap-4 text-xs font-medium text-neutral-400">
                         <span>{fmtDate(session.started_at)}</span>
                         <span>{fmtHour(session.started_at)}</span>
                         {session.duration_seconds && <span>{fmtTime(session.duration_seconds)}</span>}
@@ -155,11 +152,11 @@ export default function HistoryPage() {
                       {session.rating && (
                         <div className="flex gap-0.5">
                           {[1, 2, 3, 4, 5].map(s => (
-                            <i key={s} className={`bi bi-star-fill text-xs ${s <= session.rating! ? 'text-accent' : 'text-neutral-700'}`} />
+                            <i key={s} className={`bi bi-star-fill text-xs ${s <= session.rating! ? 'text-accent' : 'text-neutral-400'}`} />
                           ))}
                         </div>
                       )}
-                      <i className={`bi bi-chevron-down text-neutral-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                      <i className={`bi bi-chevron-down text-neutral-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                     </div>
                   </div>
                 </button>
@@ -170,13 +167,13 @@ export default function HistoryPage() {
                     <div className="border-t border-white/10 px-5 py-4 space-y-3">
                       {session.notes ? (
                         <div className="bg-white/5 px-4 py-3 rounded-xl">
-                          <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1">
+                          <p className="text-xs font-medium text-neutral-400 mb-1">
                             <i className="bi bi-pencil-square mr-1" />{t('history.notes')}
                           </p>
                           <p className="text-sm text-neutral-300 leading-relaxed">{session.notes}</p>
                         </div>
                       ) : (
-                        <p className="text-xs text-neutral-600 italic">{t('history.noNotes')}</p>
+                        <p className="text-xs text-neutral-400 italic">{t('history.noNotes')}</p>
                       )}
 
                       <div className="flex gap-3">

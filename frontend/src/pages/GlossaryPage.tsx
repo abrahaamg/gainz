@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import GlowCard from '../components/ui/GlowCard'
+import PageHeader from '../components/ui/PageHeader'
 
 // --- Tipos ---
 
@@ -59,14 +60,8 @@ export default function GlossaryPage() {
   }, [busqueda, categoriaActiva, terms])
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="card header-gradient px-8 py-8 mb-8 border-none">
-        <h1 className="text-2xl font-bold text-white tracking-tight">{t('glossary.title')}</h1>
-        <p className="text-neutral-500 text-xs mt-1">
-          {t('glossary.subtitle')}
-        </p>
-      </div>
+    <div>
+      <PageHeader title={t('glossary.title')} subtitle={t('glossary.subtitle')} />
 
       <div className="space-y-6">
         {/* Buscador */}
@@ -95,14 +90,14 @@ export default function GlossaryPage() {
         </div>
 
         {/* Contador de resultados */}
-        <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+        <p className="text-xs font-medium text-neutral-400">
           {terminosFiltrados.length} {terminosFiltrados.length === 1 ? t('glossary.term') : t('glossary.terms')}
         </p>
 
         {/* Grid de terminos */}
         {terminosFiltrados.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-neutral-500">{t('glossary.noResults')}</p>
+            <p className="text-neutral-400">{t('glossary.noResults')}</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -110,11 +105,11 @@ export default function GlossaryPage() {
               <GlowCard key={termino.name}>
                 <div className="p-5 space-y-3">
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-white font-black text-lg leading-tight">
+                    <h3 className="text-white font-bold text-lg leading-tight">
                       {termino.name}
                     </h3>
                     <span
-                      className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${CATEGORY_COLORS[termino.category]}`}
+                      className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${CATEGORY_COLORS[termino.category]}`}
                     >
                       {t(CATEGORY_I18N[termino.category])}
                     </span>
@@ -123,7 +118,7 @@ export default function GlossaryPage() {
                     {termino.definition}
                   </p>
                   {termino.example && (
-                    <p className="text-neutral-500 text-sm italic">
+                    <p className="text-neutral-400 text-sm italic">
                       {termino.example}
                     </p>
                   )}

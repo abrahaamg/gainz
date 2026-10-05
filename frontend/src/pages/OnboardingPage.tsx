@@ -239,7 +239,7 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="text-center mb-4">
           <h1 className="text-3xl font-display italic text-neutral-900 tracking-tight">Gainz</h1>
-          <p className="text-neutral-400 text-[11px] font-semibold uppercase tracking-[0.15em] mt-1">
+          <p className="text-neutral-400 text-xs font-medium mt-1">
             {t('onboarding.step')} {step} {t('onboarding.of4')} {t(STEP_LABEL_KEYS[step - 1])}
           </p>
           {/* Progress bar */}
@@ -259,8 +259,8 @@ export default function OnboardingPage() {
           {/* ─── STEP 1: Perfil ─── */}
           {step === 1 && (
             <div>
-              <h2 className="text-xl font-black text-neutral-900 tracking-tight mb-1">{t('onboarding.yourProfile')}</h2>
-              <p className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider mb-4">{t('onboarding.profileHint')}</p>
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight mb-1">{t('onboarding.yourProfile')}</h2>
+              <p className="text-xs text-neutral-400 font-medium mb-4">{t('onboarding.profileHint')}</p>
 
               <div className="space-y-3">
                 <div>
@@ -361,8 +361,8 @@ export default function OnboardingPage() {
           {/* ─── STEP 2: Objetivos ─── */}
           {step === 2 && (
             <div>
-              <h2 className="text-xl font-black text-neutral-900 tracking-tight mb-1">{t('onboarding.yourGoals')}</h2>
-              <p className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider mb-4">{t('onboarding.goalsHint')}</p>
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight mb-1">{t('onboarding.yourGoals')}</h2>
+              <p className="text-xs text-neutral-400 font-medium mb-4">{t('onboarding.goalsHint')}</p>
 
               <div className="space-y-2 mb-6">
                 {GOAL_KEYS.map(g => {
@@ -380,7 +380,7 @@ export default function OnboardingPage() {
                     >
                       <span>{t(g.key)}</span>
                       {isPrimary && (
-                        <span className="text-[10px] uppercase tracking-widest text-accent font-black">{t('onboarding.primary')}</span>
+                        <span className="text-xs text-accent font-bold">{t('onboarding.primary')}</span>
                       )}
                     </button>
                   )
@@ -409,15 +409,15 @@ export default function OnboardingPage() {
           {/* ─── STEP 3: Equipamiento ─── */}
           {step === 3 && (
             <div>
-              <h2 className="text-xl font-black text-neutral-900 tracking-tight mb-1">{t('onboarding.yourEquipment')}</h2>
-              <p className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider mb-4">
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight mb-1">{t('onboarding.yourEquipment')}</h2>
+              <p className="text-xs text-neutral-400 font-medium mb-4">
                 {t('onboarding.equipmentHint')}
               </p>
 
               {catalogError && (
                 <div role="alert" className="mb-3 text-xs text-red-600 font-semibold">
                   <p>{t('onboarding.catalogError')}</p>
-                  <button type="button" onClick={retryCatalog} className="mt-1 underline uppercase tracking-wide">
+                  <button type="button" onClick={retryCatalog} className="mt-1 underline">
                     {t('common.retry')}
                   </button>
                 </div>
@@ -447,7 +447,7 @@ export default function OnboardingPage() {
                 ))}
               </div>
 
-              <p className="text-[11px] font-semibold text-neutral-400 mt-4 uppercase tracking-wider">
+              <p className="text-xs font-medium text-neutral-400 mt-4">
                 {selectedEquipment.size} {t('onboarding.selected')}
               </p>
             </div>
@@ -456,8 +456,8 @@ export default function OnboardingPage() {
           {/* ─── STEP 4: Disponibilidad ─── */}
           {step === 4 && (
             <div>
-              <h2 className="text-xl font-black text-neutral-900 tracking-tight mb-1">{t('onboarding.yourAvailability')}</h2>
-              <p className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider mb-4">
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight mb-1">{t('onboarding.yourAvailability')}</h2>
+              <p className="text-xs text-neutral-400 font-medium mb-4">
                 {t('onboarding.availabilityHint')}
               </p>
 
@@ -515,7 +515,7 @@ export default function OnboardingPage() {
                       )
                     })}
                   </div>
-                  <p className="text-[11px] text-neutral-300 mt-2 uppercase tracking-wider font-medium">
+                  <p className="text-xs text-neutral-300 mt-2 font-medium">
                     {t('onboarding.injuriesHint')}
                   </p>
                 </div>
@@ -524,14 +524,14 @@ export default function OnboardingPage() {
           )}
 
           {/* ─── Error ─── */}
-          {error && <p role="alert" className="text-xs text-red-600 font-semibold mt-5 uppercase tracking-wide">{error}</p>}
+          {error && <p role="alert" className="text-xs text-red-600 font-semibold mt-5">{error}</p>}
           {equipmentFailed.length > 0 && (
             <div role="alert" className="mt-5 text-xs text-red-600 font-semibold">
               <p>{t('onboarding.equipmentPartial', { items: equipmentFailed.join(', ') })}</p>
               <button
                 type="button"
                 onClick={continueAnyway}
-                className="mt-2 underline uppercase tracking-wide"
+                className="mt-2 underline"
               >
                 {t('onboarding.continueAnyway')}
               </button>

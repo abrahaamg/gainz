@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
 import { useDebounce } from '../hooks/useDebounce'
@@ -8,6 +8,9 @@ import { ExerciseCategory, Difficulty } from '../types/exercise'
 import { translateMuscle } from '../utils/labels'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
+import PageHeader from '../components/ui/PageHeader'
+import EmptyState from '../components/ui/EmptyState'
+import Skeleton from '../components/ui/Skeleton'
 import ErrorState from '../components/ui/ErrorState'
 
 const CATEGORIES: ExerciseCategory[] = ['strength', 'cardio', 'flexibility', 'hiit', 'balance']
@@ -45,24 +48,21 @@ export default function ExercisesPage() {
   const totalPages = Math.ceil(total / LIMIT)
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      {/* Header */}
-      <div className="card header-gradient px-8 py-8 mb-8 flex items-center justify-between border-none">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{t('exercises.title')}</h1>
-          <p className="text-neutral-500 text-xs mt-1">{total} {t('exercises.inCatalog')}</p>
-        </div>
-        <button
-          onClick={() => navigate('/exercises/new')}
-          className="btn-primary"
-        >
-          {t('exercises.new')}
-        </button>
-      </div>
+    <div>
+      <PageHeader
+        title={t('exercises.title')}
+        subtitle={`${total} ${t('exercises.inCatalog')}`}
+        actions={
+          <button onClick={() => navigate('/exercises/new')} className="btn-primary">
+            {t('exercises.new')}
+          </button>
+        }
+      />
 
       {/* Search */}
       <input
-        type="text"
+        type="search"
+        aria-label={t('exercises.searchPlaceholder')}
         placeholder={t('exercises.searchPlaceholder')}
         value={search}
         onChange={e => changeSearch(e.target.value)}
@@ -102,9 +102,10 @@ export default function ExercisesPage() {
       </div>
 
       {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-neutral-100 h-32 rounded-apple animate-pulse" />
+        <div role="status" aria-busy="true" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <span className="sr-only">{t('common.loading')}</span>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-apple" />
           ))}
         </div>
       )}
@@ -112,33 +113,37 @@ export default function ExercisesPage() {
       {!!error && !loading && <ErrorState message={t('exercises.loadError')} onRetry={reload} />}
 
       {!loading && !error && exercises.length === 0 && (
-        <div className="text-center py-16 text-neutral-400 text-sm font-medium">{t('exercises.notFound')}</div>
+        <EmptyState
+          icon="bi-search"
+          title={t('exercises.notFound')}
+          description={t('exercises.notFoundHint')}
+        />
       )}
 
       {!loading && !error && exercises.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {exercises.map(exercise => (
-            <GlowCard key={exercise.id} className="cursor-pointer">
-              <div
-                onClick={() => navigate(`/exercises/${exercise.id}`)}
-                className="p-5"
+            <GlowCard key={exercise.id}>
+              <Link
+                to={`/exercises/${exercise.id}`}
+                className="block p-5 transition-colors hover:bg-white/[0.03]"
               >
                 <div className="flex items-start justify-between mb-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 bg-white/5 px-2.5 py-1 rounded-full">
+                  <span className="text-xs font-semibold text-neutral-400 bg-white/5 px-2.5 py-1 rounded-full">
                     {t(`categories.${exercise.category}`)}
                   </span>
                   <DifficultyDots level={exercise.difficulty} />
                 </div>
                 <h3 className="font-bold text-white mb-1 leading-tight">{exercise.name}</h3>
-                <p className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider">
+                <p className="text-xs font-medium text-neutral-400">
                   {translateMuscle(exercise.muscle_group)}
                 </p>
                 {exercise.requires_equipment && (
-                  <p className="mt-2 text-[11px] font-medium text-neutral-500">
+                  <p className="mt-2 text-xs font-medium text-neutral-400">
                     <i className="bi bi-tools mr-1" />{t('exercises.requiresEquipment')}
                   </p>
                 )}
-              </div>
+              </Link>
             </GlowCard>
           ))}
         </div>
@@ -153,7 +158,7 @@ export default function ExercisesPage() {
           >
             {t('common.previous')}
           </button>
-          <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+          <span className="text-xs font-medium text-neutral-400">
             {page} / {totalPages}
           </span>
           <button

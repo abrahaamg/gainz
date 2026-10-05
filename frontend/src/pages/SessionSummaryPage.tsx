@@ -47,7 +47,7 @@ export default function SessionSummaryPage() {
   )
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10">
+    <div>
       {/* Header */}
       <div className="text-center mb-8">
         <i className="bi bi-trophy text-5xl text-accent mb-3 block" />
@@ -71,27 +71,27 @@ export default function SessionSummaryPage() {
             <p className="text-2xl font-bold text-accent">
               {session.duration_seconds ? fmtDuration(session.duration_seconds) : '—'}
             </p>
-            <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mt-1">{t('session.duration')}</p>
+            <p className="text-xs font-medium text-neutral-400 mt-1">{t('session.duration')}</p>
           </div>
         </GlowCard>
         <GlowCard>
           <div className="p-4 text-center">
-            <p className="text-2xl font-black text-white">{totalSets}</p>
-            <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mt-1">{t('common.sets')}</p>
+            <p className="text-2xl font-bold text-white">{totalSets}</p>
+            <p className="text-xs font-medium text-neutral-400 mt-1">{t('common.sets')}</p>
           </div>
         </GlowCard>
         <GlowCard>
           <div className="p-4 text-center">
-            <p className="text-2xl font-black text-white">
+            <p className="text-2xl font-bold text-white">
               {totalVolume > 0 ? `${Math.round(totalVolume).toLocaleString()}` : '—'}
             </p>
-            <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mt-1">{t('session.volume')}</p>
+            <p className="text-xs font-medium text-neutral-400 mt-1">{t('session.volume')}</p>
           </div>
         </GlowCard>
         <GlowCard>
           <div className="p-4 text-center">
-            <p className="text-2xl font-black text-white">{session.calories_burned ?? '—'}</p>
-            <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mt-1">{t('session.calories')}</p>
+            <p className="text-2xl font-bold text-white">{session.calories_burned ?? '—'}</p>
+            <p className="text-xs font-medium text-neutral-400 mt-1">{t('session.calories')}</p>
           </div>
         </GlowCard>
       </div>
@@ -102,7 +102,7 @@ export default function SessionSummaryPage() {
           <p className="section-title mb-1">
             <i className="bi bi-pencil-square mr-1" />{t('session.notes')}
           </p>
-          <p className="text-sm text-neutral-600">{session.notes}</p>
+          <p className="text-sm text-neutral-400">{session.notes}</p>
         </div>
       )}
 
@@ -117,9 +117,9 @@ export default function SessionSummaryPage() {
                 <GlowCard key={name}>
                   <div className="p-4">
                     <div className="flex justify-between items-center mb-2">
-                      <p className="font-black text-white">{name}</p>
+                      <p className="font-bold text-white">{name}</p>
                       {maxWeight > 0 && (
-                        <span className="text-[11px] font-black text-accent">{t('session.max')} {maxWeight} {t('common.kg')}</span>
+                        <span className="text-xs font-bold text-accent">{t('session.max')} {maxWeight} {t('common.kg')}</span>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -136,7 +136,7 @@ export default function SessionSummaryPage() {
                     {sets.some(s => s.notes) && (
                       <div className="mt-2 space-y-1">
                         {sets.filter(s => s.notes).map(s => (
-                          <p key={s.set_number} className="text-xs text-neutral-500 italic">
+                          <p key={s.set_number} className="text-xs text-neutral-400 italic">
                             S{s.set_number}: {s.notes}
                           </p>
                         ))}

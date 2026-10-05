@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { sessionService } from '../services/sessionService'
 import { RoutineExercise } from '../types/routine'
@@ -9,7 +9,9 @@ import { useRestTimer, useStopwatch } from '../hooks/useRestTimer'
 import { fmtTime } from '../utils/time'
 import GlowCard from '../components/ui/GlowCard'
 import Modal from '../components/ui/Modal'
-import Spinner from '../components/ui/Spinner'
+import EmptyState from '../components/ui/EmptyState'
+import Skeleton from '../components/ui/Skeleton'
+import ToastStack, { type ToastItem } from '../components/ui/ToastStack'
 import ErrorState from '../components/ui/ErrorState'
 
 type Phase = 'working' | 'resting' | 'timing'
@@ -318,166 +320,195 @@ function LiveSession({ routineId }: { routineId: number }) {
   const setsCompletedForEx = (exerciseId: number) =>
     completedSets.filter(s => s.exercise_id === exerciseId).length
 
+  const adjustReps = (delta: number) =>
+    setSetInput(p => ({ ...p, reps: Math.max(0, (Number(p.reps) || 0) + delta) }))
+
+  const adjustWeight = (delta: number) =>
+    setSetInput(p => {
+      const next = Math.max(0, (parseFloat(p.weight_kg) || 0) + delta)
+      return { ...p, weight_kg: String(Math.round(next * 100) / 100) }
+    })
+
   if (status === 'loading') return (
-    <div className="flex justify-center items-center h-screen">
-      <Spinner />
+    <div role="status" aria-busy="true" className="space-y-4">
+      <span className="sr-only">{t('common.loading')}</span>
+      <Skeleton tone="dark" className="h-24 rounded-apple" />
+      <Skeleton tone="dark" className="h-32 rounded-apple" />
+      <Skeleton tone="dark" className="h-64 rounded-apple" />
     </div>
   )
 
   if (status === 'error') return (
-    <ErrorState message={t('session.loadError')} onRetry={retry} className="h-screen justify-center" />
+    <ErrorState message={t('session.loadError')} onRetry={retry} />
   )
 
   if (!currentEx) return (
-    <div className="text-center py-20 text-neutral-500 font-medium">{t('session.noExercises')}</div>
+    <EmptyState
+      icon="bi-clipboard-x"
+      title={t('session.noExercises')}
+      action={<Link to="/routines" className="btn-primary">{t('nav.routines')}</Link>}
+    />
   )
 
+  const toasts: ToastItem[] = [
+    ...(newPRs.length > 0
+      ? [{ id: `pr-${newPRs.length}-${newPRs[0]}`, icon: 'bi-trophy-fill', tone: 'accent' as const, text: `${t('session.newPR')} ${newPRs[0]}!` }]
+      : []),
+    ...(adaptiveRestMsg
+      ? [{ id: 'adaptive-rest', icon: 'bi-clock-history', tone: 'neutral' as const, text: adaptiveRestMsg }]
+      : []),
+  ]
+
+  const restTotal = currentEx.rest_seconds || 60
+  const canAct = !savingSet && !failedSet
+
+  // Acción principal de la barra inferior según la fase
+  const primary: { label: string; icon: string; onClick: () => void; disabled?: boolean } =
+    phase === 'resting'
+      ? { label: t('session.skipRest'), icon: 'bi-skip-forward-fill', onClick: skipRest }
+      : phase === 'timing'
+      ? {
+          label: t('session.finishEarly'),
+          icon: 'bi-stop-fill',
+          onClick: () => handleCompleteSet(currentEx.duration_seconds! - exTimer.remaining),
+          disabled: savingSet,
+        }
+      : isTimed
+      ? { label: t('session.startTimer'), icon: 'bi-play-fill', onClick: startExerciseTimer }
+      : { label: t('session.setCompleted'), icon: 'bi-check-lg', onClick: () => handleCompleteSet(), disabled: savingSet }
+
   return (
-    <div className="max-w-4xl mx-auto px-6 py-6">
-
-      {/* ── PR Toast ── */}
-      {newPRs.length > 0 && (
-        <div role="status" className="fixed top-4 right-4 bg-accent text-neutral-900 px-5 py-3 shadow-modal font-bold z-50 animate-bounce rounded-2xl">
-          <i className="bi bi-trophy-fill mr-2" />{t('session.newPR')} {newPRs[0]}!
-        </div>
-      )}
-
-      {/* ── Adaptive Rest Toast ── */}
-      {adaptiveRestMsg && (
-        <div role="status" className="fixed top-4 left-4 bg-blue-600 text-white px-5 py-3 shadow-modal font-bold z-50 rounded-2xl">
-          <i className="bi bi-clock-history mr-2" />{adaptiveRestMsg}
-        </div>
-      )}
+    <div className="pb-12">
+      <ToastStack toasts={toasts} />
 
       {/* Anuncios para lectores de pantalla (cambios de serie y descansos) */}
       <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
 
       {actionError && (
-        <p role="alert" className="mb-4 text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">{actionError}</p>
+        <p role="alert" className="mb-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-sm font-medium text-red-400">{actionError}</p>
       )}
 
-      {/* ── Header ── */}
-      <GlowCard className="mb-5">
-        <div className="p-5">
-          <div className="flex justify-between items-center">
-            <h1 className="text-xl font-black text-white truncate">{routineName}</h1>
-            <div className="flex items-center gap-3">
-              <span role="timer" aria-live="off" className="font-mono text-2xl font-black text-accent">{fmtTime(globalSecs)}</span>
-              <button onClick={handleAbandon} className="btn-danger py-1.5">
-                {t('session.abandon')}
-              </button>
+      {/* ── Cabecera: nombre, cronómetro y menú ── */}
+      <GlowCard className="mb-4 overflow-visible">
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="min-w-0 truncate text-lg font-bold text-white">{routineName}</h1>
+            <div className="flex shrink-0 items-center gap-1">
+              <span role="timer" aria-live="off" className="text-2xl font-black tabular-nums text-accent">{fmtTime(globalSecs)}</span>
+              <OverflowMenu
+                label={t('session.menu')}
+                items={[
+                  { key: 'skip', icon: 'bi-skip-forward-fill', label: t('session.skipExercise'), onSelect: skipExercise, disabled: !canAct },
+                  { key: 'finish', icon: 'bi-flag-fill', label: t('session.finishSession'), onSelect: () => setShowModal(true) },
+                  { key: 'abandon', icon: 'bi-x-octagon', label: t('session.abandon'), onSelect: handleAbandon, danger: true },
+                ]}
+              />
             </div>
           </div>
 
           {/* Progress bar */}
           <div className="mt-3">
-            <div className="flex justify-between text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1">
+            <div className="mb-1 flex justify-between text-xs font-medium tabular-nums text-neutral-400">
               <span>{doneSets} {t('session.completedSets')}</span>
               <span>{totalSets} {t('session.totalSets')}</span>
             </div>
-            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-accent transition-all duration-500 rounded-full"
-                style={{ width: `${progressPct}%` }}
-              />
+            <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPct}
+              aria-label={t('session.completedSets')}
+              className="h-1.5 overflow-hidden rounded-full bg-white/10"
+            >
+              <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
         </div>
       </GlowCard>
 
-      <div className="flex gap-5 flex-col lg:flex-row">
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-5">
 
         {/* ── Main panel ── */}
         <div className="flex-1 space-y-4">
 
           {failedSet && (
-            <div role="alert" className="flex items-center justify-between gap-3 text-red-400 bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-2xl">
-              <p className="text-xs font-semibold">{t('session.saveSetError')}</p>
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-400">
+              <p className="text-sm font-medium">{t('session.saveSetError')}</p>
               <button
                 onClick={() => persistSet(failedSet)}
                 disabled={savingSet}
-                className="btn-primary py-1.5 px-4 shrink-0 disabled:opacity-50"
+                className="btn-primary shrink-0 disabled:opacity-50"
               >
                 {t('common.retry')}
               </button>
             </div>
           )}
 
-          {/* Exercise header */}
+          {/* Ejercicio actual */}
           <GlowCard>
-            <div className="p-5">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h2 className="text-2xl font-black text-white">{currentEx.exercise_name}</h2>
-                  <div className="flex gap-2 mt-1">
-                    <span className="text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider bg-accent text-neutral-900 rounded-full">
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-2xl font-bold leading-tight text-white">{currentEx.exercise_name}</h2>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-neutral-900">
                       {currentEx.category}
                     </span>
-                    <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">{currentEx.muscle_group}</span>
+                    <span className="text-xs font-medium text-neutral-400">{currentEx.muscle_group}</span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-3xl font-black text-accent">
-                    {setIdx} <span className="text-lg font-normal text-neutral-500">/ {currentEx.sets}</span>
+                <div className="shrink-0 text-right">
+                  <p className="text-3xl font-bold tabular-nums text-accent">
+                    {setIdx} <span className="text-lg font-normal text-neutral-400">/ {currentEx.sets}</span>
                   </p>
-                  <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{t('session.set')}</p>
+                  <p className="text-xs font-medium text-neutral-400">{t('session.set')}</p>
                 </div>
               </div>
 
               {currentEx.notes && (
-                <div className="bg-accent/10 border border-accent/30 px-3 py-2 mb-3 rounded-xl">
-                  <p className="text-sm text-accent font-medium">{currentEx.notes}</p>
+                <div className="mt-3 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2">
+                  <p className="text-sm font-medium text-accent">{currentEx.notes}</p>
                 </div>
               )}
 
               {currentEx.exercise_notes && (
-                <p className="text-xs text-neutral-500 italic mb-1">{currentEx.exercise_notes}</p>
+                <p className="mt-3 text-xs italic text-neutral-400">{currentEx.exercise_notes}</p>
               )}
             </div>
           </GlowCard>
 
-          {/* ── Rest timer ── */}
+          {/* ── Descanso (la tarjeta con glow de la pantalla) ── */}
           {phase === 'resting' && (
-            <GlowCard>
+            <GlowCard glow>
               <div className="p-6 text-center">
-                <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-3">
-                  <i className="bi bi-pause-circle mr-1" />{t('session.rest')}
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
+                  <i aria-hidden="true" className="bi bi-pause-circle mr-1" />{t('session.rest')}
                 </p>
-                <p role="timer" aria-live="off" className="text-6xl font-bold text-white mb-4">{fmtTime(rest.remaining)}</p>
-                <div className="h-1 bg-white/10 rounded-full overflow-hidden mb-5">
+                <p role="timer" aria-live="off" className="mb-4 text-6xl font-bold tabular-nums text-white">{fmtTime(rest.remaining)}</p>
+                <div className="h-1 overflow-hidden rounded-full bg-white/10">
                   <div
                     className="h-full bg-accent transition-all"
-                    style={{ width: `${Math.min(100, (rest.remaining / (currentEx.rest_seconds || 60)) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (rest.remaining / restTotal) * 100)}%` }}
                   />
                 </div>
-                <button onClick={skipRest} className="btn-primary">
-                  <i className="bi bi-skip-forward-fill mr-1" />{t('session.skipRest')}
-                </button>
               </div>
             </GlowCard>
           )}
 
-          {/* ── Exercise countdown (timed) ── */}
+          {/* ── Cuenta atrás del ejercicio (por tiempo) ── */}
           {phase === 'timing' && (
             <GlowCard>
               <div className="p-6 text-center">
-                <p className="text-[11px] font-bold text-accent uppercase tracking-widest mb-3">
-                  <i className="bi bi-stopwatch mr-1" />{t('session.exerciseTime')}
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-accent">
+                  <i aria-hidden="true" className="bi bi-stopwatch mr-1" />{t('session.exerciseTime')}
                 </p>
-                <p role="timer" aria-live="off" className="text-6xl font-bold text-white mb-4">{fmtTime(exTimer.remaining)}</p>
-                <div className="h-1 bg-white/10 rounded-full overflow-hidden mb-5">
+                <p role="timer" aria-live="off" className="mb-4 text-6xl font-bold tabular-nums text-white">{fmtTime(exTimer.remaining)}</p>
+                <div className="h-1 overflow-hidden rounded-full bg-white/10">
                   <div
                     className="h-full bg-accent transition-all"
                     style={{ width: `${(exTimer.remaining / (currentEx.duration_seconds || 30)) * 100}%` }}
                   />
                 </div>
-                <button
-                  onClick={() => handleCompleteSet(currentEx.duration_seconds! - exTimer.remaining)}
-                  disabled={savingSet}
-                  className="btn-primary disabled:opacity-50"
-                >
-                  {t('session.finishEarly')}
-                </button>
               </div>
             </GlowCard>
           )}
@@ -486,164 +517,158 @@ function LiveSession({ routineId }: { routineId: number }) {
           {phase === 'working' && isTimed && (
             <GlowCard>
               <div className="p-6 text-center">
-                <p className="text-[11px] font-bold text-accent uppercase tracking-widest mb-3">
-                  <i className="bi bi-stopwatch mr-1" />{t('session.exerciseTime')}
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-accent">
+                  <i aria-hidden="true" className="bi bi-stopwatch mr-1" />{t('session.exerciseTime')}
                 </p>
-                <p className="text-6xl font-bold text-white mb-5">{fmtTime(currentEx.duration_seconds ?? 0)}</p>
-                <button onClick={startExerciseTimer} className="btn-primary">
-                  {t('session.startTimer')}
-                </button>
+                <p className="text-6xl font-bold tabular-nums text-white">{fmtTime(currentEx.duration_seconds ?? 0)}</p>
               </div>
             </GlowCard>
           )}
 
-          {/* ── Set inputs (reps mode) ── */}
+          {/* ── Registro de la serie (por repeticiones) ── */}
           {phase === 'working' && !isTimed && (
             <GlowCard>
-              <div className="p-5 space-y-4">
+              <div className="space-y-5 p-4">
 
-              {/* Plateau warning */}
-              {lastPerf?.plateau_detected && setIdx === 1 && (
-                <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 px-4 py-2.5 font-bold text-sm">
-                  <i className="bi bi-exclamation-triangle-fill" />
-                  <div>
-                    <p>{t('session.plateauWarning')}</p>
-                    <p className="font-normal text-xs mt-0.5">{t('session.deloadSuggestion')}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Overload suggestion badge */}
-              {lastPerf && lastPerf.rpe !== null && lastPerf.rpe <= 7 && !lastPerf.plateau_detected && setIdx === 1 && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowOverloadPopover(p => !p)}
-                    className="w-full flex items-center justify-center gap-2 bg-green-50 border border-green-300 text-green-800 px-4 py-2.5 font-bold text-sm hover:bg-green-100 transition-colors"
-                  >
-                    <i className="bi bi-graph-up-arrow" />
-                    {t('session.weightUpSuggestion')} {lastPerf.rpe})
-                  </button>
-                  {showOverloadPopover && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 shadow-modal p-4 z-40">
-                      <p className="text-sm text-neutral-600 mb-3">
-                        {t('session.previousRPE')} {lastPerf.rpe}/10. {t('session.addWeight')}
-                      </p>
-                      <div className="flex gap-2 items-end">
-                        <div className="flex-1">
-                          <label htmlFor="live-1" className="form-label">{t('session.increment')}</label>
-                          <input id="live-1"
-                            type="number" min={0} step={0.5}
-                            value={overloadIncrement}
-                            onChange={e => setOverloadIncrement(e.target.value)}
-                            className="form-input text-center font-bold"
-                          />
-                        </div>
-                        <button
-                          onClick={() => {
-                            const current = parseFloat(setInput.weight_kg) || 0
-                            const inc = parseFloat(overloadIncrement) || 2.5
-                            setSetInput(p => ({ ...p, weight_kg: (current + inc).toString() }))
-                            setShowOverloadPopover(false)
-                          }}
-                          className="btn-primary px-4 py-2"
-                        >
-                          {t('session.apply')}
-                        </button>
-                      </div>
+                {/* Plateau */}
+                {lastPerf?.plateau_detected && setIdx === 1 && (
+                  <div className="flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-300">
+                    <i aria-hidden="true" className="bi bi-exclamation-triangle-fill mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold">{t('session.plateauWarning')}</p>
+                      <p className="mt-0.5 text-xs">{t('session.deloadSuggestion')}</p>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="live-2" className="form-label">
-                    {t('session.repsGoal')} {currentEx.reps ?? '—'})
-                  </label>
-                  <input id="live-2"
-                    type="number" min={0}
-                    value={setInput.reps}
-                    onChange={e => setSetInput(p => ({ ...p, reps: Number(e.target.value) }))}
-                    className="form-input text-xl font-black text-center"
+                {/* Sugerencia de sobrecarga progresiva */}
+                {lastPerf && lastPerf.rpe !== null && lastPerf.rpe <= 7 && !lastPerf.plateau_detected && setIdx === 1 && (
+                  <div>
+                    <button
+                      type="button"
+                      aria-expanded={showOverloadPopover}
+                      onClick={() => setShowOverloadPopover(p => !p)}
+                      className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-green-500/30 bg-green-500/10 px-4 py-2.5 text-sm font-semibold text-green-300 transition-colors hover:bg-green-500/20"
+                    >
+                      <i aria-hidden="true" className="bi bi-graph-up-arrow" />
+                      {t('session.weightUpSuggestion')} {lastPerf.rpe})
+                    </button>
+                    {showOverloadPopover && (
+                      <div className="mt-2 rounded-2xl border border-white/10 bg-surface-2 p-4">
+                        <p className="mb-3 text-sm text-neutral-300">
+                          {t('session.previousRPE')} {lastPerf.rpe}/10. {t('session.addWeight')}
+                        </p>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <label htmlFor="live-increment" className="form-label">{t('session.increment')}</label>
+                            <input
+                              id="live-increment"
+                              type="number" min={0} step={0.5} inputMode="decimal"
+                              value={overloadIncrement}
+                              onChange={e => setOverloadIncrement(e.target.value)}
+                              className="form-input form-input-dark text-center font-bold tabular-nums"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseFloat(setInput.weight_kg) || 0
+                              const inc = parseFloat(overloadIncrement) || 2.5
+                              setSetInput(p => ({ ...p, weight_kg: (current + inc).toString() }))
+                              setShowOverloadPopover(false)
+                            }}
+                            className="btn-primary"
+                          >
+                            {t('session.apply')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Stepper
+                    id="live-reps"
+                    label={t('session.repsLabel')}
+                    hint={currentEx.reps ? t('session.repsTarget', { reps: currentEx.reps }) : undefined}
+                    value={String(setInput.reps)}
+                    inputMode="numeric"
+                    onChange={v => setSetInput(p => ({ ...p, reps: Number(v.replace(/\D/g, '')) || 0 }))}
+                    onMinus={() => adjustReps(-1)}
+                    onPlus={() => adjustReps(1)}
+                    minusLabel={t('session.repsDown')}
+                    plusLabel={t('session.repsUp')}
                   />
-                </div>
-                <div>
-                  <label htmlFor="live-3" className="form-label">
-                    {t('session.weightSuggested')} {currentEx.weight_suggestion ? `${currentEx.weight_suggestion})` : ')'}
-                  </label>
-                  <input id="live-3"
-                    type="number" min={0} step={0.5}
+                  <Stepper
+                    id="live-weight"
+                    label={t('session.weightLabel')}
+                    hint={currentEx.weight_suggestion ? t('session.weightTarget', { kg: currentEx.weight_suggestion }) : undefined}
                     value={setInput.weight_kg}
-                    onChange={e => setSetInput(p => ({ ...p, weight_kg: e.target.value }))}
                     placeholder="—"
-                    className="form-input text-xl font-black text-center"
+                    inputMode="decimal"
+                    onChange={v => {
+                      const clean = v.replace(',', '.')
+                      if (/^\d{0,4}(\.\d{0,2})?$/.test(clean)) setSetInput(p => ({ ...p, weight_kg: clean }))
+                    }}
+                    onMinus={() => adjustWeight(-2.5)}
+                    onPlus={() => adjustWeight(2.5)}
+                    minusLabel={t('session.weightDown')}
+                    plusLabel={t('session.weightUp')}
                   />
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="live-4" className="form-label">
-                  {t('session.rpeLabel')} <strong className="text-accent">{setInput.rpe}</strong>/10
-                </label>
-                <input id="live-4"
-                  type="range" min={1} max={10}
-                  value={setInput.rpe}
-                  onChange={e => setSetInput(p => ({ ...p, rpe: Number(e.target.value) }))}
-                  className="w-full accent-accent"
-                />
-                <div className="flex justify-between text-[10px] font-bold text-neutral-500 uppercase tracking-wider mt-0.5">
-                  <span>{t('session.easy')}</span><span>{t('session.moderate')}</span><span>{t('session.maximum')}</span>
+                {/* RPE: 10 botones en vez de slider */}
+                <fieldset>
+                  <legend className="form-label">
+                    {t('session.rpeLabel')} <strong className="tabular-nums text-accent">{setInput.rpe}</strong>/10
+                  </legend>
+                  <div className="flex justify-between gap-0.5">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                      <label key={n} className="min-w-0 flex-1 cursor-pointer sm:flex-none">
+                        <input
+                          type="radio"
+                          name="rpe"
+                          value={n}
+                          checked={setInput.rpe === n}
+                          onChange={() => setSetInput(p => ({ ...p, rpe: n }))}
+                          aria-label={t('session.rpeValue', { value: n })}
+                          className="peer sr-only"
+                        />
+                        <span
+                          aria-hidden="true"
+                          className="flex h-11 w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 text-sm font-semibold tabular-nums text-neutral-300 transition-colors peer-checked:border-accent peer-checked:bg-accent peer-checked:font-bold peer-checked:text-neutral-900 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent sm:w-8"
+                        >
+                          {n}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="mt-1 flex justify-between text-xs text-neutral-400">
+                    <span>{t('session.easy')}</span><span>{t('session.moderate')}</span><span>{t('session.maximum')}</span>
+                  </div>
+                </fieldset>
+
+                <div>
+                  <label htmlFor="live-note" className="form-label">{t('session.setNote')}</label>
+                  <input
+                    id="live-note"
+                    type="text"
+                    value={setInput.notes}
+                    onChange={e => setSetInput(p => ({ ...p, notes: e.target.value }))}
+                    placeholder={t('session.shoulderPainPlaceholder')}
+                    className="form-input form-input-dark"
+                  />
                 </div>
-              </div>
-
-              <div>
-                <label htmlFor="live-5" className="form-label">{t('session.setNote')}</label>
-                <input id="live-5"
-                  type="text"
-                  value={setInput.notes}
-                  onChange={e => setSetInput(p => ({ ...p, notes: e.target.value }))}
-                  placeholder={t('session.shoulderPainPlaceholder')}
-                  className="form-input"
-                />
-              </div>
-
-                <button
-                  onClick={() => handleCompleteSet()}
-                  disabled={savingSet}
-                  className="w-full btn-primary py-3.5 font-bold text-sm uppercase tracking-wider disabled:opacity-50"
-                >
-                  <i className="bi bi-check-lg mr-2" />{t('session.setCompleted')}
-                </button>
-              </div>
-            </GlowCard>
-          )}
-
-          {/* ── Action buttons ── */}
-          {phase !== 'resting' && (
-            <GlowCard>
-              <div className="p-3 flex gap-3">
-                <button
-                  onClick={skipExercise}
-                  disabled={savingSet || !!failedSet}
-                  className="flex-1 disabled:opacity-40 border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-full transition-all"
-                >
-                  <i className="bi bi-skip-forward-fill mr-1" />{t('session.skipExercise')}
-                </button>
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="flex-1 border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all"
-                >
-                  <i className="bi bi-flag-fill mr-1" />{t('session.finishSession')}
-                </button>
               </div>
             </GlowCard>
           )}
         </div>
 
-        {/* ── Sidebar: exercise list ── */}
-        <GlowCard className="lg:w-64 h-fit">
+        {/* ── Lista de ejercicios ── */}
+        <GlowCard className="h-fit lg:w-64">
           <div className="p-4">
-            <p className="text-[11px] font-black text-white uppercase tracking-wider mb-3">{t('nav.exercises')}</p>
+            <h2 className="mb-3 text-sm font-bold text-white">{t('nav.exercises')}</h2>
             <ul className="space-y-1.5">
               {exercises.map((ex, i) => {
                 const done  = setsCompletedForEx(ex.exercise_id)
@@ -653,21 +678,25 @@ function LiveSession({ routineId }: { routineId: number }) {
                   <li key={ex.re_id}>
                     <button
                       onClick={() => !isCurrentEx && jumpTo(i)}
-                      disabled={savingSet || !!failedSet}
+                      disabled={!canAct}
                       aria-current={isCurrentEx ? 'true' : undefined}
-                      className={`w-full disabled:opacity-60 text-left px-3 py-2 text-sm transition-colors rounded-xl ${
+                      className={`min-h-[44px] w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors disabled:opacity-60 ${
                         isCurrentEx
-                          ? 'bg-accent/10 border border-accent/40 font-bold text-accent'
+                          ? 'border-accent/40 bg-accent/10 font-bold text-accent'
                           : done >= total
-                          ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-                          : 'hover:bg-white/5 text-neutral-300 border border-transparent'
+                          ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                          : 'border-transparent text-neutral-300 hover:bg-white/5'
                       }`}
                     >
                       <span className="mr-2">
-                        {done >= total ? <i className="bi bi-check-circle-fill text-green-400" /> : isCurrentEx ? <i className="bi bi-circle-fill text-accent" /> : <i className="bi bi-circle text-neutral-600" />}
+                        {done >= total
+                          ? <i aria-hidden="true" className="bi bi-check-circle-fill text-green-400" />
+                          : isCurrentEx
+                          ? <i aria-hidden="true" className="bi bi-circle-fill text-accent" />
+                          : <i aria-hidden="true" className="bi bi-circle text-neutral-400" />}
                       </span>
                       {ex.exercise_name}
-                      <span className="block text-[11px] font-semibold text-neutral-500 mt-0.5 ml-5">
+                      <span className="ml-5 mt-0.5 block text-xs font-medium tabular-nums text-neutral-400">
                         {done}/{total} {t('common.sets')}
                       </span>
                     </button>
@@ -679,69 +708,200 @@ function LiveSession({ routineId }: { routineId: number }) {
         </GlowCard>
       </div>
 
-      {/* ── Finish modal ── */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} labelledBy="finish-session-title">
-            <GlowCard>
-              <div className="p-6">
-                <h2 id="finish-session-title" className="text-xl font-bold text-white mb-1">{t('session.finishSession')}</h2>
-                <p className="text-sm text-neutral-400 mb-5">
-                  {doneSets} {t('session.completedSets')} · {fmtTime(globalSecs)}
-                </p>
+      {/* ── Barra de acción fija: botón principal al alcance del pulgar ── */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-neutral-900/90 backdrop-blur-xl">
+        <div className="mx-auto max-w-6xl px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:px-6">
+          <button
+            onClick={primary.onClick}
+            disabled={primary.disabled}
+            className="btn-primary h-16 w-full text-base disabled:opacity-50"
+          >
+            <i aria-hidden="true" className={`bi ${primary.icon} mr-2 text-xl`} />{primary.label}
+          </button>
+        </div>
+      </div>
 
-                {/* Star rating */}
-                <div className="mb-5">
-                  <p className="form-label">{t('session.workoutRating')}</p>
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <button
-                        key={star}
-                        type="button"
-                        aria-label={`${star}`}
-                        aria-pressed={star <= finishRating}
-                        onClick={() => setFinishRating(star)}
-                        className={`text-2xl transition-transform hover:scale-110 ${
-                          star <= finishRating ? 'text-accent' : 'text-neutral-700'
-                        }`}
-                      >
-                        <i className={`bi bi-star-fill`} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
+      {/* ── Modal de fin: bottom-sheet en móvil ── */}
+      <Modal open={showModal} onClose={() => setShowModal(false)} labelledBy="finish-session-title" placement="sheet">
+        <GlowCard className="rounded-b-none sm:rounded-b-apple">
+          <div className="p-6">
+            <h2 id="finish-session-title" className="mb-1 text-xl font-bold text-white">{t('session.finishSession')}</h2>
+            <p className="mb-5 text-sm tabular-nums text-neutral-400">
+              {doneSets} {t('session.completedSets')} · {fmtTime(globalSecs)}
+            </p>
 
-                <div className="mb-5">
-                  <label htmlFor="live-6" className="form-label">{t('session.workoutNotes')}</label>
-                  <textarea id="live-6"
-                    rows={3}
-                    value={finishNotes}
-                    onChange={e => setFinishNotes(e.target.value)}
-                    placeholder={t('session.goodWorkoutPlaceholder')}
-                    className="form-input resize-none"
-                  />
-                </div>
-
-                {finishError && (
-                  <p role="alert" className="mb-4 text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">{finishError}</p>
-                )}
-
-                <div className="flex gap-3">
+            {/* Valoración */}
+            <div className="mb-5">
+              <p className="form-label">{t('session.workoutRating')}</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map(star => (
                   <button
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-full transition-all"
+                    key={star}
+                    type="button"
+                    aria-label={`${star}`}
+                    aria-pressed={star <= finishRating}
+                    onClick={() => setFinishRating(star)}
+                    className={`flex h-11 w-11 items-center justify-center text-2xl transition-colors ${
+                      star <= finishRating ? 'text-accent' : 'text-neutral-500'
+                    }`}
                   >
-                    {t('session.continue')}
+                    <i aria-hidden="true" className="bi bi-star-fill" />
                   </button>
-                  <button
-                    onClick={handleFinish}
-                    disabled={saving}
-                    className="flex-1 btn-primary disabled:opacity-50"
-                  >
-                    {saving ? t('common.saving') : t('session.saveAndFinish')}
-                  </button>
-                </div>
+                ))}
               </div>
-            </GlowCard>
+            </div>
+
+            <div className="mb-5">
+              <label htmlFor="live-finish-notes" className="form-label">{t('session.workoutNotes')}</label>
+              <textarea
+                id="live-finish-notes"
+                rows={3}
+                value={finishNotes}
+                onChange={e => setFinishNotes(e.target.value)}
+                placeholder={t('session.goodWorkoutPlaceholder')}
+                className="form-input form-input-dark resize-none"
+              />
+            </div>
+
+            {finishError && (
+              <p role="alert" className="mb-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-sm font-medium text-red-400">{finishError}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={() => setShowModal(false)} className="btn-ghost-dark flex-1">
+                {t('session.continue')}
+              </button>
+              <button onClick={handleFinish} disabled={saving} className="btn-primary flex-1 disabled:opacity-50">
+                {saving ? t('common.saving') : t('session.saveAndFinish')}
+              </button>
+            </div>
+          </div>
+        </GlowCard>
       </Modal>
+    </div>
+  )
+}
+
+/* ─── Piezas de presentación de la sesión ─────────────────────── */
+
+interface StepperProps {
+  id: string
+  label: string
+  hint?: string
+  value: string
+  placeholder?: string
+  inputMode: 'numeric' | 'decimal'
+  onChange: (value: string) => void
+  onMinus: () => void
+  onPlus: () => void
+  minusLabel: string
+  plusLabel: string
+}
+
+// Valor grande con botones −/+ de 56px: se maneja con el pulgar sin teclado
+function Stepper({
+  id, label, hint, value, placeholder, inputMode, onChange, onMinus, onPlus, minusLabel, plusLabel,
+}: StepperProps) {
+  const stepButton =
+    'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-2xl text-white transition-colors hover:bg-white/10 active:bg-white/15'
+  return (
+    <div>
+      <div className="mb-1.5 flex items-baseline justify-between gap-2">
+        <label htmlFor={id} className="form-label !mb-0">{label}</label>
+        {hint && <span className="text-xs tabular-nums text-neutral-400">{hint}</span>}
+      </div>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={onMinus} aria-label={minusLabel} className={stepButton}>
+          <i aria-hidden="true" className="bi bi-dash-lg" />
+        </button>
+        <input
+          id={id}
+          type="text"
+          inputMode={inputMode}
+          autoComplete="off"
+          value={value}
+          placeholder={placeholder}
+          onChange={e => onChange(e.target.value)}
+          onFocus={e => e.target.select()}
+          className="form-input form-input-dark !h-14 min-w-0 flex-1 !px-2 text-center text-4xl font-black tabular-nums"
+        />
+        <button type="button" onClick={onPlus} aria-label={plusLabel} className={stepButton}>
+          <i aria-hidden="true" className="bi bi-plus-lg" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+interface OverflowItem {
+  key: string
+  icon: string
+  label: string
+  onSelect: () => void
+  danger?: boolean
+  disabled?: boolean
+}
+
+// Menú "⋯" de la cabecera: acciones poco frecuentes lejos del pulgar
+function OverflowMenu({ label, items }: { label: string; items: OverflowItem[] }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false)
+        buttonRef.current?.focus()
+      }
+    }
+    const onPointer = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onPointer)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('pointerdown', onPointer)
+    }
+  }, [open])
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls="session-menu"
+        onClick={() => setOpen(v => !v)}
+        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-xl text-neutral-300 transition-colors hover:bg-white/10 hover:text-white"
+      >
+        <i aria-hidden="true" className="bi bi-three-dots" />
+      </button>
+      {open && (
+        <ul
+          id="session-menu"
+          className="absolute right-0 top-full z-30 mt-2 w-60 rounded-2xl border border-white/10 bg-surface-2 p-1.5 shadow-modal"
+        >
+          {items.map(item => (
+            <li key={item.key}>
+              <button
+                type="button"
+                disabled={item.disabled}
+                onClick={() => { setOpen(false); item.onSelect() }}
+                className={`flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition-colors disabled:opacity-40 ${
+                  item.danger ? 'text-red-400 hover:bg-red-500/10' : 'text-neutral-200 hover:bg-white/5'
+                }`}
+              >
+                <i aria-hidden="true" className={`bi ${item.icon} text-base`} />
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
