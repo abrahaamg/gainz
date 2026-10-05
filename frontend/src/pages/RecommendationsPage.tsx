@@ -1,35 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
-import api from '../services/api'
+import { recommendationService } from '../services/recommendationService'
 import { useAsync } from '../hooks/useAsync'
-import { useAuth } from '../hooks/useAuth'
+import { useAuthStore } from '../store/useAuthStore'
 import { isTrainingChanged, clearTrainingChanged } from '../utils/trainingFlag'
-
-/* ─── Types ──────────────────────────────────────────────────── */
-
-interface GeneratedExercise {
-  exercise_id: number
-  exercise_name: string
-  sets: number
-  reps: number | null
-  duration_seconds: number | null
-  rest_seconds: number
-  order_index: number
-}
-
-interface GeneratedRoutine {
-  name: string
-  description: string
-  goal: string
-  difficulty: string
-  estimated_duration_min: number
-  warmup_notes: string
-  cooldown_notes: string
-  day_label: string
-  exercises: GeneratedExercise[]
-}
-
+import type { GeneratedRoutine } from '../types/recommendation'
 import { label } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
 import Spinner from '../components/ui/Spinner'
@@ -39,8 +15,7 @@ import Spinner from '../components/ui/Spinner'
 export default function RecommendationsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { mysqlUser } = useAuth()
-  const uid = mysqlUser?.id
+  const uid = useAuthStore(s => s.mysqlUser?.id)
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(false)
   const [expanded, setExpanded] = useState<number | null>(null)
@@ -49,10 +24,7 @@ export default function RecommendationsPage() {
 
   // Única función de carga: la usan el montaje, "Regenerar" y "Reintentar"
   const { data, loading, error: loadError, reload: load } = useAsync(
-    async () => {
-      const res = await api.get<{ data: GeneratedRoutine[] }>('/recommendations/generate')
-      return res.data.data
-    },
+    () => recommendationService.generate(),
     [],
   )
   const routines = data ?? []
@@ -69,7 +41,7 @@ export default function RecommendationsPage() {
   const acceptAll = async () => {
     setSaving(true); setActionError(null)
     try {
-      await api.post('/recommendations/accept-all', { routines })
+      await recommendationService.acceptAll(routines)
       setSaved(true)
     } catch {
       setActionError(t('recommendations.saveAllError'))
@@ -81,8 +53,8 @@ export default function RecommendationsPage() {
   const acceptOne = async (routine: GeneratedRoutine) => {
     setSaving(true); setActionError(null)
     try {
-      const res = await api.post('/recommendations/accept', routine)
-      navigate(`/routines/${res.data.data.id}`)
+      const created = await recommendationService.accept(routine)
+      navigate(`/routines/${created.id}`)
     } catch {
       setActionError(t('recommendations.saveOneError'))
     } finally {

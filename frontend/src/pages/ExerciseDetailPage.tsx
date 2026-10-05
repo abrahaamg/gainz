@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
+import { apiErrorMessage } from '../utils/apiError'
 import { useAsync } from '../hooks/useAsync'
 import OneRMCalculator from '../components/exercises/OneRMCalculator'
 import DifficultyDots from '../components/ui/DifficultyDots'
@@ -28,8 +29,8 @@ export default function ExerciseDetailPage() {
     try {
       await exerciseService.delete(exercise.id)
       navigate('/exercises')
-    } catch {
-      setDeleteError(t('exercises.deleteError'))
+    } catch (err: unknown) {
+      setDeleteError(apiErrorMessage(err, t('exercises.deleteError')))
       setDeleting(false)
     }
   }

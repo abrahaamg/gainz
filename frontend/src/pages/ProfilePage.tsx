@@ -1,7 +1,8 @@
 import { useState, FormEvent, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore, MysqlUser } from '../store/useAuthStore'
-import api from '../services/api'
+import { useAuthStore } from '../store/useAuthStore'
+import { authService } from '../services/authService'
+import { apiErrorMessage } from '../utils/apiError'
 import GlowCard from '../components/ui/GlowCard'
 import { setTrainingChanged } from '../utils/trainingFlag'
 
@@ -81,7 +82,7 @@ export default function ProfilePage() {
     setError(null)
     setSaved(false)
     try {
-      const res = await api.patch('/auth/me', {
+      const updated = await authService.updateProfile({
         username: username || null,
         birth_date: birthDate || null,
         age: age,
@@ -92,15 +93,15 @@ export default function ProfilePage() {
         primary_goal: primaryGoal || null,
         session_duration_min: sessionDuration ? Number(sessionDuration) : null,
       })
-      setMysqlUser(res.data.data as MysqlUser)
+      setMysqlUser(updated)
       // Si cambió entrenamiento, marcar flag para aviso en recomendaciones
       if (trainingChanged) {
         setTrainingChanged(mysqlUser?.id)
       }
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
-    } catch {
-      setError(t('profile.saveError'))
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, t('profile.saveError')))
     } finally {
       setSaving(false)
     }

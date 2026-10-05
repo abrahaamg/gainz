@@ -20,6 +20,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { routineService } from '../services/routineService'
 import { exerciseService } from '../services/exerciseService'
+import { apiErrorMessage } from '../utils/apiError'
 import { RoutineExerciseForm } from '../types/routine'
 import { Exercise } from '../types/exercise'
 import useDebounce from '../hooks/useDebounce'
@@ -316,8 +317,8 @@ export default function RoutineBuilderPage() {
         await routineService.create(payload)
       }
       navigate('/routines')
-    } catch {
-      setError(t('routines.saveError'))
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, t('routines.saveError')))
     } finally {
       setSaving(false)
     }

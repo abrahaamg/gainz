@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuth } from '../hooks/useAuth'
 import { useAuthStore } from '../store/useAuthStore'
-import api from '../services/api'
+import { authService } from '../services/authService'
+import { apiErrorMessage } from '../utils/apiError'
 import { equipmentService } from '../services/equipmentService'
 import { CatalogItem } from '../types/equipment'
 import type { MysqlUser } from '../store/useAuthStore'
@@ -88,7 +88,7 @@ const STEP_LABEL_KEYS = [
 export default function OnboardingPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { mysqlUser } = useAuth()
+  const mysqlUser = useAuthStore(s => s.mysqlUser)
   const setMysqlUser = useAuthStore(s => s.setMysqlUser)
 
   const [step, setStep] = useState(1)
@@ -177,7 +177,7 @@ export default function OnboardingPage() {
     setSaving(true); setError(null); setEquipmentFailed([])
     try {
       // 1. Save profile
-      const profileRes = await api.patch('/auth/me', {
+      const profile = await authService.updateProfile({
         username: username.trim(),
         sex,
         age: age || null,
@@ -212,7 +212,7 @@ export default function OnboardingPage() {
 
       // 3. Si algo del equipo no se guardó, se avisa antes de salir (se puede reintentar o continuar)
       // (guardar el usuario con onboarding_done redirige solo, por eso se retiene si hay avisos)
-      const savedUser = { ...profileRes.data.data, onboarding_done: true } as MysqlUser
+      const savedUser = { ...profile, onboarding_done: true } as MysqlUser
       if (failed.length > 0) {
         pendingUser.current = savedUser
         setEquipmentFailed(failed)
@@ -220,8 +220,8 @@ export default function OnboardingPage() {
       }
       setMysqlUser(savedUser)
       navigate('/', { replace: true })
-    } catch {
-      setError(t('onboarding.saveError'))
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, t('onboarding.saveError')))
     } finally {
       setSaving(false)
     }

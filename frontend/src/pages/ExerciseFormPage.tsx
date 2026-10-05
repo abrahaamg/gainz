@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
+import { apiErrorMessage } from '../utils/apiError'
 import { ExerciseCategory, Difficulty, CreateExerciseDTO } from '../types/exercise'
 
 const CATEGORIES: { value: ExerciseCategory; labelKey: string }[] = [
@@ -111,7 +112,7 @@ export default function ExerciseFormPage() {
         navigate(`/exercises/${created.id}`)
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t('exercises.saveError')
+      const msg = apiErrorMessage(err, t('exercises.saveError'))
       setError(msg)
     } finally {
       setLoading(false)

@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
-import { useAuth, useLogout } from '../../hooks/useAuth'
+import { useLogout } from '../../hooks/useAuth'
+import { useAuthStore } from '../../store/useAuthStore'
 import { AUTH_CONFIG_MISSING, DEV_MODE } from '../../config/authMode'
 import Spinner from '../ui/Spinner'
 import ErrorState from '../ui/ErrorState'
@@ -13,7 +14,7 @@ interface Props {
 
 export default function ProtectedRoute({ children, allowIncompleteOnboarding = false }: Props) {
   const { t } = useTranslation()
-  const { firebaseUser, mysqlUser, loading, authError, retryAuth } = useAuth()
+  const { firebaseUser, mysqlUser, loading, authError, retryAuth } = useAuthStore()
   const logout = useLogout()
 
   if (AUTH_CONFIG_MISSING) return <Navigate to="/login" replace />

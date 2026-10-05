@@ -3,7 +3,7 @@ import { User as FirebaseUser } from 'firebase/auth'
 
 export interface MysqlUser {
   id: number
-  email: string
+  email: string | null
   username: string
   sex: string | null
   age: number | null

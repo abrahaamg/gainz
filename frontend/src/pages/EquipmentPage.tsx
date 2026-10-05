@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { equipmentService } from '../services/equipmentService'
 import { exerciseService } from '../services/exerciseService'
+import { apiErrorMessage } from '../utils/apiError'
 import { CatalogItem, Equipment } from '../types/equipment'
 import type { Exercise } from '../types/exercise'
 import { label } from '../utils/labels'
@@ -95,8 +96,8 @@ export default function EquipmentPage() {
       })
       await load()
       setShowModal(false)
-    } catch {
-      setError(t('equipment.saveError'))
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, t('equipment.saveError')))
     } finally {
       setSaving(false)
     }

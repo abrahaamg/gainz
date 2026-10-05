@@ -4,7 +4,7 @@ import { auth } from '../config/firebase'
 import { DEV_MODE, FIREBASE_CONFIGURED } from '../config/authMode'
 import { useAuthStore } from '../store/useAuthStore'
 import { clearAllTrainingFlags } from '../utils/trainingFlag'
-import api from '../services/api'
+import { authService } from '../services/authService'
 
 // Inicializa el listener de Firebase y sincroniza con backend
 export function useAuthInit() {
@@ -18,8 +18,8 @@ export function useAuthInit() {
     const loadProfile = async () => {
       setAuthError(false)
       try {
-        const res = await api.get('/auth/')
-        if (!cancelled) setMysqlUser(res.data.data)
+        const profile = await authService.getProfile()
+        if (!cancelled) setMysqlUser(profile)
       } catch {
         if (!cancelled) {
           setMysqlUser(null)
@@ -59,9 +59,6 @@ export function useAuthInit() {
   }, [retryToken])
 }
 
-export function useAuth() {
-  return useAuthStore()
-}
 
 // Cierra sesión: Firebase (si hay), estado local y marcas de localStorage del usuario.
 export function useLogout() {

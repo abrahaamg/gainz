@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  loadPref, savePref, applyTheme, applyContrast, applyReducedMotion, applyFontSize,
+  type FontSize, type Theme, type Contrast,
+} from '../../utils/a11yPrefs'
 
-type FontSize = 'normal' | 'grande' | 'muy-grande'
-type Theme = 'claro' | 'oscuro'
-type Contrast = 'normal' | 'alto'
-
-const FONT_SIZE_VALUES: { value: FontSize; labelKey: string; scale: string }[] = [
-  { value: 'normal',     labelKey: 'accessibility.normal',    scale: '100%' },
-  { value: 'grande',     labelKey: 'accessibility.large',     scale: '115%' },
-  { value: 'muy-grande', labelKey: 'accessibility.veryLarge', scale: '130%' },
+const FONT_SIZE_VALUES: { value: FontSize; labelKey: string }[] = [
+  { value: 'normal',     labelKey: 'accessibility.normal' },
+  { value: 'grande',     labelKey: 'accessibility.large' },
+  { value: 'muy-grande', labelKey: 'accessibility.veryLarge' },
 ]
 
 const SHORTCUT_KEYS: { keys: string; actionKey: string }[] = [
@@ -22,16 +22,6 @@ const SHORTCUT_KEYS: { keys: string; actionKey: string }[] = [
   { keys: 'Escape',  actionKey: 'accessibility.shortcutEsc' },
 ]
 
-function loadPref<T>(key: string, fallback: T): T {
-  try {
-    const v = localStorage.getItem(`gainz_a11y_${key}`)
-    return v ? (JSON.parse(v) as T) : fallback
-  } catch { return fallback }
-}
-function savePref(key: string, value: unknown) {
-  localStorage.setItem(`gainz_a11y_${key}`, JSON.stringify(value))
-}
-
 export default function AccessibilityPanel() {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -42,26 +32,25 @@ export default function AccessibilityPanel() {
 
   // ── Apply font size ──
   useEffect(() => {
-    const scale = FONT_SIZE_VALUES.find(f => f.value === fontSize)?.scale ?? '100%'
-    document.documentElement.style.fontSize = scale
+    applyFontSize(fontSize)
     savePref('fontSize', fontSize)
   }, [fontSize])
 
   // ── Apply theme ──
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'oscuro')
+    applyTheme(theme)
     savePref('theme', theme)
   }, [theme])
 
   // ── Apply contrast ──
   useEffect(() => {
-    document.documentElement.classList.toggle('high-contrast', contrast === 'alto')
+    applyContrast(contrast)
     savePref('contrast', contrast)
   }, [contrast])
 
   // ── Apply reduced motion ──
   useEffect(() => {
-    document.documentElement.classList.toggle('reduce-motion', reducedMotion)
+    applyReducedMotion(reducedMotion)
     savePref('reducedMotion', reducedMotion)
   }, [reducedMotion])
 

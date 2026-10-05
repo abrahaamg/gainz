@@ -5,13 +5,10 @@ import { useAuthInit } from './hooks/useAuth'
 import { AUTH_CONFIG_MISSING } from './config/authMode'
 import ErrorState from './components/ui/ErrorState'
 
-function AppInner() {
-  useAuthInit()
-  return <RouterProvider router={router} />
-}
-
 export default function App() {
   const { t } = useTranslation()
+  useAuthInit()
+
   // Producción sin Firebase configurado: fallar en vez de abrir la app sin login
   if (AUTH_CONFIG_MISSING) {
     return (
@@ -20,5 +17,5 @@ export default function App() {
       </div>
     )
   }
-  return <AppInner />
+  return <RouterProvider router={router} />
 }
