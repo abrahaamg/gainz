@@ -1,22 +1,30 @@
 import { useTranslation } from 'react-i18next'
-import { cn } from '../../lib/utils'
+import EmptyState from './EmptyState'
 
 interface Props {
   message?: string
   onRetry?: () => void
   className?: string
+  /** Sin contenedor propio (dentro de una tarjeta) */
+  bare?: boolean
 }
 
-export default function ErrorState({ message, onRetry, className }: Props) {
+/** Error con reintento. Comparte aspecto con EmptyState. */
+export default function ErrorState({ message, onRetry, className, bare }: Props) {
   const { t } = useTranslation()
   return (
-    <div role="alert" className={cn('flex flex-col items-center gap-3 py-12 text-center', className)}>
-      <p className="text-sm font-semibold text-red-500">{message ?? t('common.errorGeneric')}</p>
-      {onRetry && (
-        <button type="button" onClick={onRetry} className="btn-primary px-5 py-2 text-sm">
+    <EmptyState
+      role="alert"
+      tone="error"
+      icon="bi-exclamation-triangle"
+      title={message ?? t('common.errorGeneric')}
+      bare={bare}
+      className={className}
+      action={onRetry && (
+        <button type="button" onClick={onRetry} className="btn-primary">
           {t('common.retry')}
         </button>
       )}
-    </div>
+    />
   )
 }

@@ -11,6 +11,10 @@ export default {
         accent:      '#F5C400',
         'accent-dk': '#C9A200',
         'accent-lt': '#FFF3C4',
+        'accent-text': '#8A6D00',
+        surface:     '#0a0a0a',
+        'surface-2': '#141414',
+        'surface-3': '#1a1a1a',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -21,6 +25,25 @@ export default {
         'apple': '2rem',
         '2xl':   '1.25rem',
         '3xl':   '1.5rem',
+      },
+      keyframes: {
+        'toast-in': {
+          from: { opacity: '0', transform: 'translateY(-12px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        'sheet-in': {
+          from: { transform: 'translateY(100%)' },
+          to:   { transform: 'translateY(0)' },
+        },
+        'word-in': {
+          from: { opacity: '0', transform: 'translateY(60%)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'toast-in': 'toast-in 300ms ease-out both',
+        'sheet-in': 'sheet-in 300ms cubic-bezier(0.32, 0.72, 0, 1) both',
+        'word-in': 'word-in 500ms ease-out both',
       },
       boxShadow: {
         'soft':  '0 2px 15px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03)',

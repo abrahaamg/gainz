@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { motion } from 'framer-motion'
+import { cn } from '../../lib/utils'
 
 const ROTATION_INTERVAL = 2500
 
@@ -22,65 +22,40 @@ export default function AnimatedHero({ className }: AnimatedHeroProps) {
   }, [titleIndex, titles.length])
 
   return (
-    <div className={`card header-gradient px-8 py-14 relative overflow-hidden border-none ${className ?? ''}`}>
+    <div className={cn('card header-gradient relative overflow-hidden border-none px-5 py-6 sm:px-8 sm:py-14', className)}>
       <div className="relative z-10 max-w-lg">
-        <h1 className="text-4xl sm:text-5xl font-bold text-white leading-[1.15] tracking-tight">
-          {t('hero.title')}
-          <span className="relative flex w-full overflow-hidden md:pb-2 md:pt-1 h-[1.3em]">
-            &nbsp;
-            {titles.map((title, index) => (
-              <motion.span
-                key={index}
-                className="absolute font-display italic text-accent text-5xl sm:text-6xl"
-                initial={{ opacity: 0, y: 40 }}
-                transition={{ type: 'spring', stiffness: 80, damping: 16 }}
-                animate={
-                  titleIndex === index
-                    ? { y: 0, opacity: 1 }
-                    : { y: titleIndex > index ? -60 : 60, opacity: 0 }
-                }
-              >
-                {title}
-              </motion.span>
-            ))}
+        {/* Móvil: una sola línea ("Tu entrenamiento, a otro nivel"); desde sm, título y palabra en dos líneas */}
+        <h1 className="text-xl font-bold leading-[1.15] tracking-tight text-white sm:text-5xl">
+          {t('hero.title')}{' '}
+          <span
+            key={titleIndex}
+            className="inline-block animate-word-in whitespace-nowrap font-display italic text-accent sm:block sm:text-6xl"
+          >
+            {titles[titleIndex]}
           </span>
         </h1>
-        <p className="text-neutral-400 text-sm mt-5 max-w-md leading-relaxed">
+        <p className="mt-5 hidden max-w-md text-sm leading-relaxed text-neutral-400 sm:block">
           {t('hero.subtitle')}
         </p>
       </div>
 
       {/* GAINZ outline */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden select-none items-center justify-center overflow-hidden sm:flex">
         <span
-          className="font-display italic text-[120px] sm:text-[160px] lg:text-[200px] leading-none font-bold tracking-tight translate-x-[40%] skew-x-[-6deg]"
-          style={{
-            WebkitTextStroke: '1px rgba(255,255,255,0.06)',
-            color: 'transparent',
-          }}
+          className="translate-x-[40%] skew-x-[-6deg] font-display text-[160px] font-bold italic leading-none tracking-tight text-transparent [-webkit-text-stroke:1px_rgba(255,255,255,0.06)] lg:text-[200px]"
         >
           GAINZ
         </span>
       </div>
 
-      {/* Glow esquina izquierda */}
+      {/* Glow esquina derecha */}
       <div
-        className="absolute -top-[30%] -left-[10%] w-[300px] h-[300px] rounded-full pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(245,196,0,0.12) 0%, transparent 70%)',
-        }}
-      />
-
-      {/* Glow esquina derecha — más intenso */}
-      <div
-        className="absolute -bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(245,196,0,0.18) 0%, rgba(245,196,0,0.06) 40%, transparent 70%)',
-        }}
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-[20%] -right-[5%] h-[300px] w-[300px] rounded-full bg-[radial-gradient(circle,rgba(245,196,0,0.14)_0%,rgba(245,196,0,0.05)_40%,transparent_70%)]"
       />
 
       {/* Línea inferior */}
-      <div className="absolute bottom-0 left-8 right-8 h-px bg-gradient-to-r from-accent/40 via-accent/10 to-transparent" />
+      <div aria-hidden="true" className="absolute bottom-0 left-5 right-5 h-px bg-gradient-to-r from-accent/40 via-accent/10 to-transparent sm:left-8 sm:right-8" />
     </div>
   )
 }

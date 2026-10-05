@@ -6,7 +6,7 @@ import GuestRoute from '../components/auth/GuestRoute'
 import RouteSuspense from '../components/ui/RouteSuspense'
 import RouteError from '../components/ui/RouteError'
 
-// Cada página es un chunk aparte: recharts, framer-motion, dnd-kit... no entran en el bundle inicial
+// Cada página es un chunk aparte: recharts, dnd-kit... no entran en el bundle inicial
 const LoginPage = lazy(() => import('../pages/LoginPage'))
 const RegisterPage = lazy(() => import('../pages/RegisterPage'))
 const OnboardingPage = lazy(() => import('../pages/OnboardingPage'))

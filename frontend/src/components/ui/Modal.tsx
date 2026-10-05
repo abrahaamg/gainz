@@ -12,6 +12,8 @@ interface ModalProps {
   /** id del elemento que titula el diálogo (aria-labelledby). */
   labelledBy: string
   children: ReactNode
+  /** "sheet": en móvil sube desde abajo como bottom-sheet; desde sm, centrado. */
+  placement?: 'center' | 'sheet'
   /** Clases extra para el contenedor del diálogo (p. ej. max-h con scroll). */
   className?: string
 }
@@ -20,7 +22,7 @@ interface ModalProps {
  * Diálogo modal accesible: role="dialog" + aria-modal, cierra con Escape,
  * atrapa el foco con Tab y lo devuelve al elemento previo al cerrar.
  */
-export default function Modal({ open, onClose, labelledBy, children, className }: ModalProps) {
+export default function Modal({ open, onClose, labelledBy, children, className, placement = 'center' }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
 
@@ -64,7 +66,12 @@ export default function Modal({ open, onClose, labelledBy, children, className }
   }
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div
+      className={cn(
+        'fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center z-50',
+        placement === 'sheet' ? 'items-end sm:items-center p-0 sm:p-4' : 'items-center p-4',
+      )}
+    >
       <div
         ref={dialogRef}
         role="dialog"
@@ -72,7 +79,11 @@ export default function Modal({ open, onClose, labelledBy, children, className }
         aria-labelledby={labelledBy}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className={cn('w-full max-w-md outline-none', className)}
+        className={cn(
+          'w-full max-w-md outline-none',
+          placement === 'sheet' && 'max-w-none sm:max-w-md max-h-[92vh] overflow-y-auto animate-sheet-in sm:animate-none pb-[env(safe-area-inset-bottom)] rounded-t-apple sm:rounded-b-apple',
+          className,
+        )}
       >
         {children}
       </div>

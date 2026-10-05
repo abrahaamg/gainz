@@ -18,15 +18,26 @@ describe('GlowCard', () => {
     expect(container.firstElementChild?.className).toContain('col-span-2')
   })
 
-  it('tiene las capas internas (glass, glow, noise)', () => {
+  it('por defecto es sobria: sin capas de efecto ni variante glow', () => {
     const { container } = render(<GlowCard><p>Test</p></GlowCard>)
     const card = container.firstElementChild!
-    // Debe tener múltiples divs hijos (capas de efecto + contenido)
-    expect(card.children.length).toBeGreaterThanOrEqual(6)
+    expect(card.className).not.toContain('glow-card--glow')
+    expect(card.querySelector('.glow-card__glow')).toBeNull()
+    expect(card.children.length).toBe(1)
+  })
+
+  it('con glow tiene las capas internas (glass, glow, línea) y sin ruido SVG', () => {
+    const { container } = render(<GlowCard glow><p>Test</p></GlowCard>)
+    const card = container.firstElementChild!
+    expect(card.className).toContain('glow-card--glow')
+    expect(card.querySelector('.glow-card__glass')).not.toBeNull()
+    expect(card.querySelector('.glow-card__glow')).not.toBeNull()
+    expect(card.querySelector('.glow-card__line')).not.toBeNull()
+    expect(card.innerHTML).not.toContain('feTurbulence')
   })
 
   it('el contenido tiene z-index alto para estar encima de los efectos', () => {
-    const { container } = render(<GlowCard><p>Test</p></GlowCard>)
+    const { container } = render(<GlowCard glow><p>Test</p></GlowCard>)
     const card = container.firstElementChild!
     const contentLayer = card.querySelector('.z-40')
     expect(contentLayer).not.toBeNull()
