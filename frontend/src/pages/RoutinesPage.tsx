@@ -1,12 +1,28 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import { routineService } from '../services/routineService'
 import type { Routine } from '../types/routine'
 import { label } from '../utils/labels'
 import { apiErrorMessage } from '../utils/apiError'
 import { duplicateRoutine } from '../utils/duplicateRoutine'
 import { canHide, markHidden, splitHidden } from '../utils/hiddenRoutines'
+import { moveItem } from '../utils/reorder'
 import { useAsync } from '../hooks/useAsync'
 import { useAuthStore } from '../store/useAuthStore'
 import DifficultyDots from '../components/ui/DifficultyDots'
@@ -15,6 +31,7 @@ import PageHeader from '../components/ui/PageHeader'
 import EmptyState from '../components/ui/EmptyState'
 import Spinner from '../components/ui/Spinner'
 import ErrorState from '../components/ui/ErrorState'
+import SortableItem from '../components/ui/SortableItem'
 
 export default function RoutinesPage() {
   const { t } = useTranslation()
@@ -25,9 +42,17 @@ export default function RoutinesPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [duplicatingId, setDuplicatingId] = useState<number | null>(null)
   const [showHidden, setShowHidden] = useState(false)
+  // Vista compacta para reordenar cómodo
+  const [sorting, setSorting] = useState(false)
   // Última rutina ocultada: muestra el aviso con "Deshacer"
   const [lastHiddenId, setLastHiddenId] = useState<number | null>(null)
   const navigate = useNavigate()
+
+  // Solo se arrastra desde el asa; distance evita que un toque en el asa cuente como arrastre
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
 
   useEffect(() => {
     if (lastHiddenId === null) return
@@ -85,37 +110,54 @@ export default function RoutinesPage() {
     }
   }
 
+  // Al soltar: se reordena al momento y se guarda; si falla, vuelve el orden anterior
+  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
+    const reordered = moveItem(routines, r => r.id, active.id, over?.id)
+    if (reordered === routines) return
+    const previous = data
+    setDeleteError(null)
+    setData(() => [...reordered, ...hiddenRoutines])
+    try {
+      await routineService.reorder(reordered.map(r => r.id))
+    } catch {
+      setData(() => previous)
+      setDeleteError(t('routines.reorderError'))
+    }
+  }
+
   // Acción de cierre de cada tarjeta: las propias se eliminan; las ajenas se ocultan o se vuelven a mostrar
   const removeAction = (routine: Routine) => {
+    const className = 'card-action justify-center'
     if (routine.is_hidden) {
       return (
-        <button type="button" onClick={e => handleUnhide(routine.id, e)} className="card-action card-action-edit">
+        <button type="button" onClick={e => handleUnhide(routine.id, e)} className={`${className} card-action-edit`}>
           {t('routines.unhide')}
         </button>
       )
     }
     if (canHide(routine, userId)) {
       return (
-        <button type="button" onClick={e => handleHide(routine.id, e)} className="card-action card-action-delete">
+        <button type="button" onClick={e => handleHide(routine.id, e)} className={`${className} card-action-delete`}>
           {t('routines.hide')}
         </button>
       )
     }
     return (
-      <button onClick={e => handleDelete(routine.id, e)} className="card-action card-action-delete">
+      <button type="button" onClick={e => handleDelete(routine.id, e)} className={`${className} card-action-delete`}>
         {t('common.delete')}
       </button>
     )
   }
 
-  const renderCard = (routine: Routine) => (
-    <GlowCard key={routine.id} className={routine.is_hidden ? 'opacity-70' : undefined}>
+  const renderCard = (routine: Routine, handle?: ReactNode) => (
+    <GlowCard className={routine.is_hidden ? 'h-full opacity-70' : 'h-full'}>
       <Link
         to={`/routines/${routine.id}`}
         className="block p-5 flex flex-col h-full gap-3"
       >
-        <div className="flex justify-between items-start">
-          <h2 className="font-bold text-white leading-tight">{routine.name}</h2>
+        <div className="flex items-start gap-2">
+          {handle && <div className="-ml-3 -mt-2.5">{handle}</div>}
+          <h2 className="flex-1 font-bold text-white leading-tight">{routine.name}</h2>
           <DifficultyDots level={routine.difficulty} />
         </div>
 
@@ -146,17 +188,19 @@ export default function RoutinesPage() {
           <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed italic">{routine.description}</p>
         )}
 
-        <div className="flex justify-between items-center mt-auto pt-3 border-t border-white/10">
+        <div className="mt-auto pt-3 border-t border-white/10 space-y-2">
           <button
+            type="button"
             onClick={e => { e.preventDefault(); navigate(`/session/${routine.id}`) }}
-            className="btn-primary py-1.5 px-4"
+            className="btn-primary w-full px-5"
           >
             {t('routines.start')}
           </button>
-          <div className="flex gap-1">
+          <div className="grid grid-cols-3 gap-1">
             <button
+              type="button"
               onClick={e => { e.preventDefault(); navigate(`/routines/${routine.id}/edit`) }}
-              className="card-action card-action-edit"
+              className="card-action card-action-edit justify-center"
             >
               {t('common.edit')}
             </button>
@@ -164,7 +208,7 @@ export default function RoutinesPage() {
               type="button"
               onClick={e => handleDuplicate(routine, e)}
               disabled={duplicatingId !== null}
-              className="card-action card-action-edit disabled:opacity-50"
+              className="card-action card-action-edit justify-center disabled:opacity-50"
             >
               {duplicatingId === routine.id ? t('routines.duplicating') : t('routines.duplicate')}
             </button>
@@ -172,6 +216,21 @@ export default function RoutinesPage() {
           </div>
         </div>
       </Link>
+    </GlowCard>
+  )
+
+  // Tarjeta pequeña del modo Ordenar: asa, nombre y nº de ejercicios
+  const renderCompact = (routine: Routine, handle: ReactNode) => (
+    <GlowCard>
+      <div className="flex items-center gap-2 py-1 pl-1 pr-4">
+        {handle}
+        <p className="flex-1 truncate font-bold text-white">{routine.name}</p>
+        {routine.exercise_count !== undefined && (
+          <span className="shrink-0 text-xs font-medium text-neutral-400">
+            <strong className="text-accent">{routine.exercise_count}</strong> {t('common.exercises')}
+          </span>
+        )}
+      </div>
     </GlowCard>
   )
 
@@ -189,14 +248,25 @@ export default function RoutinesPage() {
         title={t('routines.title')}
         subtitle={`${routines.length} ${t('common.routines')}`}
         actions={
-          <>
-            <Link to="/routines/import" className="btn-ghost-dark">
-              <i aria-hidden="true" className="bi bi-clipboard-plus mr-1.5" />{t('routines.import')}
-            </Link>
-            <Link to="/routines/new" className="btn-primary">
-              {t('routines.new')}
-            </Link>
-          </>
+          sorting ? (
+            <button type="button" onClick={() => setSorting(false)} className="btn-primary px-5">
+              <i aria-hidden="true" className="bi bi-check-lg mr-1.5" />{t('routines.reorderDone')}
+            </button>
+          ) : (
+            <>
+              {routines.length > 1 && (
+                <button type="button" onClick={() => setSorting(true)} className="btn-ghost-dark px-5">
+                  <i aria-hidden="true" className="bi bi-arrow-down-up mr-1.5" />{t('routines.reorder')}
+                </button>
+              )}
+              <Link to="/routines/import" className="btn-ghost-dark px-5">
+                <i aria-hidden="true" className="bi bi-clipboard-plus mr-1.5" />{t('routines.import')}
+              </Link>
+              <Link to="/routines/new" className="btn-primary px-5">
+                {t('routines.new')}
+              </Link>
+            </>
+          )
         }
       />
 
@@ -227,12 +297,30 @@ export default function RoutinesPage() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {routines.map(renderCard)}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={routines.map(r => r.id)}
+            strategy={sorting ? verticalListSortingStrategy : rectSortingStrategy}
+          >
+            {sorting && (
+              <p className="mb-3 text-xs font-medium text-neutral-400">{t('routines.reorderHint')}</p>
+            )}
+            <div className={sorting ? 'mx-auto max-w-xl space-y-2' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'}>
+              {routines.map(routine => (
+                <SortableItem
+                  key={routine.id}
+                  id={routine.id}
+                  handleLabel={t('routines.dragRoutine', { name: routine.name })}
+                >
+                  {handle => (sorting ? renderCompact(routine, handle) : renderCard(routine, handle))}
+                </SortableItem>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
-      {hiddenRoutines.length > 0 && (
+      {!sorting && hiddenRoutines.length > 0 && (
         <div className="mt-8">
           <button
             type="button"
@@ -245,7 +333,7 @@ export default function RoutinesPage() {
           </button>
           {showHidden && (
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {hiddenRoutines.map(renderCard)}
+              {hiddenRoutines.map(routine => <div key={routine.id}>{renderCard(routine)}</div>)}
             </div>
           )}
         </div>

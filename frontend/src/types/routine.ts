@@ -44,6 +44,8 @@ export interface Routine {
   tags: string[]
   /** El usuario la ha quitado de su lista (solo rutinas públicas ajenas). */
   is_hidden: boolean
+  /** Orden manual del usuario en su lista; null = sin colocar (sale arriba). */
+  position: number | null
   created_at: string
   updated_at: string
   exercises?: RoutineExercise[]

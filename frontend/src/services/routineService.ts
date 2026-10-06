@@ -37,4 +37,9 @@ export const routineService = {
   unhide: async (id: number): Promise<void> => {
     await api.delete(`/routines/${id}/hide`)
   },
+
+  /** Guarda el orden manual de la lista del usuario (ids de arriba a abajo). */
+  reorder: async (routineIds: number[]): Promise<void> => {
+    await api.put('/routines/order', { routine_ids: routineIds })
+  },
 }

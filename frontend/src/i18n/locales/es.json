@@ -253,7 +253,17 @@
     "hideHidden": "Esconder ocultas",
     "hiddenBadge": "Oculta",
     "hideError": "No se pudo ocultar la rutina. Inténtalo de nuevo.",
-    "unhideError": "No se pudo volver a mostrar la rutina. Inténtalo de nuevo."
+    "unhideError": "No se pudo volver a mostrar la rutina. Inténtalo de nuevo.",
+    "reorder": "Ordenar",
+    "reorderDone": "Hecho",
+    "reorderHint": "Arrastra desde el asa para cambiar el orden. Se guarda al soltar.",
+    "reorderError": "No se pudo guardar el orden. Se ha deshecho el cambio.",
+    "dragRoutine": "Arrastrar {{name}} (usa espacio y las flechas para moverla)",
+    "dragExercise": "Arrastrar {{name}} (usa espacio y las flechas para moverlo)",
+    "duplicateToEdit": "Esta rutina no es tuya: duplícala para editarla o cambiar el orden de sus ejercicios.",
+    "routineNoteLabel": "Nota de la rutina",
+    "exerciseNoteLabel": "Nota del ejercicio",
+    "moreActions": "Más acciones"
   },
   "progress": {
     "title": "Progreso",
