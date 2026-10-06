@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { buildDraft, type DraftExercise } from './draft'
 import { parseRoutineText } from './parse'
-import { buildPlanDays } from './plan'
+import { DEFAULT_SPLIT, splitByMuscle } from './plan'
 import { applyExerciseEdit, editMode, isOwnExercise, saveEditedExercise, type EditableExercise, type ExerciseChanges } from './exerciseEdit'
 import { CATALOG_FIXTURE } from './catalog.fixture'
 import ejemplo from './rutina-ejemplo.fixture.txt?raw'
@@ -76,35 +76,23 @@ describe('propio vs catálogo', () => {
 
 describe('aplicar la edición al borrador', () => {
   const catalog: DraftExercise[] = CATALOG_FIXTURE.map(([name, category, muscle_group], i) => ({ id: i + 1, name, category, muscle_group, created_by: null }))
-  const rows = buildDraft(parseRoutineText(ejemplo), catalog).flatMap(d => d.rows)
-  const days = buildPlanDays(rows, '5 días', 5)
+  const days = splitByMuscle(buildDraft(parseRoutineText(ejemplo), catalog), DEFAULT_SPLIT).days
   const pecks = days[1].rows.filter(r => r.rawName === 'PECK DECK')
   const peck = pecks[0].exercise!
   const ownBack: DraftExercise = { ...peck, name: 'Mi peck', muscle_group: 'back', created_by: USER }
   const dayOf = (result: typeof days, key: string) => result.findIndex(d => d.rows.some(r => r.key === key))
 
-  it('copia: solo cambia la fila editada y se recalcula su día (pecho → espalda = Día 1)', () => {
-    const result = applyExerciseEdit(days, pecks[0].key, { exercise: { ...ownBack, id: 500 }, mode: 'copy' }, true)
-    expect(dayOf(result, pecks[0].key)).toBe(0)
-    expect(dayOf(result, pecks[1].key)).toBe(1)
+  it('copia: solo cambia la fila editada y ninguna fila cambia de día', () => {
+    const result = applyExerciseEdit(days, pecks[0].key, { exercise: { ...ownBack, id: 500 }, mode: 'copy' })
+    expect(dayOf(result, pecks[0].key)).toBe(1)
+    expect(result[1].rows.find(r => r.key === pecks[0].key)?.exercise?.name).toBe('Mi peck')
     expect(result[1].rows.find(r => r.key === pecks[1].key)?.exercise?.id).toBe(peck.id)
   })
 
-  it('propio actualizado: todas las filas con ese ejercicio lo reciben', () => {
-    const result = applyExerciseEdit(days, pecks[0].key, { exercise: ownBack, mode: 'update' }, true)
-    expect(dayOf(result, pecks[0].key)).toBe(0)
-    expect(dayOf(result, pecks[1].key)).toBe(0)
-  })
-
-  it('si el usuario movió la fila a mano, el reparto no la toca', () => {
-    const manual = days.map(d => ({ ...d, rows: d.rows.map(r => (r.key === pecks[0].key ? { ...r, manual: true } : r)) }))
-    const result = applyExerciseEdit(manual, pecks[0].key, { exercise: { ...ownBack, id: 500 }, mode: 'copy' }, true)
+  it('propio actualizado: todas las filas con ese ejercicio lo reciben, sin cambiar de día', () => {
+    const result = applyExerciseEdit(days, pecks[0].key, { exercise: ownBack, mode: 'update' })
     expect(dayOf(result, pecks[0].key)).toBe(1)
-  })
-
-  it('en modo tabla no se reparte nada', () => {
-    const result = applyExerciseEdit(days, pecks[0].key, { exercise: { ...ownBack, id: 500 }, mode: 'copy' }, false)
-    expect(dayOf(result, pecks[0].key)).toBe(1)
-    expect(result[1].rows.find(r => r.key === pecks[0].key)?.exercise?.name).toBe('Mi peck')
+    expect(dayOf(result, pecks[1].key)).toBe(1)
+    expect(result[1].rows.filter(r => r.exercise?.name === 'Mi peck')).toHaveLength(2)
   })
 })

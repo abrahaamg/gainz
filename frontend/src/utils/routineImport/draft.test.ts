@@ -60,10 +60,9 @@ describe('acciones sobre el borrador', () => {
     }))
     expect(canSave(resolved)).toBe(true)
     expect(canSave([{ ...resolved[0], name: '  ' }])).toBe(false)
-    expect(canSave([{ ...resolved[0], rows: [] }])).toBe(false)
-    // con allowEmpty se pueden crear rutinas vacías para rellenarlas después
-    expect(canSave([{ ...resolved[0], rows: [] }], false, true)).toBe(true)
-    expect(canSave([{ ...resolved[0], rows: [], name: ' ' }], false, true)).toBe(false)
+    // un día vacío es válido: se crea la rutina vacía para rellenarla después
+    expect(canSave([{ ...resolved[0], rows: [] }])).toBe(true)
+    expect(canSave([{ ...resolved[0], rows: [], name: ' ' }])).toBe(false)
   })
 })
 

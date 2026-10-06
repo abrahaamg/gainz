@@ -64,25 +64,21 @@ export async function saveEditedExercise(
 
 /**
  * Aplica al borrador el resultado de editar. Propio actualizado: todas las filas con ese ejercicio lo
- * reciben. Copia: solo la fila editada. Después se recalcula el día de esas filas (salvo las manuales).
+ * reciben. Copia: solo la fila editada. El día de las filas no cambia.
  */
 export function applyExerciseEdit(
   days: DraftDay[],
   rowKey: string,
   result: { exercise: DraftExercise; mode: EditMode },
-  planMode: boolean,
 ): DraftDay[] {
   const { exercise, mode } = result
   const source = days.flatMap(d => d.rows).find(r => r.key === rowKey)?.exercise
-  const touched: string[] = []
-  const replaced = days.map(d => ({
+  return days.map(d => ({
     ...d,
     rows: d.rows.map(r => {
       const hit = mode === 'copy' ? r.key === rowKey : source != null && r.exercise?.id === source.id
       if (!hit) return r
-      touched.push(r.key)
       return { ...r, exercise }
     }),
   }))
-  return planMode ? reclassifyRows(replaced, touched) : replaced
 }

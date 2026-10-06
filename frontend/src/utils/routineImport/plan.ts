@@ -1,19 +1,14 @@
-// Plan semanal ("5 días · Día 1" … "5 días · Día 5"): reparto de lo importado en N días,
-// propuesta automática por músculo, días omitidos y aviso por nombres ya existentes.
-// Todo puro: la pantalla solo pinta y llama a estas funciones.
+// Reparto opcional de lo importado por músculo (tirón / empuje / pierna), días omitidos y aviso
+// por nombres ya existentes. Todo puro: la pantalla solo pinta y llama a estas funciones.
 
 import { normalizeName } from './match'
+import { addDay, MAX_DAYS, UNASSIGNED_KEY } from './days'
 import type { DraftDay, DraftExercise, DraftRow } from './draft'
 
 export type SplitGroup = 'pull' | 'push' | 'legs'
 
 /** Día (1-based) que se propone para cada grupo. */
 export const GROUP_DAY: Record<SplitGroup, number> = { pull: 1, push: 2, legs: 3 }
-
-export const MIN_DAYS = 1
-export const MAX_DAYS = 7
-export const DEFAULT_DAYS = 5
-export const UNASSIGNED_KEY = 'unassigned'
 
 const LEG_MUSCLES = new Set(['legs', 'quadriceps', 'hamstrings', 'glutes', 'calves', 'adductors', 'abductors'])
 const PUSH_MUSCLES = new Set(['chest', 'triceps'])
@@ -46,74 +41,9 @@ export function classifyRawName(raw: string): SplitGroup | null {
   return null
 }
 
-/** Día (1-based) propuesto para una fila, o null si no hay propuesta o el plan no tiene ese día. */
-export function proposeDay(row: Pick<DraftRow, 'exercise' | 'rawName'>, dayCount: number): number | null {
-  const group = row.exercise ? classifyExercise(row.exercise) : classifyRawName(row.rawName)
-  if (!group) return null
-  const day = GROUP_DAY[group]
-  return day <= dayCount ? day : null
-}
-
-export function clampDayCount(n: number): number {
-  if (!Number.isFinite(n)) return DEFAULT_DAYS
-  return Math.min(MAX_DAYS, Math.max(MIN_DAYS, Math.round(n)))
-}
-
-export function defaultPlanName(dayCount: number): string {
-  return `${dayCount} días`
-}
-
-export function planDayName(planName: string, dayNumber: number): string {
-  return `${planName.trim()} · Día ${dayNumber}`
-}
-
-const planDayKey = (n: number) => `plan-day-${n}`
-
-function emptyPlan(planName: string, dayCount: number, skipped: Set<string>): DraftDay[] {
-  const days: DraftDay[] = Array.from({ length: dayCount }, (_, i) => ({
-    key: planDayKey(i + 1),
-    name: planDayName(planName, i + 1),
-    rows: [],
-    skipped: skipped.has(planDayKey(i + 1)) || undefined,
-  }))
-  days.push({ key: UNASSIGNED_KEY, name: '', rows: [], unassigned: true })
-  return days
-}
-
-/** Reparte filas en un plan de `dayCount` días. Lo que no se clasifica va a "Sin asignar" (último elemento). */
-export function buildPlanDays(rows: DraftRow[], planName: string, dayCount: number, skipped: Set<string> = new Set()): DraftDay[] {
-  const count = clampDayCount(dayCount)
-  const days = emptyPlan(planName, count, skipped)
-  for (const row of rows) {
-    const day = proposeDay(row, count)
-    days[day ? day - 1 : count].rows.push({ ...row, manual: false })
-  }
-  return days
-}
-
-/** Cambia el nº de días conservando lo asignado a mano; lo demás se vuelve a proponer. */
-export function resizePlan(days: DraftDay[], planName: string, dayCount: number): DraftDay[] {
-  const count = clampDayCount(dayCount)
-  const skipped = new Set(days.filter(d => d.skipped).map(d => d.key))
-  const next = emptyPlan(planName, count, skipped)
-  for (const day of days) {
-    const index = day.unassigned ? -1 : days.indexOf(day)
-    for (const row of day.rows) {
-      let target = count // "Sin asignar"
-      if (row.manual && index >= 0 && index < count) target = index
-      else if (!row.manual) {
-        const proposed = proposeDay(row, count)
-        if (proposed) target = proposed - 1
-      }
-      next[target].rows.push(row.manual && target === count ? { ...row, manual: false } : row)
-    }
-  }
-  return next
-}
-
-/** Renombra los días del plan (el cajón "Sin asignar" no tiene nombre). */
-export function renamePlan(days: DraftDay[], planName: string): DraftDay[] {
-  return days.map((d, i) => (d.unassigned ? d : { ...d, name: planDayName(planName, i + 1) }))
+/** Grupo de una fila (por su ejercicio o, sin emparejar, por su nombre original). */
+export function classifyRow(row: Pick<DraftRow, 'exercise' | 'rawName'>): SplitGroup | null {
+  return row.exercise ? classifyExercise(row.exercise) : classifyRawName(row.rawName)
 }
 
 /** El usuario elige día para una fila: queda marcada como manual. */
@@ -129,30 +59,6 @@ export function assignRowToDay(days: DraftDay[], rowKey: string, toKey: string):
   })
 }
 
-/** Vuelve a calcular el día de las filas indicadas, salvo las movidas a mano. */
-export function reclassifyRows(days: DraftDay[], rowKeys: string[]): DraftDay[] {
-  const planDays = days.filter(d => !d.unassigned)
-  const count = planDays.length
-  const targets = new Map<string, string>()
-  for (const d of days) {
-    for (const row of d.rows) {
-      if (!rowKeys.includes(row.key) || row.manual) continue
-      const proposed = proposeDay(row, count)
-      const targetKey = proposed ? planDays[proposed - 1].key : UNASSIGNED_KEY
-      if (targetKey !== d.key) targets.set(row.key, targetKey)
-    }
-  }
-  if (targets.size === 0) return days
-  const moving = days.flatMap(d => d.rows.filter(r => targets.has(r.key)))
-  return days.map(d => ({
-    ...d,
-    rows: [
-      ...d.rows.filter(r => !targets.has(r.key)),
-      ...moving.filter(r => targets.get(r.key) === d.key),
-    ],
-  }))
-}
-
 export function setDaySkipped(days: DraftDay[], dayKey: string, skipped: boolean): DraftDay[] {
   return days.map(d => (d.key === dayKey ? { ...d, skipped: skipped || undefined } : d))
 }
@@ -161,14 +67,97 @@ export function unassignedCount(days: DraftDay[]): number {
   return days.filter(d => d.unassigned).reduce((n, d) => n + d.rows.length, 0)
 }
 
-/** Vuelve al modo "un día por tabla": agrupa por tabla de origen con los nombres originales. */
-export function regroupByTable(days: DraftDay[], tableNames: string[]): DraftDay[] {
-  const rows = days.flatMap(d => d.rows)
-  return tableNames.map((name, i) => ({
-    key: `table-${i}`,
-    name,
-    rows: rows.filter(r => r.source === i).map(r => ({ ...r, manual: false })),
+// ── Reparto opcional por músculo
+
+export interface SplitOptions {
+  /** Cuántos días (los primeros de la lista) se usan; si faltan, se crean. */
+  dayCount: number
+  /** Día (1-based) de cada grupo. */
+  groupDays: Record<SplitGroup, number>
+}
+
+export const DEFAULT_SPLIT: SplitOptions = { dayCount: 3, groupDays: { ...GROUP_DAY } }
+
+/** Lo necesario para deshacer un reparto sin pisar lo que el usuario haya tocado después. */
+export interface SplitUndo {
+  /** Fila → día en el que estaba antes del reparto (solo las que se movieron). */
+  origins: Record<string, string>
+  /** Orden de filas de cada día antes del reparto. */
+  order: Record<string, string[]>
+  createdDayKeys: string[]
+}
+
+/**
+ * Reparte por músculo las filas que NO se han movido a mano. Crea los días que falten hasta `dayCount`;
+ * lo que no se puede clasificar va a "Sin asignar".
+ */
+export function splitByMuscle(days: DraftDay[], options: SplitOptions): { days: DraftDay[]; undo: SplitUndo } {
+  const count = Math.min(MAX_DAYS, Math.max(1, Math.round(options.dayCount) || 1))
+  const undo: SplitUndo = { origins: {}, order: {}, createdDayKeys: [] }
+  for (const d of days) undo.order[d.key] = d.rows.map(r => r.key)
+
+  let work = days
+  while (work.filter(d => !d.unassigned).length < count) {
+    const before = work.length
+    work = addDay(work)
+    if (work.length === before) break
+    undo.createdDayKeys.push(work.filter(d => !d.unassigned).at(-1)!.key)
+  }
+  const real = work.filter(d => !d.unassigned)
+  const target = (group: SplitGroup | null): string => {
+    if (!group) return UNASSIGNED_KEY
+    const n = Math.min(count, Math.max(1, Math.round(options.groupDays[group]) || 1))
+    return real[n - 1]?.key ?? UNASSIGNED_KEY
+  }
+
+  const moves = new Map<string, string>()
+  for (const d of work) {
+    for (const row of d.rows) {
+      if (row.manual) continue
+      const to = target(classifyRow(row))
+      if (to !== d.key) moves.set(row.key, to)
+    }
+  }
+  if (moves.size === 0) return { days: work, undo }
+
+  const moving = work.flatMap(d => d.rows.filter(r => moves.has(r.key)))
+  for (const row of moving) undo.origins[row.key] = work.find(d => d.rows.includes(row))!.key
+  const needUnassigned = [...moves.values()].includes(UNASSIGNED_KEY) && !work.some(d => d.unassigned)
+  const base: DraftDay[] = needUnassigned ? [...work, { key: UNASSIGNED_KEY, name: '', rows: [], unassigned: true }] : work
+  const next = base.map(d => ({
+    ...d,
+    rows: [
+      ...d.rows.filter(r => !moves.has(r.key)),
+      ...moving.filter(r => moves.get(r.key) === d.key).map(r => ({ ...r, manual: false })),
+    ],
   }))
+  return { days: next, undo }
+}
+
+/** Deshace un reparto: devuelve cada fila a su día (si no se tocó a mano) y quita los días creados que han quedado vacíos. */
+export function undoSplit(days: DraftDay[], undo: SplitUndo): DraftDay[] {
+  const exists = new Set(days.map(d => d.key))
+  const back = new Map<string, string>()
+  for (const d of days) {
+    for (const row of d.rows) {
+      const origin = undo.origins[row.key]
+      if (origin && !row.manual && origin !== d.key && exists.has(origin)) back.set(row.key, origin)
+    }
+  }
+  const moving = days.flatMap(d => d.rows.filter(r => back.has(r.key)))
+  const restored = days.map(d => {
+    const rows = [
+      ...d.rows.filter(r => !back.has(r.key)),
+      ...moving.filter(r => back.get(r.key) === d.key),
+    ]
+    const order = undo.order[d.key]
+    if (order) {
+      const pos = (key: string) => { const i = order.indexOf(key); return i < 0 ? order.length : i }
+      rows.sort((a, b) => pos(a.key) - pos(b.key))
+    }
+    return { ...d, rows }
+  })
+  return restored.filter(d => !(d.rows.length === 0 && (d.unassigned || undo.createdDayKeys.includes(d.key))))
 }
 
 // ── Nombres ya existentes
