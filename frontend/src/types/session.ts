@@ -47,9 +47,19 @@ export interface FinishSessionPayload {
   duration_seconds: number
 }
 
+/** Una serie de la última sesión completada que incluyó el ejercicio. */
+export interface LastSet {
+  set_number: number
+  reps_done: number | null
+  weight_kg: number | null
+  rpe: number | null
+}
+
 export interface LastPerformance {
   weight_kg: number | null
   reps_done: number | null
   rpe: number | null
   plateau_detected: boolean
+  /** Series de la última sesión; [] sin historial (ausente con backends antiguos). */
+  last_sets?: LastSet[]
 }
