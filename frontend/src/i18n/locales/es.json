@@ -244,7 +244,16 @@
     "duplicate": "Duplicar",
     "duplicating": "Duplicando...",
     "duplicateError": "No se pudo duplicar la rutina. Inténtalo de nuevo.",
-    "copySuffix": " (copia)"
+    "copySuffix": " (copia)",
+    "hide": "Ocultar",
+    "hidden": "Rutina oculta",
+    "undo": "Deshacer",
+    "unhide": "Volver a mostrar",
+    "showHidden": "Mostrar ocultas ({{count}})",
+    "hideHidden": "Esconder ocultas",
+    "hiddenBadge": "Oculta",
+    "hideError": "No se pudo ocultar la rutina. Inténtalo de nuevo.",
+    "unhideError": "No se pudo volver a mostrar la rutina. Inténtalo de nuevo."
   },
   "progress": {
     "title": "Progreso",

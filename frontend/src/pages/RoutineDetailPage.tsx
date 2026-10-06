@@ -6,7 +6,9 @@ import { label, translateMuscle } from '../utils/labels'
 import { apiErrorMessage } from '../utils/apiError'
 import { duplicateRoutine } from '../utils/duplicateRoutine'
 import { formatPlan, planFromExercise } from '../utils/setPlan'
+import { canHide } from '../utils/hiddenRoutines'
 import { useAsync } from '../hooks/useAsync'
+import { useAuthStore } from '../store/useAuthStore'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
 import Spinner from '../components/ui/Spinner'
@@ -27,11 +29,26 @@ export default function RoutineDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data: routine, loading, error, reload } = useAsync(() => routineService.getById(Number(id)), [id])
+  const { data: routine, loading, error, reload, setData } = useAsync(() => routineService.getById(Number(id)), [id])
   const exercises = routine?.exercises ?? []
+  const userId = useAuthStore(s => s.mysqlUser?.id)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [duplicating, setDuplicating] = useState(false)
+  // Se acaba de ocultar desde aquí: muestra el aviso con "Deshacer"
+  const [justHidden, setJustHidden] = useState(false)
+
+  const setHidden = async (hidden: boolean) => {
+    setDeleteError(null)
+    try {
+      if (hidden) await routineService.hide(Number(id))
+      else await routineService.unhide(Number(id))
+      setData(prev => prev && { ...prev, is_hidden: hidden })
+      setJustHidden(hidden)
+    } catch (err) {
+      setDeleteError(apiErrorMessage(err, t(hidden ? 'routines.hideError' : 'routines.unhideError')))
+    }
+  }
 
   const handleDelete = async () => {
     if (!confirm(t('routines.deleteConfirm'))) return
@@ -77,6 +94,15 @@ export default function RoutineDetailPage() {
         <p role="alert" className="mb-4 text-xs text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-2xl">{deleteError}</p>
       )}
 
+      {justHidden && (
+        <div role="status" className="mb-4 flex items-center justify-between gap-3 text-xs font-semibold text-neutral-200 bg-white/5 border border-white/10 px-3 py-2.5 rounded-2xl">
+          <span><i aria-hidden="true" className="bi bi-eye-slash mr-1.5" />{t('routines.hidden')}</span>
+          <button type="button" onClick={() => setHidden(false)} className="font-bold text-accent hover:underline">
+            {t('routines.undo')}
+          </button>
+        </div>
+      )}
+
       <GlowCard className="mb-6">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4 gap-4 flex-wrap">
@@ -107,12 +133,30 @@ export default function RoutineDetailPage() {
               >
                 {duplicating ? t('routines.duplicating') : t('routines.duplicate')}
               </button>
-              <button
-                onClick={handleDelete}
-                className="border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-semibold text-xs px-5 py-2.5 rounded-full transition-all"
-              >
-                {t('common.delete')}
-              </button>
+              {routine.is_hidden ? (
+                <button
+                  type="button"
+                  onClick={() => setHidden(false)}
+                  className="border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs px-5 py-2.5 rounded-full transition-all"
+                >
+                  {t('routines.unhide')}
+                </button>
+              ) : canHide(routine, userId) ? (
+                <button
+                  type="button"
+                  onClick={() => setHidden(true)}
+                  className="border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-semibold text-xs px-5 py-2.5 rounded-full transition-all"
+                >
+                  {t('routines.hide')}
+                </button>
+              ) : (
+                <button
+                  onClick={handleDelete}
+                  className="border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-semibold text-xs px-5 py-2.5 rounded-full transition-all"
+                >
+                  {t('common.delete')}
+                </button>
+              )}
             </div>
           </div>
 

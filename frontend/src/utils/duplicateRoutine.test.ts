@@ -5,7 +5,7 @@ import type { Routine, RoutineExercise } from '../types/routine'
 const routine = {
   id: 7, user_id: 1, name: 'Día 1', description: 'Importada', goal: null, difficulty: 'medium',
   estimated_duration_min: 50, warmup_notes: null, cooldown_notes: null, is_public: true,
-  times_completed: 4, tags: [], created_at: '', updated_at: '',
+  times_completed: 4, tags: [], is_hidden: false, created_at: '', updated_at: '',
 } as Routine
 
 const ex = (over: Partial<RoutineExercise>): RoutineExercise => ({
