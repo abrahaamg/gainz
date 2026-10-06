@@ -26,6 +26,7 @@ import { RoutineExerciseForm } from '../types/routine'
 import { Exercise } from '../types/exercise'
 import useDebounce from '../hooks/useDebounce'
 import GlowCard from '../components/ui/GlowCard'
+import PageHeader from '../components/ui/PageHeader'
 
 // ─── Estimated duration ───────────────────────────────────────
 function calcDuration(exercises: RoutineExerciseForm[]): number {
@@ -328,14 +329,15 @@ export default function RoutineBuilderPage() {
   const estimatedDuration = calcDuration(exercises)
 
   return (
-    <div>
-      <button onClick={() => navigate('/routines')} className="text-xs font-medium text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
-        <i className="bi bi-arrow-left mr-1" />{t('nav.routines')}
-      </button>
-
-      <h1 className="page-title mb-8">
-        {isEdit ? t('routines.editRoutine') : t('routines.newRoutine')}
-      </h1>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        title={isEdit ? t('routines.editRoutine') : t('routines.newRoutine')}
+        actions={
+          <button type="button" onClick={() => navigate('/routines')} className="btn-ghost-dark">
+            <i aria-hidden="true" className="bi bi-arrow-left mr-1.5" />{t('nav.routines')}
+          </button>
+        }
+      />
 
       {/* ── Metadata ── */}
       <GlowCard className="mb-6">
@@ -485,7 +487,7 @@ export default function RoutineBuilderPage() {
       )}
 
       {/* ── Footer ── */}
-      <GlowCard className="sticky bottom-4">
+      <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-4 z-10">
         <div className="p-4 flex items-center justify-between">
           <div className="text-sm text-neutral-400 font-medium">
             {exercises.length > 0 && (
@@ -497,7 +499,7 @@ export default function RoutineBuilderPage() {
             {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
             <button
               onClick={() => navigate('/routines')}
-              className="btn-secondary"
+              className="btn-ghost-dark"
             >
               {t('common.cancel')}
             </button>

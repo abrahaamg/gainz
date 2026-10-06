@@ -8,6 +8,7 @@ import { apiErrorMessage } from '../utils/apiError'
 import { equipmentService } from '../services/equipmentService'
 import { CatalogItem } from '../types/equipment'
 import type { MysqlUser } from '../store/useAuthStore'
+import GlowCard from '../components/ui/GlowCard'
 
 /* ─── Constants ─────────────────────────────────────────────── */
 
@@ -234,32 +235,40 @@ export default function OnboardingPage() {
   }, {})
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-start justify-center px-4 py-4">
+    <div className="min-h-screen bg-surface flex items-start justify-center px-4 py-6 sm:py-10">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-4">
-          <h1 className="text-3xl font-display italic text-neutral-900 tracking-tight">Gainz</h1>
-          <p className="text-neutral-400 text-xs font-medium mt-1">
+          <h1 className="text-4xl font-display italic text-accent-text dark:text-accent tracking-tight">Gainz</h1>
+          <p className="text-xs font-medium mt-1 text-[var(--text-muted)]" aria-live="polite">
             {t('onboarding.step')} {step} {t('onboarding.of4')} {t(STEP_LABEL_KEYS[step - 1])}
           </p>
           {/* Progress bar */}
-          <div className="flex gap-2 mt-3 justify-center">
+          <div
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={4}
+            aria-valuenow={step}
+            aria-label={t('onboarding.step')}
+            className="flex gap-2 mt-3 justify-center"
+          >
             {[1, 2, 3, 4].map(s => (
               <div
                 key={s}
                 className={`h-1 w-14 rounded-full transition-all duration-300 ${
-                  s <= step ? 'bg-accent' : 'bg-neutral-200'
+                  s <= step ? 'bg-accent' : 'bg-neutral-300 dark:bg-white/15'
                 }`}
               />
             ))}
           </div>
         </div>
 
-        <div className="bg-white border border-neutral-100 shadow-soft rounded-apple p-6">
+        <GlowCard>
+        <div className="p-5 sm:p-6">
           {/* ─── STEP 1: Perfil ─── */}
           {step === 1 && (
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 tracking-tight mb-1">{t('onboarding.yourProfile')}</h2>
+              <h2 className="text-xl font-bold text-white tracking-tight mb-1">{t('onboarding.yourProfile')}</h2>
               <p className="text-xs text-neutral-400 font-medium mb-4">{t('onboarding.profileHint')}</p>
 
               <div className="space-y-3">
@@ -274,7 +283,7 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">{t('onboarding.sex')}</label>
+                  <p className="form-label">{t('onboarding.sex')}</p>
                   <div className="flex gap-2">
                     {[
                       { value: 'male', key: 'onboarding.male' },
@@ -283,6 +292,8 @@ export default function OnboardingPage() {
                     ].map(opt => (
                       <button
                         key={opt.value}
+                        type="button"
+                        aria-pressed={sex === opt.value}
                         onClick={() => setSex(opt.value)}
                         className={`flex-1 chip ${sex === opt.value ? 'chip-accent' : ''}`}
                       >
@@ -326,11 +337,13 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">{t('onboarding.experience')}</label>
+                  <p className="form-label">{t('onboarding.experience')}</p>
                   <div className="grid grid-cols-2 gap-2">
                     {EXPERIENCE_KEYS.map(opt => (
                       <button
                         key={opt.value}
+                        type="button"
+                        aria-pressed={experience === opt.value}
                         onClick={() => setExperience(opt.value)}
                         className={`chip ${experience === opt.value ? 'chip-accent' : ''}`}
                       >
@@ -341,11 +354,13 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">{t('onboarding.fitnessLevel')}</label>
+                  <p className="form-label">{t('onboarding.fitnessLevel')}</p>
                   <div className="flex gap-2">
                     {FITNESS_LEVEL_KEYS.map(opt => (
                       <button
                         key={opt.value}
+                        type="button"
+                        aria-pressed={fitnessLevel === opt.value}
                         onClick={() => setFitnessLevel(opt.value)}
                         className={`flex-1 chip ${fitnessLevel === opt.value ? 'chip-accent' : ''}`}
                       >
@@ -361,7 +376,7 @@ export default function OnboardingPage() {
           {/* ─── STEP 2: Objetivos ─── */}
           {step === 2 && (
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 tracking-tight mb-1">{t('onboarding.yourGoals')}</h2>
+              <h2 className="text-xl font-bold text-white tracking-tight mb-1">{t('onboarding.yourGoals')}</h2>
               <p className="text-xs text-neutral-400 font-medium mb-4">{t('onboarding.goalsHint')}</p>
 
               <div className="space-y-2 mb-6">
@@ -371,11 +386,13 @@ export default function OnboardingPage() {
                   return (
                     <button
                       key={g.value}
+                      type="button"
+                      aria-pressed={selected}
                       onClick={() => toggleGoal(g.value)}
-                      className={`w-full border px-4 py-3 text-left text-sm flex items-center justify-between transition-all duration-150 ${
+                      className={`w-full min-h-[44px] rounded-2xl border px-4 py-3 text-left text-sm flex items-center justify-between transition-all duration-150 ${
                         selected
-                          ? 'border-accent bg-accent/10 font-bold text-neutral-900 shadow-sm'
-                          : 'border-neutral-200 text-neutral-600 hover:border-neutral-400'
+                          ? 'border-accent bg-accent/10 font-bold text-white'
+                          : 'border-white/10 text-neutral-300 hover:border-white/30'
                       }`}
                     >
                       <span>{t(g.key)}</span>
@@ -389,11 +406,13 @@ export default function OnboardingPage() {
 
               {goals.length > 1 && (
                 <div>
-                  <label className="form-label">{t('onboarding.mainGoal')}</label>
+                  <p className="form-label">{t('onboarding.mainGoal')}</p>
                   <div className="flex flex-wrap gap-2">
                     {goals.map(g => (
                       <button
                         key={g}
+                        type="button"
+                        aria-pressed={primaryGoal === g}
                         onClick={() => setPrimaryGoal(g)}
                         className={`chip ${primaryGoal === g ? 'chip-active' : ''}`}
                       >
@@ -409,13 +428,13 @@ export default function OnboardingPage() {
           {/* ─── STEP 3: Equipamiento ─── */}
           {step === 3 && (
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 tracking-tight mb-1">{t('onboarding.yourEquipment')}</h2>
+              <h2 className="text-xl font-bold text-white tracking-tight mb-1">{t('onboarding.yourEquipment')}</h2>
               <p className="text-xs text-neutral-400 font-medium mb-4">
                 {t('onboarding.equipmentHint')}
               </p>
 
               {catalogError && (
-                <div role="alert" className="mb-3 text-xs text-red-600 font-semibold">
+                <div role="alert" className="mb-3 text-xs text-red-400 font-semibold">
                   <p>{t('onboarding.catalogError')}</p>
                   <button type="button" onClick={retryCatalog} className="mt-1 underline">
                     {t('common.retry')}
@@ -435,6 +454,8 @@ export default function OnboardingPage() {
                         return (
                           <button
                             key={item.id}
+                            type="button"
+                            aria-pressed={selected}
                             onClick={() => toggleEquipment(item.id)}
                             className={`chip text-left ${selected ? 'chip-accent' : ''}`}
                           >
@@ -456,20 +477,22 @@ export default function OnboardingPage() {
           {/* ─── STEP 4: Disponibilidad ─── */}
           {step === 4 && (
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 tracking-tight mb-1">{t('onboarding.yourAvailability')}</h2>
+              <h2 className="text-xl font-bold text-white tracking-tight mb-1">{t('onboarding.yourAvailability')}</h2>
               <p className="text-xs text-neutral-400 font-medium mb-4">
                 {t('onboarding.availabilityHint')}
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="form-label">{t('onboarding.trainingDays')}</label>
+                  <p className="form-label">{t('onboarding.trainingDays')}</p>
                   <div className="grid grid-cols-4 gap-2">
                     {DAY_KEYS.map(d => {
                       const selected = availableDays.includes(d.value)
                       return (
                         <button
                           key={d.value}
+                          type="button"
+                          aria-pressed={selected}
                           onClick={() => toggleDay(d.value)}
                           className={`chip ${selected ? 'chip-accent' : ''}`}
                         >
@@ -481,11 +504,13 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">{t('onboarding.sessionDuration')}</label>
+                  <p className="form-label">{t('onboarding.sessionDuration')}</p>
                   <div className="flex gap-2">
                     {DURATIONS.map(d => (
                       <button
                         key={d.value}
+                        type="button"
+                        aria-pressed={sessionDuration === d.value}
                         onClick={() => setSessionDuration(d.value)}
                         className={`flex-1 chip ${sessionDuration === d.value ? 'chip-accent' : ''}`}
                       >
@@ -496,17 +521,19 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">{t('onboarding.injuries')}</label>
+                  <p className="form-label">{t('onboarding.injuries')}</p>
                   <div className="grid grid-cols-4 gap-2">
                     {INJURY_OPTIONS.map(i => {
                       const selected = injuries.includes(i)
                       return (
                         <button
                           key={i}
+                          type="button"
+                          aria-pressed={selected}
                           onClick={() => toggleInjury(i)}
                           className={`chip ${
                             selected
-                              ? 'border-red-400 bg-red-50 font-bold text-red-700'
+                              ? 'border-red-400 bg-red-500/10 font-bold text-red-300'
                               : ''
                           }`}
                         >
@@ -515,7 +542,7 @@ export default function OnboardingPage() {
                       )
                     })}
                   </div>
-                  <p className="text-xs text-neutral-300 mt-2 font-medium">
+                  <p className="text-xs text-neutral-400 mt-2 font-medium">
                     {t('onboarding.injuriesHint')}
                   </p>
                 </div>
@@ -524,9 +551,9 @@ export default function OnboardingPage() {
           )}
 
           {/* ─── Error ─── */}
-          {error && <p role="alert" className="text-xs text-red-600 font-semibold mt-5">{error}</p>}
+          {error && <p role="alert" className="text-xs text-red-400 font-semibold mt-5">{error}</p>}
           {equipmentFailed.length > 0 && (
-            <div role="alert" className="mt-5 text-xs text-red-600 font-semibold">
+            <div role="alert" className="mt-5 text-xs text-red-400 font-semibold">
               <p>{t('onboarding.equipmentPartial', { items: equipmentFailed.join(', ') })}</p>
               <button
                 type="button"
@@ -542,14 +569,16 @@ export default function OnboardingPage() {
           <div className="flex gap-3 mt-5">
             {step > 1 && (
               <button
+                type="button"
                 onClick={() => setStep(s => s - 1)}
-                className="flex-1 btn-secondary py-2.5"
+                className="flex-1 btn-ghost-dark"
               >
                 {t('common.back')}
               </button>
             )}
             {step < 4 ? (
               <button
+                type="button"
                 onClick={() => setStep(s => s + 1)}
                 disabled={!canNext()}
                 className="flex-1 btn-primary py-2.5 disabled:opacity-30"
@@ -558,6 +587,7 @@ export default function OnboardingPage() {
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleFinish}
                 disabled={saving || !canNext()}
                 className="flex-1 btn-primary py-2.5 disabled:opacity-30"
@@ -567,6 +597,7 @@ export default function OnboardingPage() {
             )}
           </div>
         </div>
+        </GlowCard>
       </div>
     </div>
   )
