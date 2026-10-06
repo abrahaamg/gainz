@@ -1,6 +1,7 @@
 import { RowDataPacket, ResultSetHeader } from 'mysql2'
 import { pool } from '../config'
 import { CreateRoutineDTO, CreateRoutineExerciseDTO, Routine, RoutineExercise } from '../types/entities/Routine'
+import { applySetPlan, parseSetPlan } from '../utils/setPlan'
 
 // ─── Find all routines for a user (incluye rutinas públicas) ─
 export const findAllRoutines = async (userId: number): Promise<Routine[]> => {
@@ -35,6 +36,7 @@ export const findRoutineById = async (id: number, userId: number): Promise<{ rou
        re.duration_seconds,
        re.rest_seconds,
        re.weight_suggestion,
+       re.set_plan,
        re.notes        AS notes,
        re.superset_group,
        e.name          AS exercise_name,
@@ -54,7 +56,8 @@ export const findRoutineById = async (id: number, userId: number): Promise<{ rou
     [id]
   )
 
-  return { routine, exercises: exRows as RoutineExercise[] }
+  const exercises = exRows.map(ex => ({ ...ex, set_plan: parseSetPlan(ex.set_plan) })) as RoutineExercise[]
+  return { routine, exercises }
 }
 
 // ─── Create routine ───────────────────────────────────────────
@@ -174,7 +177,7 @@ async function insertRoutineExercises(
   exercises: CreateRoutineExerciseDTO[]
 ): Promise<void> {
   if (!exercises.length) return
-  const values = exercises.map(ex => [
+  const values = exercises.map(applySetPlan).map(ex => [
     routineId,
     ex.exercise_id,
     ex.order_index,
@@ -183,13 +186,14 @@ async function insertRoutineExercises(
     ex.duration_seconds ?? null,
     ex.rest_seconds ?? 60,
     ex.weight_suggestion ?? null,
+    ex.set_plan ? JSON.stringify(ex.set_plan) : null,
     ex.notes ?? null,
     ex.superset_group ?? null,
   ])
   await conn.query(
     `INSERT INTO routine_exercises
        (routine_id, exercise_id, order_index, sets, reps, duration_seconds,
-        rest_seconds, weight_suggestion, notes, superset_group)
+        rest_seconds, weight_suggestion, set_plan, notes, superset_group)
      VALUES ?`,
     [values]
   )

@@ -3,6 +3,14 @@ import { numeric, optionalText, positiveInt } from './common'
 
 const optionalInt = (min = 0) => numeric(z.number().int().min(min).nullable()).optional()
 
+// Plan por serie: una entrada por serie con sus reps y su peso
+const setPlanEntry = z.object({
+  reps: numeric(z.number().int().min(1).max(999).nullable()),
+  weight_kg: numeric(z.number().min(0).max(1000).nullable()),
+})
+
+const setPlan =z.array(setPlanEntry).min(1).max(20).nullable().optional()
+
 const routineExercise = z.object({
   exercise_id: positiveInt,
   order_index: numeric(z.number().int().min(0)),
@@ -11,6 +19,7 @@ const routineExercise = z.object({
   duration_seconds: optionalInt(),
   rest_seconds: numeric(z.number().int().min(0)).optional(),
   weight_suggestion: numeric(z.number().min(0).nullable()).optional(),
+  set_plan: setPlan,
   notes: optionalText(),
   superset_group: optionalInt(),
 })

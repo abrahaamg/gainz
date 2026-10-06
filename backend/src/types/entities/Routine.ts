@@ -1,3 +1,9 @@
+/** Plan de una serie concreta del ejercicio */
+export interface SetPlanEntry {
+  reps: number | null
+  weight_kg: number | null
+}
+
 export interface RoutineExercise {
   re_id: number
   exercise_id: number
@@ -7,6 +13,7 @@ export interface RoutineExercise {
   duration_seconds: number | null
   rest_seconds: number
   weight_suggestion: number | null
+  set_plan: SetPlanEntry[] | null // una entrada por serie; null = todas usan reps/weight_suggestion
   notes: string | null          // NIVEL 2: nota del creador de la rutina
   superset_group: number | null
   // joined from exercises
@@ -48,6 +55,7 @@ export interface CreateRoutineExerciseDTO {
   duration_seconds?: number | null
   rest_seconds?: number
   weight_suggestion?: number | null
+  set_plan?: SetPlanEntry[] | null // si llega, manda sobre sets/reps/weight_suggestion
   notes?: string | null
   superset_group?: number | null
 }

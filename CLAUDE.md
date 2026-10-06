@@ -58,6 +58,7 @@ Se aplican con el runner de `backend/src/db/` (desde `backend/`, contra la BD de
 - `pnpm db:setup` — migrate + seed. Es lo que se usa para montar una BD vacía (producción en TiDB, o una local nueva)
 - `--baseline` (`pnpm db:migrate --baseline`, `pnpm db:seed --baseline`) — registra como aplicados los ficheros pendientes **sin ejecutarlos**. Solo para una BD que ya los tenía aplicados a mano
 - La BD local `fitness_tracker` ya está registrada (001-009 con `--baseline`)
+- `010_routine_exercise_set_plan.sql` añade `routine_exercises.set_plan` (JSON NULL, plan de reps/peso por serie). Se aplica con `pnpm db:migrate` normal, sin `--baseline`
 
 Reglas para ficheros nuevos:
 - Migración nueva = fichero nuevo con el siguiente número (`010_...sql`). Nunca editar una ya aplicada
