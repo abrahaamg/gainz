@@ -61,6 +61,7 @@ export default function RoutineImportPage() {
   const [planName, setPlanName] = useState(defaultPlanName(DEFAULT_DAYS))
   const [nameTouched, setNameTouched] = useState(false)
   const [dayCount, setDayCount] = useState(DEFAULT_DAYS)
+  const [keepEmpty, setKeepEmpty] = useState(true)
   const [tableNames, setTableNames] = useState<string[]>([])
   const [editing, setEditing] = useState<string | null>(null)
   const [saveList, setSaveList] = useState<DraftDay[]>([])
@@ -72,8 +73,8 @@ export default function RoutineImportPage() {
   const matchIndex = useMemo(() => buildMatchIndex(draftCatalog), [draftCatalog])
   const summary = summarize(days)
   const planMode = mode === 'plan'
-  const toSave = daysToSave(days, planMode)
-  const savable = canSave(days, planMode)
+  const toSave = daysToSave(days, planMode && !keepEmpty)
+  const savable = canSave(days, planMode && !keepEmpty, planMode && keepEmpty)
   const pickerRow = picker ? days.find(d => d.key === picker.dayKey)?.rows.find(r => r.key === picker.rowKey) : undefined
   const editingRow = editing ? days.flatMap(d => d.rows).find(r => r.key === editing) : undefined
   const unassignedDay = days.find(d => d.unassigned)
@@ -353,6 +354,13 @@ export default function RoutineImportPage() {
                       ))}
                     </select>
                   </div>
+                  <label className="flex items-start gap-2 text-sm text-neutral-300 sm:col-span-2">
+                    <input
+                      type="checkbox" checked={keepEmpty} onChange={e => setKeepEmpty(e.target.checked)}
+                      className="mt-1 h-4 w-4 accent-[#F5C400]"
+                    />
+                    <span>{t('routineImport.plan.keepEmpty')}</span>
+                  </label>
                   <p className="text-xs text-neutral-400 sm:col-span-2">{t('routineImport.plan.proposalHint')}</p>
                 </div>
               )}

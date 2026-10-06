@@ -80,13 +80,14 @@ export function daysToSave(days: DraftDay[], dropEmpty = false): DraftDay[] {
 
 /**
  * Se puede guardar si hay algo que guardar, nada queda "Sin asignar", todas las filas están
- * resueltas y cada día tiene nombre (y filas, salvo que `dropEmpty` ignore los vacíos).
+ * resueltas y cada día tiene nombre (y filas, salvo que `dropEmpty` ignore los vacíos o `allowEmpty`
+ * deje crear rutinas vacías para rellenarlas después).
  */
-export function canSave(days: DraftDay[], dropEmpty = false): boolean {
+export function canSave(days: DraftDay[], dropEmpty = false, allowEmpty = false): boolean {
   if (days.some(d => d.unassigned && d.rows.length > 0)) return false
   const list = daysToSave(days, dropEmpty)
   if (list.length === 0) return false
-  return list.every(d => d.name.trim() !== '' && d.rows.length > 0 && d.rows.every(r => r.exercise !== null))
+  return list.every(d => d.name.trim() !== '' && (allowEmpty || d.rows.length > 0) && d.rows.every(r => r.exercise !== null))
 }
 
 export function swapRow(row: DraftRow): DraftRow {
