@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { pool } from '../config'
-import { addSet, finishSession } from './session.queries'
+import { addSet, finishSession, getLastSessionSets } from './session.queries'
 
 vi.mock('../config', () => ({
   pool: {
@@ -107,6 +107,41 @@ describe('session.queries', () => {
       const result = await addSet(1, 1, { exercise_id: 1, set_number: 1, reps_done: 5, weight_kg: 60 })
 
       expect(result).toEqual({ new_pr: true })
+    })
+  })
+
+  describe('getLastSessionSets', () => {
+    it('filtra por usuario, sesión completada y series completadas', async () => {
+      vi.mocked(pool.query).mockResolvedValueOnce([[]] as any)
+
+      await getLastSessionSets(7, 3)
+
+      const [sql, params] = vi.mocked(pool.query).mock.calls[0] as unknown as [string, unknown[]]
+      expect(sql).toMatch(/s\.user_id = \?/)
+      expect(sql).toMatch(/s\.status = 'completed'/)
+      expect(sql).toMatch(/se\.completed = true/)
+      expect(sql).toMatch(/LIMIT 1/)
+      expect(params).toEqual([3, 7, 3])
+    })
+
+    it('convierte a número y con set_number repetido se queda la última', async () => {
+      vi.mocked(pool.query).mockResolvedValueOnce([[
+        { set_number: 1, reps_done: 10, weight_kg: '20.00', rpe: 7 },
+        { set_number: 2, reps_done: 8, weight_kg: '20.00', rpe: null },
+        { set_number: 2, reps_done: 9, weight_kg: '22.50', rpe: 8 },
+        { set_number: 3, reps_done: null, weight_kg: null, rpe: null },
+      ]] as any)
+
+      expect(await getLastSessionSets(1, 1)).toEqual([
+        { set_number: 1, reps_done: 10, weight_kg: 20, rpe: 7 },
+        { set_number: 2, reps_done: 9, weight_kg: 22.5, rpe: 8 },
+        { set_number: 3, reps_done: null, weight_kg: null, rpe: null },
+      ])
+    })
+
+    it('sin historial devuelve []', async () => {
+      vi.mocked(pool.query).mockResolvedValueOnce([[]] as any)
+      expect(await getLastSessionSets(1, 1)).toEqual([])
     })
   })
 

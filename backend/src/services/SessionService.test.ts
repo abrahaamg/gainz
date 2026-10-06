@@ -9,6 +9,7 @@ vi.mock('../queries/session.queries', () => ({
   addSet: vi.fn(),
   finishSession: vi.fn(),
   getLastPerformance: vi.fn(),
+  getLastSessionSets: vi.fn(),
   getExerciseVolumes: vi.fn(),
 }))
 
@@ -120,6 +121,32 @@ describe('SessionService', () => {
   })
 
   describe('getLastPerformance', () => {
+    beforeEach(() => {
+      vi.mocked(q.getLastSessionSets).mockResolvedValue([])
+    })
+
+    it('añade last_sets sin tocar los campos de siempre', async () => {
+      const lastSets = [
+        { set_number: 1, reps_done: 10, weight_kg: 20, rpe: null },
+        { set_number: 2, reps_done: 9, weight_kg: 20, rpe: 8 },
+      ]
+      vi.mocked(q.getLastPerformance).mockResolvedValue({ weight_kg: 20, reps_done: 9, rpe: 8 })
+      vi.mocked(q.getLastSessionSets).mockResolvedValue(lastSets)
+      vi.mocked(q.getExerciseVolumes).mockResolvedValue([])
+
+      const result = await SessionService.getLastPerformance(4, 2)
+      expect(result).toEqual({ weight_kg: 20, reps_done: 9, rpe: 8, plateau_detected: false, last_sets: lastSets })
+      expect(q.getLastSessionSets).toHaveBeenCalledWith(4, 2)
+    })
+
+    it('sin historial devuelve last_sets vacío', async () => {
+      vi.mocked(q.getLastPerformance).mockResolvedValue(null)
+      vi.mocked(q.getExerciseVolumes).mockResolvedValue([])
+
+      const result = await SessionService.getLastPerformance(1, 1)
+      expect(result.last_sets).toEqual([])
+    })
+
     it('devuelve rendimiento anterior sin plateau', async () => {
       vi.mocked(q.getLastPerformance).mockResolvedValue({
         weight_kg: 80, reps_done: 5, rpe: 8,

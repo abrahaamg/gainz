@@ -1,6 +1,6 @@
 import { RowDataPacket, ResultSetHeader } from 'mysql2'
 import { pool } from '../config'
-import { AddSetDTO, FinishSessionDTO, Session, SessionExercise } from '../types/entities/Session'
+import { AddSetDTO, FinishSessionDTO, LastSet, Session, SessionExercise } from '../types/entities/Session'
 
 // ─── Create session ───────────────────────────────────────────
 // Solo inserta si la rutina es del usuario o pública; si no, devuelve null.
@@ -185,6 +185,40 @@ export const getLastPerformance = async (
   )
   if (!rows.length) return null
   return rows[0] as { weight_kg: number | null; reps_done: number | null; rpe: number | null }
+}
+
+// ─── Series de la última sesión completada con el ejercicio ──
+// Solo sesiones 'completed' del usuario (la que está en curso no cuenta).
+// Si un set_number se repite, se queda la última serie registrada.
+export const getLastSessionSets = async (userId: number, exerciseId: number): Promise<LastSet[]> => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT se.set_number, se.reps_done, se.weight_kg, se.rpe
+     FROM session_exercises se
+     WHERE se.exercise_id = ? AND se.completed = true
+       AND se.session_id = (
+         SELECT s.id
+         FROM sessions s
+         JOIN session_exercises se2 ON se2.session_id = s.id
+         WHERE s.user_id = ? AND s.status = 'completed'
+           AND se2.exercise_id = ? AND se2.completed = true
+         ORDER BY s.finished_at DESC, s.started_at DESC, s.id DESC
+         LIMIT 1
+       )
+     ORDER BY se.set_number, se.completed_at, se.id`,
+    [exerciseId, userId, exerciseId]
+  )
+
+  const bySetNumber = new Map<number, LastSet>()
+  for (const row of rows) {
+    const setNumber = Number(row.set_number)
+    bySetNumber.set(setNumber, {
+      set_number: setNumber,
+      reps_done: row.reps_done === null ? null : Number(row.reps_done),
+      weight_kg: row.weight_kg === null ? null : Number(row.weight_kg),
+      rpe: row.rpe === null ? null : Number(row.rpe),
+    })
+  }
+  return [...bySetNumber.values()]
 }
 
 // ─── Plateau detection: last 3 session volumes for exercise ──
