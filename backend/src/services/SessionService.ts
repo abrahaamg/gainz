@@ -1,5 +1,5 @@
 import * as q from '../queries/session.queries'
-import { AddSetDTO, FinishSessionDTO, Session, SessionExercise } from '../types/entities/Session'
+import { AddSetDTO, FinishSessionDTO, LastPerformance, Session, SessionExercise } from '../types/entities/Session'
 import { BadRequestError, NotFoundError } from '../utils/customErrors'
 
 export const SessionService = {
@@ -34,9 +34,10 @@ export const SessionService = {
     return result
   },
 
-  getLastPerformance: async (userId: number, exerciseId: number) => {
+  getLastPerformance: async (userId: number, exerciseId: number): Promise<LastPerformance> => {
     if (!exerciseId) throw new BadRequestError('exercise_id es requerido')
     const perf = await q.getLastPerformance(userId, exerciseId)
+    const last_sets = await q.getLastSessionSets(userId, exerciseId)
 
     // Plateau detection: check last 3 session volumes
     let plateau_detected = false
@@ -50,7 +51,9 @@ export const SessionService = {
       }
     }
 
-    return perf ? { ...perf, plateau_detected } : { weight_kg: null, reps_done: null, rpe: null, plateau_detected }
+    return perf
+      ? { ...perf, plateau_detected, last_sets }
+      : { weight_kg: null, reps_done: null, rpe: null, plateau_detected, last_sets }
   },
 
   finish: async (

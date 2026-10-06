@@ -31,6 +31,22 @@ export interface SessionExercise {
   muscle_group?: string
 }
 
+/** Una serie de la última sesión completada con ese ejercicio */
+export interface LastSet {
+  set_number: number
+  reps_done: number | null
+  weight_kg: number | null
+  rpe: number | null
+}
+
+export interface LastPerformance {
+  weight_kg: number | null
+  reps_done: number | null
+  rpe: number | null
+  plateau_detected: boolean
+  last_sets: LastSet[]
+}
+
 export interface AddSetDTO {
   exercise_id: number
   set_number: number
