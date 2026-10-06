@@ -17,6 +17,7 @@ const ExerciseFormPage = lazy(() => import('../pages/ExerciseFormPage'))
 const RoutinesPage = lazy(() => import('../pages/RoutinesPage'))
 const RoutineDetailPage = lazy(() => import('../pages/RoutineDetailPage'))
 const RoutineBuilderPage = lazy(() => import('../pages/RoutineBuilderPage'))
+const RoutineImportPage = lazy(() => import('../pages/RoutineImportPage'))
 const LiveSessionPage = lazy(() => import('../pages/LiveSessionPage'))
 const SessionSummaryPage = lazy(() => import('../pages/SessionSummaryPage'))
 const EquipmentPage = lazy(() => import('../pages/EquipmentPage'))
@@ -67,6 +68,7 @@ const router = createBrowserRouter([
 
           { path: 'routines',          element: protect(<RoutinesPage />) },
           { path: 'routines/new',      element: protect(<RoutineBuilderPage />) },
+          { path: 'routines/import',   element: protect(<RoutineImportPage />) },
           { path: 'routines/:id',      element: protect(<RoutineDetailPage />) },
           { path: 'routines/:id/edit', element: protect(<RoutineBuilderPage />) },
 

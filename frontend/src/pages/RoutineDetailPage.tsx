@@ -3,6 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
 import { label, translateMuscle } from '../utils/labels'
+import { apiErrorMessage } from '../utils/apiError'
+import { duplicateRoutine } from '../utils/duplicateRoutine'
+import { formatPlan, planFromExercise } from '../utils/setPlan'
 import { useAsync } from '../hooks/useAsync'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
@@ -28,6 +31,7 @@ export default function RoutineDetailPage() {
   const exercises = routine?.exercises ?? []
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [duplicating, setDuplicating] = useState(false)
 
   const handleDelete = async () => {
     if (!confirm(t('routines.deleteConfirm'))) return
@@ -37,6 +41,19 @@ export default function RoutineDetailPage() {
       navigate('/routines')
     } catch {
       setDeleteError(t('routines.deleteError'))
+    }
+  }
+
+  const handleDuplicate = async () => {
+    if (!routine || duplicating) return
+    setDuplicating(true)
+    setDeleteError(null)
+    try {
+      const copy = await duplicateRoutine(routine, t('routines.copySuffix'))
+      navigate(`/routines/${copy.id}/edit`)
+    } catch (err) {
+      setDeleteError(apiErrorMessage(err, t('routines.duplicateError')))
+      setDuplicating(false)
     }
   }
 
@@ -82,6 +99,14 @@ export default function RoutineDetailPage() {
               >
                 {t('common.edit')}
               </Link>
+              <button
+                type="button"
+                onClick={handleDuplicate}
+                disabled={duplicating}
+                className="border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs px-5 py-2.5 rounded-full transition-all disabled:opacity-50"
+              >
+                {duplicating ? t('routines.duplicating') : t('routines.duplicate')}
+              </button>
               <button
                 onClick={handleDelete}
                 className="border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-semibold text-xs px-5 py-2.5 rounded-full transition-all"
@@ -156,14 +181,30 @@ export default function RoutineDetailPage() {
                     </div>
                     <div className="text-right text-sm shrink-0">
                       <p className="font-bold text-white">
-                        {ex.sets}×{ex.reps ? `${ex.reps}` : `${ex.duration_seconds}s`}
+                        {ex.duration_seconds !== null
+                          ? `${ex.sets}×${ex.duration_seconds}s`
+                          : `${ex.sets} ${t('common.sets')}`}
                       </p>
                       <p className="text-xs font-semibold text-neutral-400">{ex.rest_seconds}s {t('routines.rest')}</p>
-                      {ex.weight_suggestion && (
-                        <p className="text-xs font-bold text-accent">{ex.weight_suggestion} {t('common.kg')}</p>
-                      )}
                     </div>
                   </div>
+
+                  {ex.duration_seconds === null && (
+                    <ol
+                      aria-label={t('routines.planPerSet')}
+                      className="mt-3 flex flex-wrap gap-1.5"
+                    >
+                      {planFromExercise(ex).map((s, n) => (
+                        <li
+                          key={n}
+                          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs font-semibold tabular-nums text-neutral-300"
+                        >
+                          <span className="text-accent">S{n + 1}</span>{' '}
+                          {formatPlan([s]).replace(/^S1 /, '')}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
 
                   {/* Desplegable con info del ejercicio */}
                   <div className={`dropdown-panel ${isOpen ? 'open' : ''}`}>

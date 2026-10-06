@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
+import type { Routine } from '../types/routine'
 import { label } from '../utils/labels'
+import { apiErrorMessage } from '../utils/apiError'
+import { duplicateRoutine } from '../utils/duplicateRoutine'
 import { useAsync } from '../hooks/useAsync'
 import DifficultyDots from '../components/ui/DifficultyDots'
 import GlowCard from '../components/ui/GlowCard'
@@ -16,7 +19,22 @@ export default function RoutinesPage() {
   const { data, loading, error, reload, setData } = useAsync(() => routineService.getAll(), [])
   const routines = data ?? []
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [duplicatingId, setDuplicatingId] = useState<number | null>(null)
   const navigate = useNavigate()
+
+  const handleDuplicate = async (routine: Routine, e: React.MouseEvent) => {
+    e.preventDefault()
+    if (duplicatingId !== null) return
+    setDeleteError(null)
+    setDuplicatingId(routine.id)
+    try {
+      const copy = await duplicateRoutine(routine, t('routines.copySuffix'))
+      navigate(`/routines/${copy.id}/edit`)
+    } catch (err) {
+      setDeleteError(apiErrorMessage(err, t('routines.duplicateError')))
+      setDuplicatingId(null)
+    }
+  }
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.preventDefault()
@@ -44,9 +62,14 @@ export default function RoutinesPage() {
         title={t('routines.title')}
         subtitle={`${routines.length} ${t('common.routines')}`}
         actions={
-          <Link to="/routines/new" className="btn-primary">
-            {t('routines.new')}
-          </Link>
+          <>
+            <Link to="/routines/import" className="btn-ghost-dark">
+              <i aria-hidden="true" className="bi bi-clipboard-plus mr-1.5" />{t('routines.import')}
+            </Link>
+            <Link to="/routines/new" className="btn-primary">
+              {t('routines.new')}
+            </Link>
+          </>
         }
       />
 
@@ -58,7 +81,14 @@ export default function RoutinesPage() {
         <EmptyState
           icon="bi-journal-plus"
           title={t('routines.noRoutines')}
-          action={<Link to="/routines/new" className="btn-primary">{t('routines.createFirst')}</Link>}
+          action={
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Link to="/routines/new" className="btn-primary">{t('routines.createFirst')}</Link>
+              <Link to="/routines/import" className="btn-ghost-dark">
+                <i aria-hidden="true" className="bi bi-clipboard-plus mr-1.5" />{t('routines.import')}
+              </Link>
+            </div>
+          }
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -108,6 +138,14 @@ export default function RoutinesPage() {
                       className="card-action card-action-edit"
                     >
                       {t('common.edit')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={e => handleDuplicate(routine, e)}
+                      disabled={duplicatingId !== null}
+                      className="card-action card-action-edit disabled:opacity-50"
+                    >
+                      {duplicatingId === routine.id ? t('routines.duplicating') : t('routines.duplicate')}
                     </button>
                     <button
                       onClick={e => handleDelete(routine.id, e)}

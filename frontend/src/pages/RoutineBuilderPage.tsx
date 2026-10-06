@@ -22,22 +22,29 @@ import { routineService } from '../services/routineService'
 import { exerciseService } from '../services/exerciseService'
 import { apiErrorMessage } from '../utils/apiError'
 import { label } from '../utils/labels'
-import { RoutineExerciseForm } from '../types/routine'
+import { RoutineExerciseForm, SetPlanEntry } from '../types/routine'
 import { Exercise } from '../types/exercise'
 import useDebounce from '../hooks/useDebounce'
 import GlowCard from '../components/ui/GlowCard'
 import PageHeader from '../components/ui/PageHeader'
+import SetPlanEditor from '../components/routines/SetPlanEditor'
+import ExercisePickerModal from '../components/routines/ExercisePickerModal'
+import { useExerciseCatalog } from '../hooks/useExerciseCatalog'
+import { planFromExercise } from '../utils/setPlan'
 
 // ─── Estimated duration ───────────────────────────────────────
 function calcDuration(exercises: RoutineExerciseForm[]): number {
   const secs = exercises.reduce((acc, ex) => {
-    const workTime = ex.duration_seconds
-      ? ex.duration_seconds
-      : (ex.reps ?? 10) * 3
-    return acc + ex.sets * (workTime + ex.rest_seconds)
+    if (ex.duration_seconds) return acc + ex.sets * (ex.duration_seconds + ex.rest_seconds)
+    const plan = ex.set_plan ?? []
+    if (plan.length === 0) return acc + ex.sets * ((ex.reps ?? 10) * 3 + ex.rest_seconds)
+    return acc + plan.reduce((sum, s) => sum + (s.reps ?? 10) * 3 + ex.rest_seconds, 0)
   }, 0)
   return Math.round(secs / 60)
 }
+
+const cardIconBtn =
+  'flex h-10 w-10 items-center justify-center rounded-xl text-neutral-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent'
 
 const CATEGORY_COLORS: Record<string, string> = {
   strength:    'bg-neutral-900 text-white',
@@ -50,14 +57,24 @@ const CATEGORY_COLORS: Record<string, string> = {
 // ─── Sortable exercise card ───────────────────────────────────
 function SortableExerciseCard({
   ex,
+  index,
+  count,
   onChange,
+  onPlanChange,
   onRemove,
+  onMove,
+  onChangeExercise,
   t,
 }: {
   ex: RoutineExerciseForm
+  index: number
+  count: number
   onChange: (id: string, field: keyof RoutineExerciseForm, value: unknown) => void
+  onPlanChange: (id: string, plan: SetPlanEntry[]) => void
   onRemove: (id: string) => void
-  t: (key: string) => string
+  onMove: (id: string, delta: -1 | 1) => void
+  onChangeExercise: (id: string) => void
+  t: (key: string, opts?: Record<string, unknown>) => string
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: ex.id })
@@ -93,60 +110,90 @@ function SortableExerciseCard({
                 <span className="text-xs font-medium text-neutral-400">{label('muscles', ex.muscle_group)}</span>
               </div>
             </div>
-            <button onClick={() => onRemove(ex.id)} className="text-red-400 hover:text-red-300 text-lg leading-none font-bold">×</button>
+            <div className="flex shrink-0 gap-1">
+              <button
+                type="button"
+                onClick={() => onMove(ex.id, -1)}
+                disabled={index === 0}
+                aria-label={t('routines.moveUp', { name: ex.exercise_name })}
+                className={cardIconBtn}
+              ><i aria-hidden="true" className="bi bi-arrow-up" /></button>
+              <button
+                type="button"
+                onClick={() => onMove(ex.id, 1)}
+                disabled={index === count - 1}
+                aria-label={t('routines.moveDown', { name: ex.exercise_name })}
+                className={cardIconBtn}
+              ><i aria-hidden="true" className="bi bi-arrow-down" /></button>
+              <button
+                type="button"
+                onClick={() => onChangeExercise(ex.id)}
+                aria-label={t('routines.changeExercise', { name: ex.exercise_name })}
+                title={t('routines.changeExerciseShort')}
+                className={cardIconBtn}
+              ><i aria-hidden="true" className="bi bi-arrow-left-right" /></button>
+              <button
+                type="button"
+                onClick={() => onRemove(ex.id)}
+                aria-label={t('routines.removeExercise', { name: ex.exercise_name })}
+                className={`${cardIconBtn} !text-red-400 hover:!text-red-300`}
+              ><i aria-hidden="true" className="bi bi-trash3" /></button>
+            </div>
           </div>
 
-          {/* Inputs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-            <div>
-              <label className="form-label">{t('common.sets')}</label>
-              <input
-                type="number" min={1} max={20}
-                value={ex.sets}
-                onChange={e => onChange(ex.id, 'sets', Number(e.target.value))}
-                className="form-input text-center"
+          {/* Series: una fila por serie (reps y peso); ejercicios por tiempo conservan series + duración */}
+          {ex.set_plan ? (
+            <div className="mt-3">
+              <SetPlanEditor
+                plan={ex.set_plan}
+                onChange={plan => onPlanChange(ex.id, plan)}
+                idPrefix={`ex-${ex.id}`}
               />
-            </div>
-            <div>
-              <label className="form-label">
-                {ex.duration_seconds !== null ? t('routines.duration') : t('common.reps')}
-              </label>
-              {ex.duration_seconds !== null ? (
+              <div className="mt-3 max-w-[10rem]">
+                <label htmlFor={`rest-${ex.id}`} className="form-label">{t('routines.restSeconds')}</label>
                 <input
+                  id={`rest-${ex.id}`}
+                  type="number" min={0} step={5}
+                  value={ex.rest_seconds}
+                  onChange={e => onChange(ex.id, 'rest_seconds', Number(e.target.value))}
+                  className="form-input form-input-dark text-center"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 mt-3">
+              <div>
+                <label htmlFor={`sets-${ex.id}`} className="form-label">{t('common.sets')}</label>
+                <input
+                  id={`sets-${ex.id}`}
+                  type="number" min={1} max={20}
+                  value={ex.sets}
+                  onChange={e => onChange(ex.id, 'sets', Number(e.target.value))}
+                  className="form-input text-center"
+                />
+              </div>
+              <div>
+                <label htmlFor={`dur-${ex.id}`} className="form-label">{t('routines.duration')}</label>
+                <input
+                  id={`dur-${ex.id}`}
                   type="number" min={1}
-                  value={ex.duration_seconds}
+                  value={ex.duration_seconds ?? ''}
                   onChange={e => onChange(ex.id, 'duration_seconds', Number(e.target.value))}
                   className="form-input text-center"
                 />
-              ) : (
+              </div>
+              <div>
+                <label htmlFor={`rest-${ex.id}`} className="form-label">{t('routines.restSeconds')}</label>
                 <input
-                  type="number" min={1} max={200}
-                  value={ex.reps ?? 10}
-                  onChange={e => onChange(ex.id, 'reps', Number(e.target.value))}
+                  id={`rest-${ex.id}`}
+                  type="number" min={0} step={5}
+                  value={ex.rest_seconds}
+                  onChange={e => onChange(ex.id, 'rest_seconds', Number(e.target.value))}
                   className="form-input text-center"
                 />
-              )}
+              </div>
             </div>
-            <div>
-              <label className="form-label">{t('routines.restSeconds')}</label>
-              <input
-                type="number" min={0} step={5}
-                value={ex.rest_seconds}
-                onChange={e => onChange(ex.id, 'rest_seconds', Number(e.target.value))}
-                className="form-input text-center"
-              />
-            </div>
-            <div>
-              <label className="form-label">{t('routines.weight')}</label>
-              <input
-                type="number" min={0} step={0.5}
-                value={ex.weight_suggestion ?? ''}
-                onChange={e => onChange(ex.id, 'weight_suggestion', e.target.value ? Number(e.target.value) : null)}
-                className="form-input text-center"
-                placeholder="—"
-              />
-            </div>
-          </div>
+          )}
 
           {/* Nota NIVEL 2 */}
           <div className="mt-3">
@@ -191,6 +238,9 @@ export default function RoutineBuilderPage() {
   const [searchResults, setSearchResults] = useState<Exercise[]>([])
   const [searching, setSearching]     = useState(false)
 
+  const [swapId, setSwapId]           = useState<string | null>(null)
+  const { catalog, loading: catalogLoading, error: catalogError, reload: reloadCatalog } = useExerciseCatalog()
+
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState<string | null>(null)
 
@@ -221,6 +271,8 @@ export default function RoutineBuilderPage() {
           duration_seconds: ex.duration_seconds,
           rest_seconds: ex.rest_seconds,
           weight_suggestion: ex.weight_suggestion,
+          // Por duración no hay plan por serie; el resto siempre se edita serie a serie
+          set_plan: ex.duration_seconds !== null ? null : planFromExercise(ex),
           notes: ex.notes ?? '',
           superset_group: ex.superset_group,
           exercise_name: ex.exercise_name,
@@ -228,8 +280,8 @@ export default function RoutineBuilderPage() {
           muscle_group: ex.muscle_group,
         }))
       )
-    })
-  }, [id, isEdit])
+    }).catch(() => setError(t('routines.routineNotFound')))
+  }, [id, isEdit, t])
 
   // Search exercises
   useEffect(() => {
@@ -251,6 +303,7 @@ export default function RoutineBuilderPage() {
       duration_seconds: null,
       rest_seconds: 60,
       weight_suggestion: null,
+      set_plan: Array.from({ length: 3 }, () => ({ reps: 10, weight_kg: null })),
       notes: '',
       superset_group: null,
       exercise_name: ex.name,
@@ -269,6 +322,28 @@ export default function RoutineBuilderPage() {
       )
     }, []
   )
+
+  const updatePlan = useCallback((clientId: string, plan: SetPlanEntry[]) => {
+    setExercises(prev => prev.map(ex => ex.id === clientId
+      ? { ...ex, set_plan: plan, sets: plan.length, reps: plan[0]?.reps ?? null, weight_suggestion: plan[0]?.weight_kg ?? null }
+      : ex))
+  }, [])
+
+  const moveExercise = useCallback((clientId: string, delta: -1 | 1) => {
+    setExercises(prev => {
+      const from = prev.findIndex(e => e.id === clientId)
+      const to = from + delta
+      if (from < 0 || to < 0 || to >= prev.length) return prev
+      return arrayMove(prev, from, to).map((ex, i) => ({ ...ex, order_index: i }))
+    })
+  }, [])
+
+  // Cambiar un ejercicio por otro conserva series, reps, peso, descanso y notas
+  const replaceExercise = useCallback((clientId: string, next: Exercise) => {
+    setExercises(prev => prev.map(ex => ex.id === clientId
+      ? { ...ex, exercise_id: next.id, exercise_name: next.name, category: next.category, muscle_group: next.muscle_group }
+      : ex))
+  }, [])
 
   const removeExercise = useCallback((clientId: string) => {
     setExercises(prev => prev.filter(ex => ex.id !== clientId))
@@ -309,6 +384,7 @@ export default function RoutineBuilderPage() {
           duration_seconds: ex.duration_seconds,
           rest_seconds: ex.rest_seconds,
           weight_suggestion: ex.weight_suggestion,
+          set_plan: ex.set_plan,
           notes: ex.notes || null,
           superset_group: ex.superset_group,
         })),
@@ -471,12 +547,17 @@ export default function RoutineBuilderPage() {
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-3">
-                {exercises.map(ex => (
+                {exercises.map((ex, i) => (
                   <SortableExerciseCard
                     key={ex.id}
                     ex={ex}
+                    index={i}
+                    count={exercises.length}
                     onChange={updateExercise}
+                    onPlanChange={updatePlan}
                     onRemove={removeExercise}
+                    onMove={moveExercise}
+                    onChangeExercise={setSwapId}
                     t={t}
                   />
                 ))}
@@ -485,6 +566,20 @@ export default function RoutineBuilderPage() {
           </DndContext>
         </section>
       )}
+
+      <ExercisePickerModal
+        open={swapId !== null}
+        onClose={() => setSwapId(null)}
+        title={t('routines.changeExerciseTitle')}
+        catalog={catalog}
+        loading={catalogLoading}
+        error={Boolean(catalogError)}
+        onRetry={reloadCatalog}
+        onSelect={next => {
+          if (swapId) replaceExercise(swapId, next)
+          setSwapId(null)
+        }}
+      />
 
       {/* ── Footer ── */}
       <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-4 z-10">
