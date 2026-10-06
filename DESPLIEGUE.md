@@ -182,6 +182,14 @@ Una vez completados los pasos 0.1–0.6, di explícitamente al usuario:
 
 ## Fase 1 — Backend: cambios para producción
 
+> **Estado del backend (ya hecho):** se despliega desde este mismo repo, sin la copia de la Fase 0.
+> - 1.1 TLS con `DB_SSL=true` y `DB_POOL_LIMIT` (por defecto 5) en `backend/src/config/`.
+> - 1.2 CORS ya iba por entorno, con la variable **`CORS_ORIGINS`** (no `ALLOWED_ORIGINS`). En producción, si falta, se rechaza cualquier origen cruzado.
+> - 1.3 `PORT` sale del entorno. 1.4 la clave de Firebase ya reemplaza los `\n`. 1.5 `/health` sin auth. 1.6 `trust proxy` en producción.
+> - 1.7 Las plantillas `.env.example` / `.env.production.example` hay que completarlas a mano (ver apéndice A).
+> - 1.8 `build` compila con `tsconfig.build.json` (sin tests), `start` = `node dist/index.js`, `engines.node` = `>=22 <25`, `packageManager` = pnpm.
+> - 4.1 `render.yaml` en la raíz. El plan free de Render no admite `preDeployCommand`, así que el arranque hace `node dist/db/cli.js migrate && node dist/index.js`: aplica las migraciones pendientes y luego levanta la API.
+
 ### 1.1 Adaptar el pool de conexiones MySQL para TiDB Cloud
 
 TiDB Cloud exige **conexión TLS** y usa **puerto 4000** (no el 3306 por defecto). El cambio es mínimo: añadir bloque `ssl` al pool.
@@ -228,7 +236,7 @@ Actualmente probablemente está hardcodeado a `http://localhost:5173`. Cámbialo
 ```typescript
 import cors from 'cors';
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
@@ -332,7 +340,7 @@ DB_SSL=false           # ← NUEVO: poner 'true' en producción (TiDB exige TLS)
 DB_POOL_LIMIT=10       # ← NUEVO: bajar a 5 en producción
 
 # CORS
-ALLOWED_ORIGINS=http://localhost:5173   # ← NUEVO: lista separada por comas
+CORS_ORIGINS=http://localhost:5173   # ← NUEVO: lista separada por comas
 
 # Firebase (vacías = modo DEV con user id=1)
 FIREBASE_PROJECT_ID=
@@ -619,8 +627,8 @@ services:
     plan: free
     region: oregon       # o 'frankfurt' si TiDB cluster está en EU
     branch: main         # rama del repo copia (tfg-rutinas-deploy)
-    buildCommand: pnpm install && pnpm build
-    startCommand: pnpm start
+    buildCommand: pnpm install && pnpm build     # versión real: ver render.yaml
+    startCommand: pnpm start                     # versión real: ver render.yaml
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -632,7 +640,7 @@ services:
       # Las siguientes se configuran a mano en el dashboard (son secrets):
       # DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
       # FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
-      # ALLOWED_ORIGINS
+      # CORS_ORIGINS
 ```
 
 ### 4.2 Crear `vercel.json` en `frontend/` (opcional)
@@ -672,23 +680,14 @@ Documento separado, dirigido al humano, con los pasos manuales que él tiene que
    - Method: General
    - Crear password (guárdalo en gestor de contraseñas)
    - Anotar: `Host`, `Port` (4000), `User` (formato `XXXXXX.root`), `Database` name (default)
-4. Importar esquema y datos:
-   - Exportar desde MySQL local:
-     ```bash
-     mysqldump -u root -p tfg_rutinas > tfg_dump.sql
-     ```
-   - En el dashboard de TiDB, ir a "Import" → "From local" → subir `tfg_dump.sql`
-   - Alternativa CLI:
-     ```bash
-     mysql -h <HOST> -P 4000 -u <USER> -p \
-       --ssl-mode=VERIFY_IDENTITY --ssl-ca=/etc/ssl/certs/ca-certificates.crt \
-       <DATABASE> < tfg_dump.sql
-     ```
-5. Verificar:
+4. Crear las tablas y cargar el catálogo con el runner del backend (no se importa ningún dump). Desde `backend/` en tu máquina, apuntando a TiDB con variables de entorno de la terminal (no las guardes en `.env`):
    ```bash
-   mysql -h <HOST> -P 4000 -u <USER> -p --ssl-mode=VERIFY_IDENTITY \
-     -e "USE tfg_rutinas; SHOW TABLES; SELECT COUNT(*) FROM exercises;"
+   cd backend
+   DB_HOST=<HOST> DB_PORT=4000 DB_USER=<USER> DB_PASSWORD=<PASSWORD> \
+   DB_NAME=<DATABASE> DB_SSL=true pnpm db:setup
    ```
+   `db:setup` aplica todas las migraciones (`src/db/migrations/`) y los seeds (`src/db/seeds/`: usuario 1, catálogo de ejercicios y equipo, rutinas oficiales) y los apunta en `schema_migrations` y `schema_seeds`. Se puede repetir sin miedo: lo ya aplicado se salta. Los datos de demo (`seeds/demo/`) no se cargan.
+5. Verificar: repetir el comando debe decir `nada pendiente` en migraciones y seeds. En adelante, Render aplica solo las migraciones nuevas en cada arranque.
 
 ## 2. Render (backend)
 
@@ -700,8 +699,9 @@ Documento separado, dirigido al humano, con los pasos manuales que él tiene que
    - **Branch**: `main`
    - **Root Directory**: `backend`
    - **Runtime**: Node
-   - **Build Command**: `pnpm install && pnpm build`
-   - **Start Command**: `pnpm start`
+   - **Build Command**: `corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build`
+   - **Start Command**: `node dist/db/cli.js migrate && node dist/index.js`
+   - (Si se crea desde el Blueprint `render.yaml`, esto ya viene puesto)
    - **Plan**: Free
 4. En la sección "Environment Variables", añadir todas:
    | Key | Value |
@@ -714,7 +714,7 @@ Documento separado, dirigido al humano, con los pasos manuales que él tiene que
    | `DB_NAME` | _(de TiDB, default `test` salvo que hayas creado otra)_ |
    | `DB_SSL` | `true` |
    | `DB_POOL_LIMIT` | `5` |
-   | `ALLOWED_ORIGINS` | _(provisionalmente vacío; se rellena tras desplegar Vercel)_ |
+   | `CORS_ORIGINS` | _(provisionalmente vacío; se rellena tras desplegar Vercel)_ |
    | `FIREBASE_PROJECT_ID` | _(de Firebase service account JSON)_ |
    | `FIREBASE_CLIENT_EMAIL` | _(de Firebase service account JSON)_ |
    | `FIREBASE_PRIVATE_KEY` | _(de Firebase service account JSON, pegar incluyendo los `\n` literales)_ |
@@ -754,7 +754,7 @@ Firebase Console → tu proyecto → ⚙️ Project settings → General → You
 
 ## 4. Cerrar el círculo: actualizar CORS en Render
 
-Vuelve a Render → tu service → Environment → edita `ALLOWED_ORIGINS`:
+Vuelve a Render → tu service → Environment → edita `CORS_ORIGINS`:
 
 ```
 https://tfg-rutinas.vercel.app
@@ -782,7 +782,7 @@ Desde el móvil, abre `https://tfg-rutinas.vercel.app`:
 
 ## Troubleshooting
 
-- **`CORS error`**: revisa `ALLOWED_ORIGINS` en Render, sin barra final (`/`), exactamente igual que la URL de Vercel.
+- **`CORS error`**: revisa `CORS_ORIGINS` en Render, sin barra final (`/`), exactamente igual que la URL de Vercel.
 - **`Database connection failed`**: probablemente falta `DB_SSL=true` o el puerto está mal (debe ser 4000, no 3306).
 - **Backend tarda 60s al primer request**: es el cold start de Render free. Normal. El warmup ping del frontend lo mitiga.
 - **`FIREBASE_PRIVATE_KEY` no funciona**: el replace `\\n` → `\n` no está aplicado, o copiaste mal la key (debe incluir `-----BEGIN PRIVATE KEY-----` ... `-----END PRIVATE KEY-----`).
@@ -834,7 +834,7 @@ DB_USER=XXXXXX.root
 DB_PASSWORD=xxxxxxxx
 DB_SSL=true
 DB_POOL_LIMIT=5
-ALLOWED_ORIGINS=https://tfg-rutinas.vercel.app
+CORS_ORIGINS=https://tfg-rutinas.vercel.app
 FIREBASE_PROJECT_ID=tu-proyecto
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxx@tu-proyecto.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvg...\n-----END PRIVATE KEY-----\n"
@@ -958,7 +958,7 @@ Al finalizar, comunica al usuario:
 | `DB_PASSWORD` | _(tu pwd local)_ | _(generado al crear TiDB)_ | |
 | `DB_SSL` | `false` | `true` | TiDB exige TLS |
 | `DB_POOL_LIMIT` | `10` | `5` | TiDB Starter tiene límite |
-| `ALLOWED_ORIGINS` | `http://localhost:5173` | `https://tfg-rutinas.vercel.app` | Lista CSV |
+| `CORS_ORIGINS` | `http://localhost:5173` | `https://tfg-rutinas.vercel.app` | Lista CSV |
 | `FIREBASE_PROJECT_ID` | _(vacío para modo DEV)_ | _(de service account)_ | |
 | `FIREBASE_CLIENT_EMAIL` | _(vacío para modo DEV)_ | _(de service account)_ | |
 | `FIREBASE_PRIVATE_KEY` | _(vacío para modo DEV)_ | _(de service account, con `\n`)_ | |
