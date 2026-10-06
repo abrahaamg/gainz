@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { sessionService } from '../services/sessionService'
 import { RoutineExercise } from '../types/routine'
-import type { AddSetPayload, LastPerformance } from '../types/session'
+import type { AddSetPayload } from '../types/session'
 import { useWorkoutSession } from '../hooks/useWorkoutSession'
 import { useRestTimer, useStopwatch } from '../hooks/useRestTimer'
+import { useLastPerformance } from '../hooks/useLastPerformance'
+import { targetForSet } from '../utils/setPlan'
+import { formatSetRef, lastSetFor, resolveTyped, setHints, stepFrom } from '../utils/liveSet'
 import { fmtTime } from '../utils/time'
 import { label } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
@@ -18,7 +20,8 @@ import ErrorState from '../components/ui/ErrorState'
 type Phase = 'working' | 'resting' | 'timing'
 
 interface SetInput {
-  reps: number
+  /** Vacío = se usa el placeholder (última vez u objetivo del plan). */
+  reps: string
   weight_kg: string
   rpe: number
   notes: string
@@ -39,7 +42,7 @@ interface PendingSet {
   rpe: number
 }
 
-const DEFAULT_INPUT: SetInput = { reps: 10, weight_kg: '', rpe: 7, notes: '' }
+const DEFAULT_INPUT: SetInput = { reps: '', weight_kg: '', rpe: 7, notes: '' }
 
 // Remonta la sesión entera al cambiar de rutina (estado limpio, nueva sesión)
 export default function LiveSessionPage() {
@@ -85,11 +88,16 @@ function LiveSession({ routineId }: { routineId: number }) {
   const [saving, setSaving]             = useState(false)
   const [finishError, setFinishError]   = useState<string | null>(null)
 
-  // Smart Fill: last performance data + plateau
-  const [lastPerf, setLastPerf] = useState<LastPerformance | null>(null)
-
   const currentEx = exercises[exIdx] as RoutineExercise | undefined
   const isTimed   = currentEx ? currentEx.duration_seconds !== null : false
+
+  // Última vez (solo lectura): da los placeholders y las sugerencias; nunca escribe en las casillas
+  const lastPerf = useLastPerformance(currentEx?.exercise_id)
+  const lastSet  = lastSetFor(lastPerf?.last_sets, setIdx)
+  const target   = currentEx ? targetForSet(currentEx, setIdx) : null
+  const hints    = setHints(lastSet, target)
+  const lastRef  = lastSet ? formatSetRef(lastSet.reps_done, lastSet.weight_kg) : null
+  const planRef  = currentEx?.set_plan && target ? formatSetRef(target.reps, target.weight_kg) : null
 
   // ── Temporizadores: el fin es un timestamp y los callbacks se leen siempre actuales
   const handlers = useRef({ onRestEnd: () => {}, onTimeUp: () => {} })
@@ -113,32 +121,6 @@ function LiveSession({ routineId }: { routineId: number }) {
     timeouts.current.add(id)
   }
 
-  // ── Smart Fill: al cambiar de ejercicio, última marca y valores iniciales (con cancelación)
-  useEffect(() => {
-    if (!currentEx) return
-    let cancelled = false
-    const fallback: SetInput = {
-      reps: currentEx.reps ?? 10,
-      weight_kg: currentEx.weight_suggestion?.toString() ?? '',
-      rpe: 7,
-      notes: '',
-    }
-    sessionService.getLastPerformance(currentEx.exercise_id)
-      .then(perf => {
-        if (cancelled) return
-        setLastPerf(perf)
-        setSetInput(perf
-          ? { ...fallback, reps: perf.reps_done ?? fallback.reps, weight_kg: perf.weight_kg?.toString() ?? fallback.weight_kg }
-          : fallback)
-      })
-      .catch(() => {
-        if (cancelled) return
-        setLastPerf(null)
-        setSetInput(fallback)
-      })
-    return () => { cancelled = true }
-  }, [currentEx])
-
   // ── Move to next set or exercise
   const goNext = () => {
     if (!currentEx) return
@@ -158,6 +140,8 @@ function LiveSession({ routineId }: { routineId: number }) {
       setSetIdx(setIdx + 1)
       setAnnouncement(t('session.announceSet', { set: setIdx + 1, total: currentEx.sets }))
     }
+    // Las casillas vuelven a vacío: la serie nueva muestra su propio placeholder
+    setSetInput(p => ({ ...p, reps: '', weight_kg: '', notes: '' }))
     setPhase('working')
   }
 
@@ -215,6 +199,11 @@ function LiveSession({ routineId }: { routineId: number }) {
   // ── Complete a set
   const handleCompleteSet = (durationDone?: number) => {
     if (!currentEx) return
+    const reps = isTimed ? null : resolveTyped(setInput.reps, hints.repsPlaceholder)
+    if (!isTimed && reps === null) {
+      setActionError(t('session.repsRequired'))
+      return
+    }
     exTimer.stop()
     return persistSet({
       exercise: currentEx,
@@ -224,8 +213,8 @@ function LiveSession({ routineId }: { routineId: number }) {
       payload: {
         exercise_id:       currentEx.exercise_id,
         set_number:        setIdx,
-        reps_done:         isTimed ? null : Number(setInput.reps),
-        weight_kg:         setInput.weight_kg ? Number(setInput.weight_kg) : null,
+        reps_done:         reps,
+        weight_kg:         resolveTyped(setInput.weight_kg, hints.weightPlaceholder),
         duration_done_sec: durationDone ?? null,
         rpe:               setInput.rpe || null,
         notes:             setInput.notes || null,
@@ -322,13 +311,10 @@ function LiveSession({ routineId }: { routineId: number }) {
     completedSets.filter(s => s.exercise_id === exerciseId).length
 
   const adjustReps = (delta: number) =>
-    setSetInput(p => ({ ...p, reps: Math.max(0, (Number(p.reps) || 0) + delta) }))
+    setSetInput(p => ({ ...p, reps: String(stepFrom(p.reps, hints.repsPlaceholder, delta)) }))
 
   const adjustWeight = (delta: number) =>
-    setSetInput(p => {
-      const next = Math.max(0, (parseFloat(p.weight_kg) || 0) + delta)
-      return { ...p, weight_kg: String(Math.round(next * 100) / 100) }
-    })
+    setSetInput(p => ({ ...p, weight_kg: String(stepFrom(p.weight_kg, hints.weightPlaceholder, delta)) }))
 
   if (status === 'loading') return (
     <div role="status" aria-busy="true" className="space-y-4">
@@ -573,7 +559,7 @@ function LiveSession({ routineId }: { routineId: number }) {
                           <button
                             type="button"
                             onClick={() => {
-                              const current = parseFloat(setInput.weight_kg) || 0
+                              const current = resolveTyped(setInput.weight_kg, hints.weightPlaceholder) ?? 0
                               const inc = parseFloat(overloadIncrement) || 2.5
                               setSetInput(p => ({ ...p, weight_kg: (current + inc).toString() }))
                               setShowOverloadPopover(false)
@@ -588,14 +574,32 @@ function LiveSession({ routineId }: { routineId: number }) {
                   </div>
                 )}
 
+                {(lastRef || planRef) && (
+                  <dl className="space-y-0.5 text-xs text-neutral-400">
+                    {lastRef && (
+                      <div className="flex gap-1.5">
+                        <dt>{t('session.lastTime')}:</dt>
+                        <dd className="font-semibold tabular-nums text-neutral-300">{lastRef}</dd>
+                      </div>
+                    )}
+                    {planRef && (
+                      <div className="flex gap-1.5">
+                        <dt>{t('session.planTarget')}:</dt>
+                        <dd className="font-semibold tabular-nums text-neutral-300">{planRef}</dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
+
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Stepper
                     id="live-reps"
                     label={t('session.repsLabel')}
-                    hint={currentEx.reps ? t('session.repsTarget', { reps: currentEx.reps }) : undefined}
-                    value={String(setInput.reps)}
+                    hint={planRef ? undefined : (currentEx.reps ? t('session.repsTarget', { reps: currentEx.reps }) : undefined)}
+                    value={setInput.reps}
+                    placeholder={hints.repsPlaceholder !== null ? String(hints.repsPlaceholder) : '—'}
                     inputMode="numeric"
-                    onChange={v => setSetInput(p => ({ ...p, reps: Number(v.replace(/\D/g, '')) || 0 }))}
+                    onChange={v => setSetInput(p => ({ ...p, reps: v.replace(/\D/g, '') }))}
                     onMinus={() => adjustReps(-1)}
                     onPlus={() => adjustReps(1)}
                     minusLabel={t('session.repsDown')}
@@ -604,9 +608,9 @@ function LiveSession({ routineId }: { routineId: number }) {
                   <Stepper
                     id="live-weight"
                     label={t('session.weightLabel')}
-                    hint={currentEx.weight_suggestion ? t('session.weightTarget', { kg: currentEx.weight_suggestion }) : undefined}
+                    hint={planRef || !currentEx.weight_suggestion ? undefined : t('session.weightTarget', { kg: currentEx.weight_suggestion })}
                     value={setInput.weight_kg}
-                    placeholder="—"
+                    placeholder={hints.weightPlaceholder !== null ? String(hints.weightPlaceholder) : '—'}
                     inputMode="decimal"
                     onChange={v => {
                       const clean = v.replace(',', '.')

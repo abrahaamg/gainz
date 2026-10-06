@@ -1,3 +1,9 @@
+/** Objetivo de una serie concreta. */
+export interface SetPlanEntry {
+  reps: number | null
+  weight_kg: number | null
+}
+
 export interface RoutineExercise {
   re_id: number
   exercise_id: number
@@ -7,6 +13,8 @@ export interface RoutineExercise {
   duration_seconds: number | null
   rest_seconds: number
   weight_suggestion: number | null
+  /** Una entrada por serie; null en rutinas antiguas (entonces valen reps/weight_suggestion). */
+  set_plan: SetPlanEntry[] | null
   notes: string | null          // NIVEL 2: nota del creador de la rutina
   superset_group: number | null
   exercise_name: string
@@ -49,6 +57,8 @@ export interface RoutineExerciseForm {
   duration_seconds: number | null
   rest_seconds: number
   weight_suggestion: number | null
+  /** Plan por serie; null = ejercicio por duración o sin plan. */
+  set_plan: SetPlanEntry[] | null
   notes: string
   superset_group: number | null
   // display only
@@ -75,6 +85,7 @@ export interface CreateRoutinePayload {
     duration_seconds: number | null
     rest_seconds: number
     weight_suggestion: number | null
+    set_plan?: SetPlanEntry[] | null
     notes: string | null
     superset_group: number | null
   }[]
