@@ -8,9 +8,10 @@ services:
     region: frankfurt
     rootDir: backend
     branch: main
+    # Sin corepack enable: el disco de Render es de solo lectura y falla. pnpm ya viene instalado.
     # --prod=false: con NODE_ENV=production pnpm se saltaría las devDependencies
     # y sin ellas no hay TypeScript para compilar
-    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm build
     # El plan free no admite preDeployCommand: las migraciones pendientes se
     # aplican en cada arranque, antes de levantar la API. Si fallan, no arranca.
     # setup = migraciones + seeds pendientes (registrados: cada uno corre una vez).
