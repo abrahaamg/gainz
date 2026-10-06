@@ -1,6 +1,6 @@
 -- ============================================================
 -- SEED: Ejercicios extendidos (complementarios al seed original de 25)
--- Ejecutar DESPUÉS de 001_seed_exercises.sql y 006_secondary_muscles.sql
+-- Se aplica con `pnpm db:seed` después de 001_seed_exercises.sql
 --
 -- Idempotente: los ejercicios se cargan primero en una tabla temporal y
 -- solo se copian a `exercises` los que no existen ya en el catálogo
@@ -8,10 +8,24 @@
 -- INSERT IGNORE. Se puede re-ejecutar sin crear duplicados.
 -- ============================================================
 
-USE fitness_tracker;
-
+-- Columnas explícitas en vez de LIKE exercises: así la tabla temporal no
+-- arrastra claves foráneas, que las temporales de TiDB no admiten.
 DROP TEMPORARY TABLE IF EXISTS tmp_seed_exercises;
-CREATE TEMPORARY TABLE tmp_seed_exercises LIKE exercises;
+CREATE TEMPORARY TABLE tmp_seed_exercises (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  name               VARCHAR(150) NOT NULL,
+  category           VARCHAR(30)  NOT NULL,
+  muscle_group       VARCHAR(100) NOT NULL,
+  secondary_muscles  JSON,
+  description        TEXT,
+  instructions       TEXT,
+  difficulty         VARCHAR(10),
+  requires_equipment BOOLEAN,
+  is_unilateral      BOOLEAN,
+  is_public          BOOLEAN,
+  created_by         INT
+);
+
 -- ─── PECHO (14 ejercicios nuevos) ─────────────────────────────
 
 INSERT INTO tmp_seed_exercises (name, category, muscle_group, secondary_muscles, description, instructions, difficulty, requires_equipment, is_unilateral, is_public, created_by) VALUES
@@ -1376,7 +1390,3 @@ CROSS JOIN (
   SELECT 'Polea alta' AS equipment_name, false AS is_optional
   UNION ALL SELECT 'Barra de dominadas', true
 ) eq WHERE e.name = 'Lat Stretch en Polea';
-
-USE fitness_tracker;
-SELECT COUNT(*) FROM exercises WHERE created_by IS NULL;  -- debería dar ~155
-SELECT COUNT(*) FROM exercise_equipment;                   -- ahora con todos los nuevos links

@@ -1,9 +1,8 @@
 -- ============================================================
 -- 000_dev_user.sql
--- Usuario de desarrollo para módulos 0-6 (sin auth real)
+-- Usuario 1: el de desarrollo (sin auth real) y el dueño de las rutinas
+-- oficiales del seed 002. Idempotente (INSERT IGNORE).
 -- ============================================================
-
-USE fitness_tracker;
 
 INSERT IGNORE INTO users (id, username, email, fitness_level, weight_kg)
 VALUES (1, 'dev_user', 'dev@test.com', 'intermediate', 75);

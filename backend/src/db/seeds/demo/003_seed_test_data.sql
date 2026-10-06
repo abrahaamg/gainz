@@ -2,9 +2,12 @@
 -- 003_seed_test_data.sql
 -- Datos de prueba completos para ver TODAS las funcionalidades
 -- Ejecutar DESPUÉS de todas las migraciones y seeds anteriores
+--
+-- NO lo aplica `pnpm db:seed`: son datos de demostración (renombra al
+-- usuario 1 e inserta sesiones falsas) y no es idempotente. Solo para una
+-- BD local de pruebas, a mano (MySQL Workbench) sobre la BD seleccionada.
 -- ============================================================
 
-USE fitness_tracker;
 SET SQL_SAFE_UPDATES = 0;
 
 -- ─────────────────────────────────────────────────────────────

@@ -1,11 +1,29 @@
 -- ============================================================
 -- 001_seed_exercises.sql
 -- 25 ejercicios: 8 fuerza, 6 cardio, 5 hiit, 4 flexibilidad, 2 equilibrio
+-- más sus músculos secundarios y sus vínculos con el equipo del catálogo.
+--
+-- Idempotente: los ejercicios pasan por una tabla temporal y solo se copian
+-- los que no existen ya en el catálogo (mismo nombre y created_by IS NULL).
+-- Los vínculos con el equipo usan INSERT IGNORE y los UPDATE dejan siempre
+-- el mismo valor.
 -- ============================================================
 
-USE fitness_tracker;
+DROP TEMPORARY TABLE IF EXISTS tmp_seed_exercises;
+CREATE TEMPORARY TABLE tmp_seed_exercises (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  name               VARCHAR(150) NOT NULL,
+  category           VARCHAR(30)  NOT NULL,
+  muscle_group       VARCHAR(100) NOT NULL,
+  difficulty         VARCHAR(10),
+  requires_equipment BOOLEAN,
+  description        TEXT,
+  instructions       TEXT,
+  notes              TEXT
+);
 
-INSERT INTO exercises (name, category, muscle_group, difficulty, requires_equipment, description, instructions, notes) VALUES
+INSERT INTO tmp_seed_exercises (name, category, muscle_group, difficulty, requires_equipment, description, instructions, notes) VALUES
+
 
 -- ─── FUERZA (8) ───────────────────────────────────────────
 ('Press de Banca', 'strength', 'chest', 'medium', true,
@@ -136,3 +154,219 @@ INSERT INTO exercises (name, category, muscle_group, difficulty, requires_equipm
  'Peso muerto a una pierna. Trabaja glúteos, isquios y propiocepción.',
  '1. De pie en una pierna con rodilla ligeramente flexionada.\n2. Inclina el torso hacia delante mientras la pierna libre sube atrás.\n3. Forma una T con el cuerpo: torso y pierna libre paralelos al suelo.\n4. Vuelve a la posición inicial apretando el glúteo.',
  'Mira un punto fijo al frente para mantener el equilibrio. Mueve caderas y torso como una unidad.');
+
+-- ─── Copiar al catálogo solo los que faltan ──────────────────
+INSERT INTO exercises (name, category, muscle_group, difficulty, requires_equipment, description, instructions, notes)
+SELECT t.name, t.category, t.muscle_group, t.difficulty, t.requires_equipment,
+       t.description, t.instructions, t.notes
+FROM tmp_seed_exercises t
+WHERE NOT EXISTS (
+  SELECT 1 FROM exercises e
+  WHERE e.name = t.name AND e.created_by IS NULL
+)
+ORDER BY t.id;
+
+DROP TEMPORARY TABLE tmp_seed_exercises;
+
+-- ═══════════════════════════════════════════════════════════════
+-- MÚSCULOS SECUNDARIOS (antes en la migración 006)
+-- ═══════════════════════════════════════════════════════════════
+
+-- ─── FUERZA ─────────────────────────────────────────────────
+-- Press de Banca: pecho principal, secundarios triceps + hombro frontal
+UPDATE exercises SET secondary_muscles = '["triceps","shoulders"]'
+WHERE name = 'Press de Banca' AND created_by IS NULL;
+
+-- Sentadilla con Barra: cuádriceps principal, secundarios glúteos + isquios + core
+UPDATE exercises SET secondary_muscles = '["glutes","hamstrings","core"]'
+WHERE name = 'Sentadilla con Barra' AND created_by IS NULL;
+
+-- Peso Muerto: espalda principal, secundarios glúteos + isquios + core + antebrazos
+UPDATE exercises SET secondary_muscles = '["glutes","hamstrings","core","forearms"]'
+WHERE name = 'Peso Muerto' AND created_by IS NULL;
+
+-- Dominadas: espalda principal, secundarios bíceps + core + antebrazos
+UPDATE exercises SET secondary_muscles = '["biceps","core","forearms"]'
+WHERE name = 'Dominadas' AND created_by IS NULL;
+
+-- Press Militar: hombros principal, secundarios tríceps + core
+UPDATE exercises SET secondary_muscles = '["triceps","core"]'
+WHERE name = 'Press Militar' AND created_by IS NULL;
+
+-- Remo con Barra: espalda principal, secundarios bíceps + core + antebrazos
+UPDATE exercises SET secondary_muscles = '["biceps","core","forearms"]'
+WHERE name = 'Remo con Barra' AND created_by IS NULL;
+
+-- Fondos en Paralelas: pecho principal, secundarios tríceps + hombros
+UPDATE exercises SET secondary_muscles = '["triceps","shoulders"]'
+WHERE name = 'Fondos en Paralelas' AND created_by IS NULL;
+
+-- Curl de Bíceps: bíceps (arms) principal, secundarios antebrazos
+UPDATE exercises SET secondary_muscles = '["forearms"]'
+WHERE name = 'Curl de Bíceps con Barra' AND created_by IS NULL;
+
+-- ─── CARDIO ─────────────────────────────────────────────────
+-- Carrera en Cinta: full_body principal, secundarios cuádriceps + isquios + gemelos
+UPDATE exercises SET secondary_muscles = '["quadriceps","hamstrings","calves"]'
+WHERE name = 'Carrera en Cinta' AND created_by IS NULL;
+
+-- Bicicleta Estática: piernas principal, secundarios cuádriceps + glúteos
+UPDATE exercises SET secondary_muscles = '["quadriceps","glutes"]'
+WHERE name = 'Bicicleta Estática' AND created_by IS NULL;
+
+-- Saltar a la Comba: full_body principal, secundarios gemelos + hombros + core
+UPDATE exercises SET secondary_muscles = '["calves","shoulders","core"]'
+WHERE name = 'Saltar a la Comba' AND created_by IS NULL;
+
+-- Burpees: full_body principal, secundarios pecho + cuádriceps + core + hombros
+UPDATE exercises SET secondary_muscles = '["chest","quadriceps","core","shoulders"]'
+WHERE name = 'Burpees' AND created_by IS NULL;
+
+-- Mountain Climbers: core principal, secundarios hombros + cuádriceps
+UPDATE exercises SET secondary_muscles = '["shoulders","quadriceps"]'
+WHERE name = 'Mountain Climbers' AND created_by IS NULL;
+
+-- Remo en Ergómetro: full_body principal, secundarios lats + cuádriceps + bíceps
+UPDATE exercises SET secondary_muscles = '["lats","quadriceps","biceps"]'
+WHERE name = 'Remo en Ergómetro' AND created_by IS NULL;
+
+-- ─── HIIT ───────────────────────────────────────────────────
+-- Thrusters: full_body principal, secundarios cuádriceps + hombros + tríceps + core
+UPDATE exercises SET secondary_muscles = '["quadriceps","shoulders","triceps","core"]'
+WHERE name = 'Thrusters con Mancuernas' AND created_by IS NULL;
+
+-- Box Jumps: piernas principal, secundarios glúteos + gemelos + core
+UPDATE exercises SET secondary_muscles = '["glutes","calves","core"]'
+WHERE name = 'Box Jumps' AND created_by IS NULL;
+
+-- Kettlebell Swings: full_body principal, secundarios glúteos + isquios + hombros + core
+UPDATE exercises SET secondary_muscles = '["glutes","hamstrings","shoulders","core"]'
+WHERE name = 'Kettlebell Swings' AND created_by IS NULL;
+
+-- Battle Ropes: full_body principal, secundarios hombros + core + bíceps
+UPDATE exercises SET secondary_muscles = '["shoulders","core","biceps"]'
+WHERE name = 'Battle Ropes' AND created_by IS NULL;
+
+-- Sprints: piernas principal, secundarios glúteos + gemelos + core
+UPDATE exercises SET secondary_muscles = '["glutes","calves","core"]'
+WHERE name = 'Sprints 20 metros' AND created_by IS NULL;
+
+-- ─── FLEXIBILIDAD ───────────────────────────────────────────
+-- Cat-Cow: espalda principal, secundarios core
+UPDATE exercises SET secondary_muscles = '["core"]'
+WHERE name = 'Cat-Cow' AND created_by IS NULL;
+
+-- Pigeon Pose: piernas principal, secundarios glúteos
+UPDATE exercises SET secondary_muscles = '["glutes"]'
+WHERE name = 'Pigeon Pose' AND created_by IS NULL;
+
+-- Hip Flexor Stretch: piernas principal, secundarios glúteos + core
+UPDATE exercises SET secondary_muscles = '["glutes","core"]'
+WHERE name = 'Hip Flexor Stretch' AND created_by IS NULL;
+
+-- Estiramiento Isquiotibiales: piernas principal, secundarios lats
+UPDATE exercises SET secondary_muscles = '["lats"]'
+WHERE name = 'Estiramiento de Isquiotibiales' AND created_by IS NULL;
+
+-- ─── EQUILIBRIO ─────────────────────────────────────────────
+-- Pistol Squat: piernas principal, secundarios glúteos + core + cuádriceps
+UPDATE exercises SET secondary_muscles = '["glutes","core","quadriceps"]'
+WHERE name = 'Pistol Squat' AND created_by IS NULL;
+
+-- Single Leg Deadlift: piernas principal, secundarios glúteos + isquios + core
+UPDATE exercises SET secondary_muscles = '["glutes","hamstrings","core"]'
+WHERE name = 'Single Leg Deadlift' AND created_by IS NULL;
+
+-- ═══════════════════════════════════════════════════════════════
+-- VÍNCULOS EJERCICIO ↔ EQUIPO (antes en la migración 002)
+-- ═══════════════════════════════════════════════════════════════
+
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, eq.equipment_name, eq.is_optional FROM exercises e
+CROSS JOIN (
+  SELECT 'Barra olímpica' AS equipment_name, false AS is_optional
+  UNION ALL SELECT 'Discos', false
+  UNION ALL SELECT 'Banco plano', false
+  UNION ALL SELECT 'Rack / Jaula', true
+) eq WHERE e.name = 'Press de Banca' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, eq.equipment_name, eq.is_optional FROM exercises e
+CROSS JOIN (
+  SELECT 'Barra olímpica' AS equipment_name, false AS is_optional
+  UNION ALL SELECT 'Discos', false
+  UNION ALL SELECT 'Rack / Jaula', false
+) eq WHERE e.name = 'Sentadilla con Barra' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, eq.equipment_name, eq.is_optional FROM exercises e
+CROSS JOIN (
+  SELECT 'Barra olímpica' AS equipment_name, false AS is_optional
+  UNION ALL SELECT 'Discos', false
+) eq WHERE e.name = 'Peso Muerto' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, eq.equipment_name, eq.is_optional FROM exercises e
+CROSS JOIN (
+  SELECT 'Barra de dominadas' AS equipment_name, false AS is_optional
+  UNION ALL SELECT 'Banda elástica', true
+) eq WHERE e.name = 'Dominadas' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, eq.equipment_name, eq.is_optional FROM exercises e
+CROSS JOIN (
+  SELECT 'Barra olímpica' AS equipment_name, false AS is_optional
+  UNION ALL SELECT 'Discos', false
+) eq WHERE e.name = 'Press Militar' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, eq.equipment_name, eq.is_optional FROM exercises e
+CROSS JOIN (
+  SELECT 'Barra olímpica' AS equipment_name, false AS is_optional
+  UNION ALL SELECT 'Discos', false
+) eq WHERE e.name = 'Remo con Barra' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, 'Barra de dominadas', true FROM exercises e
+WHERE e.name = 'Fondos en Paralelas' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, eq.equipment_name, eq.is_optional FROM exercises e
+CROSS JOIN (
+  SELECT 'Barra olímpica' AS equipment_name, false AS is_optional
+  UNION ALL SELECT 'Discos', false
+  UNION ALL SELECT 'Barra Z / EZ', true
+) eq WHERE e.name = 'Curl de Bíceps con Barra' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, 'Cinta de correr', false FROM exercises e WHERE e.name = 'Carrera en Cinta' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, 'Bicicleta estática', false FROM exercises e WHERE e.name = 'Bicicleta Estática' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, 'Cuerda de saltar', false FROM exercises e WHERE e.name = 'Saltar a la Comba' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, 'Remo ergómetro', false FROM exercises e WHERE e.name = 'Remo en Ergómetro' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, 'Mancuernas', false FROM exercises e WHERE e.name = 'Thrusters con Mancuernas' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, 'Cajón pliométrico', false FROM exercises e WHERE e.name = 'Box Jumps' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, 'Kettlebell', false FROM exercises e WHERE e.name = 'Kettlebell Swings' AND e.created_by IS NULL;
+
+INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_name, is_optional)
+SELECT e.id, 'Cuerdas de batalla', false FROM exercises e WHERE e.name = 'Battle Ropes' AND e.created_by IS NULL;
+
+-- ─────────────────────────────────────────────────────────────
+-- 4. ACTUALIZAR requires_equipment
+-- ─────────────────────────────────────────────────────────────
+UPDATE exercises SET requires_equipment = true WHERE name = 'Saltar a la Comba' AND created_by IS NULL;
+UPDATE exercises SET requires_equipment = true WHERE name = 'Dominadas' AND created_by IS NULL;
+UPDATE exercises SET requires_equipment = true WHERE name = 'Curl de Bíceps con Barra' AND created_by IS NULL;
+
