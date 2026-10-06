@@ -582,7 +582,7 @@ export default function RoutineBuilderPage() {
       />
 
       {/* ── Footer ── */}
-      <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-4 z-10">
+      <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-4 z-50">
         <div className="p-4 flex items-center justify-between">
           <div className="text-sm text-neutral-400 font-medium">
             {exercises.length > 0 && (

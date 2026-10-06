@@ -149,7 +149,7 @@ export default function RoutineImportPage() {
               >
                 {i + 1}
               </span>
-              <span className={current ? 'text-white' : 'text-neutral-400'}>{t(`routineImport.steps.${s}`)}</span>
+              <span className={current ? 'text-[color:var(--text)]' : 'text-[color:var(--text-muted)]'}>{t(`routineImport.steps.${s}`)}</span>
               {i < STEPS.length - 1 && <span aria-hidden="true" className="h-px flex-1 bg-white/10" />}
             </li>
           )
@@ -221,21 +221,18 @@ export default function RoutineImportPage() {
       {/* ───────── 2. Revisar ───────── */}
       {step === 'review' && (
         <div className="space-y-6">
-          <div
-            role="status"
-            className={
-              'rounded-2xl border px-4 py-3 text-sm font-semibold ' +
-              (summary.pending === 0
-                ? 'border-green-500/30 bg-green-500/10 text-green-300'
-                : 'border-amber-500/30 bg-amber-500/10 text-amber-300')
-            }
-          >
-            <i aria-hidden="true" className={`bi ${summary.pending === 0 ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} mr-2`} />
-            {t('routineImport.summary', { matched: summary.matched, pending: summary.pending })}
-          </div>
+          <GlowCard>
+            <div
+              role="status"
+              className={'px-4 py-3 text-sm font-semibold ' + (summary.pending === 0 ? 'text-green-300' : 'text-amber-300')}
+            >
+              <i aria-hidden="true" className={`bi ${summary.pending === 0 ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} mr-2`} />
+              {t('routineImport.summary', { matched: summary.matched, pending: summary.pending })}
+            </div>
+          </GlowCard>
 
           {days.length === 0 && (
-            <p className="text-sm text-neutral-400">{t('routineImport.noDays')}</p>
+            <p className="text-sm text-[color:var(--text-muted)]">{t('routineImport.noDays')}</p>
           )}
 
           {days.map(day => (
@@ -250,21 +247,21 @@ export default function RoutineImportPage() {
                     value={day.name}
                     onChange={e => updateDay(day.key, d => ({ ...d, name: e.target.value }))}
                     maxLength={150}
-                    className="form-input form-input-dark font-bold"
+                    className="form-input font-bold"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => removeDay(day.key)}
                   aria-label={t('routineImport.deleteDay', { name: day.name })}
-                  className="btn-ghost-dark h-[46px] shrink-0 !text-red-400"
+                  className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-neutral-900 text-red-400 transition-colors hover:bg-neutral-800 hover:text-red-300"
                 >
                   <i aria-hidden="true" className="bi bi-trash3" />
                 </button>
               </div>
 
               {day.rows.length === 0 && (
-                <p className="text-sm text-neutral-400">{t('routineImport.emptyDay')}</p>
+                <p className="text-sm text-[color:var(--text-muted)]">{t('routineImport.emptyDay')}</p>
               )}
 
               {day.rows.map((row, i) => (
@@ -288,7 +285,7 @@ export default function RoutineImportPage() {
             </section>
           ))}
 
-          <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 md:bottom-4">
+          <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 md:bottom-4">
             <div className="flex flex-wrap items-center justify-between gap-3 p-4">
               <p className="min-w-0 text-xs font-medium text-neutral-400" aria-live="polite">
                 {canSave(days) ? t('routineImport.readyToSave', { count: days.length }) : t('routineImport.cannotSave')}

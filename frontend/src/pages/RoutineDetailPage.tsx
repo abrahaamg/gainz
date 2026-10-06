@@ -86,7 +86,7 @@ export default function RoutineDetailPage() {
                 <p className="text-neutral-400 text-sm mt-2">{routine.description}</p>
               )}
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => navigate(`/session/${routine.id}`)}
                 className="btn-primary"

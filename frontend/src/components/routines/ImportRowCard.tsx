@@ -77,7 +77,7 @@ export default function ImportRowCard({
         >
           {resolved ? (
             <span className="min-w-0">
-              <span className="block truncate text-sm font-bold text-white">{row.exercise!.name}</span>
+              <span className="block break-words text-sm font-bold text-white">{row.exercise!.name}</span>
               <span className="block text-xs text-neutral-400">{label('muscles', row.exercise!.muscle_group)}</span>
             </span>
           ) : (
@@ -97,18 +97,18 @@ export default function ImportRowCard({
             {row.warnings.map(w => (
               <li
                 key={w}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-300"
+                className="flex flex-col gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-300 sm:flex-row sm:items-center sm:justify-between"
               >
-                <span className="flex min-w-0 flex-1 items-start gap-2 text-xs">
+                <span className="flex min-w-0 items-start gap-2 text-xs">
                   <i aria-hidden="true" className="bi bi-exclamation-triangle-fill mt-0.5" />
                   <span>{t(`routineImport.warnings.${w}`)}</span>
                 </span>
                 {w === 'swapped' ? (
-                  <button type="button" onClick={onSwap} className="btn-ghost-dark px-3 py-1.5 text-xs">
+                  <button type="button" onClick={onSwap} className="btn-ghost-dark shrink-0 justify-center px-3 py-1.5 text-xs">
                     <i aria-hidden="true" className="bi bi-arrow-left-right mr-1.5" />{t('routineImport.swap')}
                   </button>
                 ) : (
-                  <button type="button" onClick={() => onDismissWarning(w)} className="btn-ghost-dark px-3 py-1.5 text-xs">
+                  <button type="button" onClick={() => onDismissWarning(w)} className="btn-ghost-dark shrink-0 justify-center px-3 py-1.5 text-xs">
                     {t('routineImport.dismiss')}
                   </button>
                 )}
