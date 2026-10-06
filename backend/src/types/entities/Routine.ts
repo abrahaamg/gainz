@@ -42,6 +42,8 @@ export interface Routine {
   is_public: boolean
   times_completed: number
   tags: string[]
+  is_hidden: boolean // el usuario la ha quitado de su lista (user_routine_prefs.hidden)
+  position: number | null // orden manual del usuario; null = sin colocar (sale arriba)
   created_at: string
   updated_at: string
   exercises?: RoutineExercise[]

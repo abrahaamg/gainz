@@ -8,6 +8,10 @@ vi.mock('../queries/routine.queries', () => ({
   createRoutine: vi.fn(),
   updateRoutine: vi.fn(),
   deleteRoutine: vi.fn(),
+  hideRoutine: vi.fn(),
+  unhideRoutine: vi.fn(),
+  findVisibleRoutineIds: vi.fn(),
+  setRoutineOrder: vi.fn(),
 }))
 
 const mockRoutine = {
@@ -23,6 +27,8 @@ const mockRoutine = {
   is_public: true,
   times_completed: 3,
   tags: [],
+  is_hidden: false,
+  position: null,
   exercise_count: 5,
   created_at: '2024-01-01',
   updated_at: '2024-01-01',
@@ -47,7 +53,14 @@ describe('RoutineService', () => {
       const result = await RoutineService.getAll(1)
       expect(result).toHaveLength(1)
       expect(result[0].name).toBe('Fuerza Básica con Barra')
-      expect(q.findAllRoutines).toHaveBeenCalledWith(1)
+      expect(q.findAllRoutines).toHaveBeenCalledWith(1, {})
+    })
+
+    it('pasa includeHidden a la query', async () => {
+      vi.mocked(q.findAllRoutines).mockResolvedValue([])
+
+      await RoutineService.getAll(1, { includeHidden: true })
+      expect(q.findAllRoutines).toHaveBeenCalledWith(1, { includeHidden: true })
     })
 
     it('devuelve array vacío si no hay rutinas', async () => {
@@ -142,6 +155,69 @@ describe('RoutineService', () => {
       vi.mocked(q.deleteRoutine).mockResolvedValue(false)
 
       await expect(RoutineService.delete(999, 1)).rejects.toThrow('no encontrada')
+    })
+  })
+
+  describe('hide', () => {
+    const foreign = { ...mockRoutineResult, routine: { ...mockRoutine, user_id: 2 } }
+
+    it('oculta una rutina pública de otro usuario', async () => {
+      vi.mocked(q.findRoutineById).mockResolvedValue(foreign)
+
+      await expect(RoutineService.hide(1, 1)).resolves.toBeUndefined()
+      expect(q.hideRoutine).toHaveBeenCalledWith(1, 1)
+    })
+
+    it('lanza 400 si la rutina es propia', async () => {
+      vi.mocked(q.findRoutineById).mockResolvedValue(mockRoutineResult)
+
+      await expect(RoutineService.hide(1, 1)).rejects.toMatchObject({
+        statusCode: 400,
+        message: 'Las rutinas propias se eliminan, no se ocultan',
+      })
+      expect(q.hideRoutine).not.toHaveBeenCalled()
+    })
+
+    it('lanza 404 si la rutina no existe o no es visible', async () => {
+      vi.mocked(q.findRoutineById).mockResolvedValue(null)
+
+      await expect(RoutineService.hide(999, 1)).rejects.toMatchObject({ statusCode: 404 })
+      expect(q.hideRoutine).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('unhide', () => {
+    it('vuelve a mostrar una rutina', async () => {
+      vi.mocked(q.findRoutineById).mockResolvedValue({ ...mockRoutineResult, routine: { ...mockRoutine, user_id: 2 } })
+
+      await expect(RoutineService.unhide(1, 1)).resolves.toBeUndefined()
+      expect(q.unhideRoutine).toHaveBeenCalledWith(1, 1)
+    })
+
+    it('lanza 404 si la rutina no existe o no es visible', async () => {
+      vi.mocked(q.findRoutineById).mockResolvedValue(null)
+
+      await expect(RoutineService.unhide(999, 1)).rejects.toMatchObject({ statusCode: 404 })
+      expect(q.unhideRoutine).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('reorder', () => {
+    it('guarda el orden si todas las rutinas son visibles', async () => {
+      vi.mocked(q.findVisibleRoutineIds).mockResolvedValue([3, 1, 2])
+
+      await RoutineService.reorder(1, [3, 1, 2])
+      expect(q.setRoutineOrder).toHaveBeenCalledWith(1, [3, 1, 2])
+    })
+
+    it('lanza 400 con los ids que no ve el usuario y no guarda nada', async () => {
+      vi.mocked(q.findVisibleRoutineIds).mockResolvedValue([1])
+
+      await expect(RoutineService.reorder(1, [1, 8, 9])).rejects.toMatchObject({
+        statusCode: 400,
+        message: 'Rutinas no encontradas: 8, 9',
+      })
+      expect(q.setRoutineOrder).not.toHaveBeenCalled()
     })
   })
 })

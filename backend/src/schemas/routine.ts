@@ -39,6 +39,17 @@ export const createRoutineBody = z.object({
 
 export const updateRoutineBody = createRoutineBody.partial()
 
+// Orden manual de la lista: ids de arriba a abajo, sin repetir
+export const routineOrderBody = z.object({
+  routine_ids: z.array(positiveInt).min(1).max(500)
+    .refine((ids) => new Set(ids).size === ids.length, 'Hay ids repetidos'),
+})
+
+// ?include_hidden=true incluye las rutinas que el usuario ha ocultado
+export const listRoutinesQuery = z.looseObject({
+  include_hidden: z.enum(['true', 'false']).optional().transform((value) => value === 'true'),
+})
+
 // ─── Rutinas generadas por el recomendador ───────────────────
 const generatedExercise = routineExercise.extend({
   sets: numeric(z.number().int().min(1)),

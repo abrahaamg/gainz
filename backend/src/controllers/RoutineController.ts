@@ -5,7 +5,9 @@ import { asyncHandler } from '../utils/functions'
 
 export const RoutineController = {
   getAll: asyncHandler(async (req: Request, res: Response) => {
-    const routines = await RoutineService.getAll(req.user!.id)
+    // validate() ya ha convertido include_hidden a boolean
+    const { include_hidden: includeHidden } = req.query as unknown as { include_hidden: boolean }
+    const routines = await RoutineService.getAll(req.user!.id, { includeHidden })
     res.json({ data: routines })
   }),
 
@@ -27,5 +29,21 @@ export const RoutineController = {
   delete: asyncHandler(async (req: Request, res: Response) => {
     await RoutineService.delete(Number(req.params.id), req.user!.id)
     res.json({ data: { deleted: true } })
+  }),
+
+  hide: asyncHandler(async (req: Request, res: Response) => {
+    await RoutineService.hide(Number(req.params.id), req.user!.id)
+    res.json({ data: { hidden: true } })
+  }),
+
+  unhide: asyncHandler(async (req: Request, res: Response) => {
+    await RoutineService.unhide(Number(req.params.id), req.user!.id)
+    res.json({ data: { hidden: false } })
+  }),
+
+  reorder: asyncHandler(async (req: Request, res: Response) => {
+    const { routine_ids: routineIds } = req.body as { routine_ids: number[] }
+    await RoutineService.reorder(req.user!.id, routineIds)
+    res.json({ data: { routine_ids: routineIds } })
   }),
 }

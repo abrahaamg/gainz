@@ -3,28 +3,48 @@ import { pool } from '../config'
 import { CreateRoutineDTO, CreateRoutineExerciseDTO, Routine, RoutineExercise } from '../types/entities/Routine'
 import { applySetPlan, parseSetPlan } from '../utils/setPlan'
 
+// is_hidden y position salen de las preferencias del usuario (user_routine_prefs)
+const toRoutine = (row: RowDataPacket): Routine => ({
+  ...row,
+  tags: Array.isArray(row.tags) ? row.tags : [],
+  is_hidden: Boolean(row.is_hidden),
+  position: row.position ?? null,
+}) as Routine
+
 // ─── Find all routines for a user (incluye rutinas públicas) ─
-export const findAllRoutines = async (userId: number): Promise<Routine[]> => {
+// Por defecto excluye las que el usuario ha ocultado; con includeHidden salen
+// todas y cada una lleva is_hidden.
+// Orden: primero las que el usuario aún no ha colocado (las más nuevas arriba,
+// así una rutina recién creada o importada sale la primera) y luego su orden manual.
+export const findAllRoutines = async (userId: number, { includeHidden = false } = {}): Promise<Routine[]> => {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT r.*,
-       (SELECT COUNT(*) FROM routine_exercises WHERE routine_id = r.id) AS exercise_count
+       (SELECT COUNT(*) FROM routine_exercises WHERE routine_id = r.id) AS exercise_count,
+       COALESCE(p.hidden, false) AS is_hidden,
+       p.position
      FROM routines r
-     WHERE r.user_id = ? OR r.is_public = true
-     ORDER BY r.updated_at DESC`,
-    [userId]
+     LEFT JOIN user_routine_prefs p ON p.routine_id = r.id AND p.user_id = ?
+     WHERE (r.user_id = ? OR r.is_public = true)
+       ${includeHidden ? '' : 'AND COALESCE(p.hidden, false) = false'}
+     ORDER BY (p.position IS NOT NULL), p.position, r.created_at DESC, r.id DESC`,
+    [userId, userId]
   )
-  return rows.map(r => ({ ...r, tags: Array.isArray(r.tags) ? r.tags : [] })) as Routine[]
+  return rows.map(toRoutine)
 }
 
 // ─── Find one routine with all exercises (full JOIN) ─────────
+// Devuelve la rutina aunque el usuario la haya ocultado (se puede abrir por enlace)
 export const findRoutineById = async (id: number, userId: number): Promise<{ routine: Routine; exercises: RoutineExercise[] } | null> => {
   const [routineRows] = await pool.query<RowDataPacket[]>(
-    'SELECT * FROM routines WHERE id = ? AND (user_id = ? OR is_public = true)',
-    [id, userId]
+    `SELECT r.*, COALESCE(p.hidden, false) AS is_hidden, p.position
+     FROM routines r
+     LEFT JOIN user_routine_prefs p ON p.routine_id = r.id AND p.user_id = ?
+     WHERE r.id = ? AND (r.user_id = ? OR r.is_public = true)`,
+    [userId, id, userId]
   )
   if (!routineRows.length) return null
 
-  const routine = { ...routineRows[0], tags: Array.isArray(routineRows[0].tags) ? routineRows[0].tags : [] } as Routine
+  const routine = toRoutine(routineRows[0])
 
   const [exRows] = await pool.query<RowDataPacket[]>(
     `SELECT
@@ -141,6 +161,48 @@ export const deleteRoutine = async (id: number, userId: number): Promise<boolean
     [id, userId]
   )
   return result.affectedRows > 0
+}
+
+// ─── Hide / unhide a routine for a user (idempotentes) ───────
+// hidden_at conserva la fecha de la primera vez que se ocultó
+export const hideRoutine = async (id: number, userId: number): Promise<void> => {
+  await pool.query(
+    `INSERT INTO user_routine_prefs (user_id, routine_id, hidden, hidden_at)
+     VALUES (?, ?, true, CURRENT_TIMESTAMP)
+     ON DUPLICATE KEY UPDATE
+       hidden_at = IF(hidden, hidden_at, CURRENT_TIMESTAMP),
+       hidden = true`,
+    [userId, id]
+  )
+}
+
+export const unhideRoutine = async (id: number, userId: number): Promise<void> => {
+  await pool.query(
+    'UPDATE user_routine_prefs SET hidden = false, hidden_at = NULL WHERE user_id = ? AND routine_id = ?',
+    [userId, id]
+  )
+}
+
+// ─── Ids visibles para el usuario (propias o públicas) de entre los dados ─
+export const findVisibleRoutineIds = async (ids: number[], userId: number): Promise<number[]> => {
+  if (!ids.length) return []
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM routines WHERE id IN (?) AND (user_id = ? OR is_public = true)',
+    [ids, userId]
+  )
+  return rows.map(r => r.id as number)
+}
+
+// ─── Orden manual de la lista: position = índice en routineIds ─
+// Solo toca las rutinas enviadas; el resto conserva su posición.
+export const setRoutineOrder = async (userId: number, routineIds: number[]): Promise<void> => {
+  if (!routineIds.length) return
+  const values = routineIds.map((routineId, index) => [userId, routineId, index])
+  await pool.query(
+    `INSERT INTO user_routine_prefs (user_id, routine_id, position) VALUES ?
+     ON DUPLICATE KEY UPDATE position = VALUES(position)`,
+    [values]
+  )
 }
 
 // ─── Helper: insert routine + its exercises ───────────────────
