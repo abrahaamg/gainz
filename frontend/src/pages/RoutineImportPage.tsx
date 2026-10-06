@@ -466,8 +466,8 @@ export default function RoutineImportPage() {
             </GlowCard>
           )}
 
-          <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 md:bottom-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 md:bottom-4">
+            <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 flex-1 text-xs font-medium text-neutral-400" aria-live="polite">
                 {checkError ? (
                   <p>{t('routineImport.dup.checkError')}</p>
@@ -487,7 +487,7 @@ export default function RoutineImportPage() {
                   <p>{t('routineImport.cannotSave')}</p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
                 <button type="button" onClick={() => setStep('paste')} className="btn-ghost-dark">
                   {t('routineImport.back')}
                 </button>

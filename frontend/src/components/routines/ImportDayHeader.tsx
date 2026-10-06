@@ -64,7 +64,7 @@ export default function ImportDayHeader({
             onChange={e => onRename(e.target.value)}
             maxLength={100}
             autoFocus={autoFocus}
-            className="form-input form-input-dark font-bold"
+            className="form-input font-bold"
           />
         </div>
         <div ref={wrapRef} className="relative shrink-0">
@@ -76,14 +76,14 @@ export default function ImportDayHeader({
             aria-controls={`${uid}-menu`}
             aria-label={t('routineImport.dayActions', { name: label })}
             onClick={() => setOpen(o => !o)}
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-300 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-neutral-900 text-neutral-200 transition-colors hover:bg-neutral-800 hover:text-white"
           >
             <i aria-hidden="true" className="bi bi-three-dots" />
           </button>
           {open && (
             <div
               id={`${uid}-menu`}
-              className="absolute right-0 top-full z-30 mt-1 w-56 overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 py-1 shadow-lg"
+              className="absolute right-0 top-full z-[45] mt-1 w-56 overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 py-1 shadow-lg"
             >
               <button type="button" className={menuItem} disabled={isFirst} onClick={act(() => onMove(-1))}>
                 <i aria-hidden="true" className="bi bi-arrow-up" />{t('routineImport.moveDayUp')}
