@@ -78,6 +78,16 @@ export const addSet = async (
       return null
     }
 
+    // El ejercicio tiene que ser público o del propio usuario
+    const [exerciseRows] = await conn.query<RowDataPacket[]>(
+      'SELECT id FROM exercises WHERE id = ? AND (is_public = 1 OR created_by = ?)',
+      [data.exercise_id, userId]
+    )
+    if (!exerciseRows.length) {
+      await conn.rollback()
+      return null
+    }
+
     // Insert session_exercise
     await conn.query(
       `INSERT INTO session_exercises

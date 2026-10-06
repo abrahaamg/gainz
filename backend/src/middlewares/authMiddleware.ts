@@ -27,8 +27,10 @@ const USERNAME_MAX = 100
  * Solo con NODE_ENV=test (tests de integración): la cabecera x-test-user-id
  * elige el usuario de la petición sin pasar por Firebase, para poder probar
  * qué puede tocar cada usuario. Con cualquier otro NODE_ENV se ignora.
+ * Además exige VITEST, que solo define el runner de tests: un despliegue con
+ * NODE_ENV=test por error no abre la puerta a suplantar usuarios.
  */
-const testAuth = process.env.NODE_ENV === 'test'
+const testAuth = process.env.NODE_ENV === 'test' && process.env.VITEST === 'true'
 const TEST_USER_HEADER = 'x-test-user-id'
 
 export const authMiddleware = async (

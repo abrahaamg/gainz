@@ -41,10 +41,27 @@ describe('session.queries', () => {
       expect(conn.release).toHaveBeenCalled()
     })
 
-    // Secuencia de queries con peso y reps: sesión, serie, 1RM, récord previo, [upsert]
+    it('devuelve null y no inserta si el ejercicio es privado de otro usuario', async () => {
+      conn.query
+        .mockResolvedValueOnce([[{ id: 1 }]]) // SELECT sesión FOR UPDATE
+        .mockResolvedValueOnce([[]])          // SELECT ejercicio accesible, sin filas
+
+      const result = await addSet(1, 2, { exercise_id: 99, set_number: 1, reps_done: 10, weight_kg: 60 })
+
+      expect(result).toBeNull()
+      expect(conn.query).toHaveBeenCalledTimes(2)
+      const [sql, params] = conn.query.mock.calls[1]
+      expect(sql).toMatch(/is_public = 1 OR created_by = \?/)
+      expect(params).toEqual([99, 2])
+      expect(conn.rollback).toHaveBeenCalled()
+      expect(conn.commit).not.toHaveBeenCalled()
+    })
+
+    // Secuencia de queries con peso y reps: sesión, ejercicio, serie, 1RM, récord previo, [upsert]
     const mockSetQueries = (previous: { record_type: string; value: string }[]) => {
       conn.query
         .mockResolvedValueOnce([[{ id: 1 }]])          // SELECT sesión FOR UPDATE
+        .mockResolvedValueOnce([[{ id: 1 }]])          // SELECT ejercicio accesible
         .mockResolvedValueOnce([{ affectedRows: 1 }])  // INSERT session_exercises
         .mockResolvedValueOnce([{ affectedRows: 1 }])  // INSERT exercise_1rm_history
         .mockResolvedValueOnce([previous])             // SELECT récord previo

@@ -56,7 +56,13 @@ export const EquipmentService = {
   },
 
   update: async (id: number, userId: number, data: Partial<CreateEquipmentDTO>): Promise<Equipment> => {
-    const updated = await q.updateEquipment(id, userId, data)
+    let updated: Equipment | null
+    try {
+      updated = await q.updateEquipment(id, userId, data)
+    } catch (err) {
+      if ((err as { code?: string }).code === 'ER_DUP_ENTRY') throw new ConflictError(DUPLICATE_MESSAGE)
+      throw err
+    }
     if (!updated) throw new NotFoundError('Equipo no encontrado')
     return updated
   },
