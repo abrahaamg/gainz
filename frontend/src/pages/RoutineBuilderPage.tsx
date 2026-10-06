@@ -21,6 +21,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { routineService } from '../services/routineService'
 import { exerciseService } from '../services/exerciseService'
 import { apiErrorMessage } from '../utils/apiError'
+import { label } from '../utils/labels'
 import { RoutineExerciseForm } from '../types/routine'
 import { Exercise } from '../types/exercise'
 import useDebounce from '../hooks/useDebounce'
@@ -86,9 +87,9 @@ function SortableExerciseCard({
               <p className="font-bold text-white">{ex.exercise_name}</p>
               <div className="flex gap-2 mt-1">
                 <span className={`text-xs font-bold px-2 py-0.5 uppercase tracking-wider rounded-full ${CATEGORY_COLORS[ex.category] ?? 'bg-white/10 text-neutral-300'}`}>
-                  {ex.category}
+                  {label('categories', ex.category)}
                 </span>
-                <span className="text-xs font-medium text-neutral-400">{t(`muscles.${ex.muscle_group}`)}</span>
+                <span className="text-xs font-medium text-neutral-400">{label('muscles', ex.muscle_group)}</span>
               </div>
             </div>
             <button onClick={() => onRemove(ex.id)} className="text-red-400 hover:text-red-300 text-lg leading-none font-bold">×</button>
@@ -441,7 +442,7 @@ export default function RoutineBuilderPage() {
                 >
                   <span>
                     <span className="font-bold text-white">{ex.name}</span>
-                    <span className="text-neutral-400 ml-2 text-xs">{t(`muscles.${ex.muscle_group}`)}</span>
+                    <span className="text-neutral-400 ml-2 text-xs">{label('muscles', ex.muscle_group)}</span>
                   </span>
                   <span className="text-accent font-bold text-xs">{t('exercises.add')}</span>
                 </button>

@@ -7,6 +7,7 @@ import type { AddSetPayload, LastPerformance } from '../types/session'
 import { useWorkoutSession } from '../hooks/useWorkoutSession'
 import { useRestTimer, useStopwatch } from '../hooks/useRestTimer'
 import { fmtTime } from '../utils/time'
+import { label } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
 import Modal from '../components/ui/Modal'
 import EmptyState from '../components/ui/EmptyState'
@@ -452,9 +453,9 @@ function LiveSession({ routineId }: { routineId: number }) {
                   <h2 className="text-2xl font-bold leading-tight text-white">{currentEx.exercise_name}</h2>
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-neutral-900">
-                      {currentEx.category}
+                      {label('categories', currentEx.category)}
                     </span>
-                    <span className="text-xs font-medium text-neutral-400">{currentEx.muscle_group}</span>
+                    <span className="text-xs font-medium text-neutral-400">{label('muscles', currentEx.muscle_group)}</span>
                   </div>
                 </div>
                 <div className="shrink-0 text-right">

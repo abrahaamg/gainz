@@ -12,6 +12,7 @@ import EmptyState from '../components/ui/EmptyState'
 import Skeleton from '../components/ui/Skeleton'
 import PageHeader from '../components/ui/PageHeader'
 import { CHART_THEME, AXIS_PROPS } from '../lib/chartTheme'
+import { translateMuscle } from '../utils/labels'
 import ErrorState from '../components/ui/ErrorState'
 
 const PERIODS = [
@@ -234,9 +235,9 @@ export default function ProgressPage() {
               <div className="p-5">
                 {charts.muscles.length === 0 ? <EmptyChart /> : (
                   <ResponsiveContainer width="100%" height={260}>
-                    <RadarChart data={charts.muscles}>
+                    <RadarChart data={charts.muscles.map(m => ({ ...m, muscle_label: translateMuscle(m.muscle_group) }))}>
                       <PolarGrid stroke={CHART_THEME.polarGrid} />
-                      <PolarAngleAxis dataKey="muscle_group" tick={CHART_THEME.tick} />
+                      <PolarAngleAxis dataKey="muscle_label" tick={CHART_THEME.tick} />
                       <Radar dataKey="sets" stroke={CHART_THEME.accent} fill={CHART_THEME.accent} fillOpacity={0.25} />
                       <Tooltip contentStyle={CHART_THEME.tooltip} formatter={(v) => [String(v ?? 0), t('common.sets')]} />
                     </RadarChart>
