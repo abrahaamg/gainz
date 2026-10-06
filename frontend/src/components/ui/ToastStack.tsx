@@ -18,7 +18,7 @@ export default function ToastStack({ toasts }: { toasts: ToastItem[] }) {
     <div
       role="status"
       aria-live="polite"
-      className="fixed top-4 inset-x-4 z-50 mx-auto flex max-w-md flex-col gap-2 pointer-events-none"
+      className="fixed top-[calc(env(safe-area-inset-top)+1rem)] inset-x-4 z-50 mx-auto flex max-w-md flex-col gap-2 pointer-events-none"
     >
       {toasts.map(toast => (
         <div

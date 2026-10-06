@@ -118,14 +118,14 @@ export default function AccessibilityPanel() {
         onClick={() => setOpen(v => !v)}
         aria-label={t('accessibility.title')}
         title={t('accessibility.openPanel')}
-        className="fixed z-[60] top-0.5 right-2 md:top-auto md:bottom-5 md:right-5 w-11 h-11 md:w-12 md:h-12 text-neutral-300 hover:text-accent md:bg-neutral-900 md:dark:bg-white md:text-white md:dark:text-neutral-900 md:shadow-lg md:hover:shadow-xl rounded-full transition-all duration-200 flex items-center justify-center"
+        className="fixed z-[60] top-[calc(env(safe-area-inset-top)+0.125rem)] right-2 md:top-auto md:bottom-5 md:right-5 w-11 h-11 md:w-12 md:h-12 text-neutral-300 hover:text-accent md:bg-neutral-900 md:dark:bg-white md:text-white md:dark:text-neutral-900 md:shadow-lg md:hover:shadow-xl rounded-full transition-all duration-200 flex items-center justify-center"
       >
         <i className="bi bi-universal-access text-xl" />
       </button>
 
       {/* ── Panel ── */}
       {open && (
-        <div className="fixed top-14 md:top-auto md:bottom-20 right-4 md:right-5 z-[60] w-[min(20rem,calc(100vw-2rem))] bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border border-neutral-100 dark:border-neutral-700 shadow-modal rounded-apple max-h-[80vh] overflow-y-auto">
+        <div className="fixed top-[calc(env(safe-area-inset-top)+3.5rem)] md:top-auto md:bottom-20 right-4 md:right-5 z-[60] w-[min(20rem,calc(100vw-2rem))] bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border border-neutral-100 dark:border-neutral-700 shadow-modal rounded-apple max-h-[80vh] overflow-y-auto">
           <div className="p-5">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-black text-neutral-900 dark:text-white tracking-tight">
