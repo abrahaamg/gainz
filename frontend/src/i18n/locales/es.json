@@ -35,6 +35,7 @@
     "allMasc": "Todos",
     "none": "Ninguno",
     "retry": "Reintentar",
+    "serverWaking": "Despertando el servidor, esto tarda unos segundos solo la primera vez...",
     "saved": "Guardado",
     "deleting": "Eliminando...",
     "noData": "Sin datos",
