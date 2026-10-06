@@ -511,6 +511,24 @@ html.dark .chip-accent {
   background-color: rgba(245,196,0,0.08);
   color: #F5C400;
 }
+/* Chips dentro de tarjetas oscuras: también en tema claro (la tarjeta es siempre oscura) */
+html:not(.high-contrast) .glow-card .chip {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #d4d4d4;
+}
+html:not(.high-contrast) .glow-card .chip:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+html:not(.high-contrast) .glow-card .chip-active {
+  border-color: #F5C400;
+  background: #F5C400;
+  color: #0a0a0a;
+}
+html:not(.high-contrast) .glow-card .chip-accent {
+  border-color: rgba(245, 196, 0, 0.3);
+  background-color: rgba(245, 196, 0, 0.08);
+  color: #F5C400;
+}
 html.dark .bg-accent\/5,
 html.dark .bg-accent\/10 {
   background-color: rgba(245,196,0,0.06);

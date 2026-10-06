@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { sessionService } from '../services/sessionService'
-import { Session } from '../types/session'
+import { useAsync } from '../hooks/useAsync'
 import GlowCard from '../components/ui/GlowCard'
 import PageHeader from '../components/ui/PageHeader'
 import EmptyState from '../components/ui/EmptyState'
+import ErrorState from '../components/ui/ErrorState'
+import Skeleton from '../components/ui/Skeleton'
 
 function fmtTime(secs: number): string {
   const h = Math.floor(secs / 3600)
@@ -41,16 +43,10 @@ export default function HistoryPage() {
     in_progress: t('history.inProgressLabel'),
   }
 
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [loading, setLoading]   = useState(true)
+  const { data, loading, error, reload } = useAsync(() => sessionService.getByUser(100), [])
+  const sessions = data ?? []
   const [filter, setFilter]     = useState<FilterStatus>('')
   const [expanded, setExpanded] = useState<number | null>(null)
-
-  useEffect(() => {
-    sessionService.getByUser(100)
-      .then(setSessions)
-      .finally(() => setLoading(false))
-  }, [])
 
   const filtered = filter
     ? sessions.filter(s => s.status === filter)
@@ -60,13 +56,26 @@ export default function HistoryPage() {
   const completedSessions = sessions.filter(s => s.status === 'completed')
   const totalMinutes = completedSessions.reduce((sum, s) => sum + (s.duration_seconds ?? 0), 0) / 60
   const totalCalories = completedSessions.reduce((sum, s) => sum + (s.calories_burned ?? 0), 0)
-  const avgRating = completedSessions.length
-    ? (completedSessions.reduce((sum, s) => sum + (s.rating ?? 0), 0) / completedSessions.filter(s => s.rating).length).toFixed(1)
+  const rated = completedSessions.filter(s => s.rating)
+  const avgRating = rated.length
+    ? (rated.reduce((sum, s) => sum + (s.rating ?? 0), 0) / rated.length).toFixed(1)
     : '—'
 
   if (loading) return (
-    <div className="flex justify-center items-center h-64">
-      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+    <div role="status" aria-busy="true" className="space-y-4">
+      <Skeleton tone="dark" className="h-24 rounded-apple" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[0, 1, 2, 3].map(i => <Skeleton key={i} tone="dark" className="h-20" />)}
+      </div>
+      <Skeleton tone="dark" className="h-20 rounded-apple" />
+      <Skeleton tone="dark" className="h-20 rounded-apple" />
+    </div>
+  )
+
+  if (error || !data) return (
+    <div>
+      <PageHeader title={t('history.title')} />
+      <ErrorState message={t('common.loadError')} onRetry={reload} />
     </div>
   )
 
@@ -95,7 +104,7 @@ export default function HistoryPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {([
           { value: '', label: t('common.all') },
           { value: 'completed', label: t('history.completed') },
@@ -104,6 +113,8 @@ export default function HistoryPage() {
         ] as { value: FilterStatus; label: string }[]).map(f => (
           <button
             key={f.value}
+            type="button"
+            aria-pressed={filter === f.value}
             onClick={() => setFilter(f.value)}
             className={`chip ${filter === f.value ? 'chip-active' : ''}`}
           >
@@ -127,6 +138,8 @@ export default function HistoryPage() {
               <GlowCard key={session.id}>
                 {/* Header clickable */}
                 <button
+                  type="button"
+                  aria-expanded={isExpanded}
                   onClick={() => setExpanded(isExpanded ? null : session.id)}
                   className="w-full px-5 py-4 text-left"
                 >

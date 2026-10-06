@@ -4,6 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { exerciseService } from '../services/exerciseService'
 import { apiErrorMessage } from '../utils/apiError'
 import { ExerciseCategory, Difficulty, CreateExerciseDTO } from '../types/exercise'
+import { label } from '../utils/labels'
+import GlowCard from '../components/ui/GlowCard'
+import PageHeader from '../components/ui/PageHeader'
+import ErrorState from '../components/ui/ErrorState'
+import Skeleton from '../components/ui/Skeleton'
 
 const CATEGORIES: { value: ExerciseCategory; labelKey: string }[] = [
   { value: 'strength', labelKey: 'categories.strength' },
@@ -52,10 +57,14 @@ export default function ExerciseFormPage() {
   const [loading, setLoading] = useState(false)
   const [fetchLoading, setFetchLoading] = useState(isEditing)
   const [error, setError] = useState<string | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!isEditing || !id) return
     const fetch = async () => {
+      setFetchLoading(true)
+      setLoadFailed(false)
       try {
         const exercise = await exerciseService.getById(parseInt(id, 10))
         setForm({
@@ -73,13 +82,13 @@ export default function ExerciseFormPage() {
           equipment: exercise.equipment ?? [],
         })
       } catch {
-        setError(t('exercises.loadError'))
+        setLoadFailed(true)
       } finally {
         setFetchLoading(false)
       }
     }
     fetch()
-  }, [id, isEditing, t])
+  }, [id, isEditing, reloadKey])
 
   const set = <K extends keyof CreateExerciseDTO>(key: K, value: CreateExerciseDTO[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -119,35 +128,46 @@ export default function ExerciseFormPage() {
     }
   }
 
+  const title = isEditing ? t('exercises.editExercise') : t('exercises.newExercise')
+  const backButton = (
+    <button type="button" onClick={() => navigate('/exercises')} className="btn-ghost-dark">
+      <i aria-hidden="true" className="bi bi-arrow-left mr-1.5" />{t('exercises.backToExercises')}
+    </button>
+  )
+
   if (fetchLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 bg-neutral-200 animate-pulse w-1/2" />
-        <div className="h-48 bg-neutral-200 animate-pulse" />
+      <div role="status" aria-busy="true" className="mx-auto max-w-2xl space-y-4">
+        <Skeleton tone="dark" className="h-24 rounded-apple" />
+        <Skeleton tone="dark" className="h-96 rounded-apple" />
+      </div>
+    )
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <PageHeader title={title} actions={backButton} />
+        <ErrorState message={t('exercises.loadError')} onRetry={() => setReloadKey(k => k + 1)} />
       </div>
     )
   }
 
   return (
-    <div>
-      <button onClick={() => navigate('/exercises')} className="text-xs font-medium text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
-        <i className="bi bi-arrow-left mr-1" />{t('exercises.backToExercises')}
-      </button>
-
-      <h1 className="page-title mb-8">
-        {isEditing ? t('exercises.editExercise') : t('exercises.newExercise')}
-      </h1>
+    <div className="mx-auto max-w-2xl">
+      <PageHeader title={title} actions={backButton} />
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 p-3 mb-6 text-sm font-medium rounded-2xl">{error}</div>
+        <div role="alert" className="mb-6 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-sm font-medium text-red-300">{error}</div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <GlowCard>
+      <form onSubmit={handleSubmit} noValidate className="space-y-6 p-5 sm:p-6">
         {/* Nombre */}
         <div>
-          <label className="form-label">{t('exercises.name')}</label>
+          <label htmlFor="ex-name" className="form-label">{t('exercises.name')}</label>
           <input
-            type="text" required value={form.name}
+            id="ex-name" type="text" required value={form.name}
             onChange={(e) => set('name', e.target.value)}
             placeholder={t('exercises.namePlaceholder')}
             className="form-input"
@@ -156,10 +176,11 @@ export default function ExerciseFormPage() {
 
         {/* Categoría */}
         <div>
-          <label className="form-label">{t('exercises.category')}</label>
-          <div className="flex flex-wrap gap-2">
+          <p id="ex-category" className="form-label">{t('exercises.category')}</p>
+          <div role="group" aria-labelledby="ex-category" className="flex flex-wrap gap-2">
             {CATEGORIES.map(({ value, labelKey }) => (
               <button key={value} type="button"
+                aria-pressed={form.category === value}
                 onClick={() => set('category', value)}
                 className={`chip ${form.category === value ? 'chip-active' : ''}`}
               >
@@ -171,28 +192,30 @@ export default function ExerciseFormPage() {
 
         {/* Músculo principal */}
         <div>
-          <label className="form-label">{t('exercises.mainMuscle')}</label>
+          <label htmlFor="ex-muscle" className="form-label">{t('exercises.mainMuscle')}</label>
           <select
+            id="ex-muscle"
             value={form.muscle_group}
             onChange={(e) => set('muscle_group', e.target.value)}
             className="form-input"
           >
             {MUSCLE_GROUPS.map((m) => (
-              <option key={m} value={m}>{t(`muscles.${m}`)}</option>
+              <option key={m} value={m}>{label('muscles', m)}</option>
             ))}
           </select>
         </div>
 
         {/* Músculos secundarios */}
         <div>
-          <label className="form-label">
-            {t('exercises.secondaryMuscles')} <span className="text-neutral-300 font-normal">({t('exercises.secondaryMusclesHint')})</span>
-          </label>
-          <div className="flex flex-wrap gap-2">
+          <p id="ex-secondary" className="form-label">
+            {t('exercises.secondaryMuscles')} <span className="font-normal text-neutral-400">({t('exercises.secondaryMusclesHint')})</span>
+          </p>
+          <div role="group" aria-labelledby="ex-secondary" className="flex flex-wrap gap-2">
             {MUSCLE_GROUPS.filter(m => m !== form.muscle_group && m !== 'full_body').map(m => {
               const active = form.secondary_muscles?.includes(m)
               return (
                 <button key={m} type="button"
+                  aria-pressed={Boolean(active)}
                   onClick={() => {
                     const current = form.secondary_muscles ?? []
                     set('secondary_muscles', active
@@ -201,7 +224,7 @@ export default function ExerciseFormPage() {
                   }}
                   className={`chip ${active ? 'chip-active' : ''}`}
                 >
-                  {t(`muscles.${m}`)}
+                  {label('muscles', m)}
                 </button>
               )
             })}
@@ -210,10 +233,11 @@ export default function ExerciseFormPage() {
 
         {/* Dificultad */}
         <div>
-          <label className="form-label">{t('exercises.difficulty')}</label>
-          <div className="flex gap-2">
+          <p id="ex-difficulty" className="form-label">{t('exercises.difficulty')}</p>
+          <div role="group" aria-labelledby="ex-difficulty" className="flex flex-wrap gap-2">
             {DIFFICULTIES.map(({ value, labelKey }) => (
               <button key={value} type="button"
+                aria-pressed={form.difficulty === value}
                 onClick={() => set('difficulty', value)}
                 className={`chip ${form.difficulty === value ? 'chip-active' : ''}`}
               >
@@ -225,8 +249,8 @@ export default function ExerciseFormPage() {
 
         {/* Descripción */}
         <div>
-          <label className="form-label">{t('exercises.description')}</label>
-          <textarea rows={3} value={form.description ?? ''}
+          <label htmlFor="ex-description" className="form-label">{t('exercises.description')}</label>
+          <textarea id="ex-description" rows={3} value={form.description ?? ''}
             onChange={(e) => set('description', e.target.value)}
             placeholder={t('exercises.descriptionPlaceholder')}
             className="form-input"
@@ -235,10 +259,10 @@ export default function ExerciseFormPage() {
 
         {/* Instrucciones */}
         <div>
-          <label className="form-label">
+          <label htmlFor="ex-instructions" className="form-label">
             {t('exercises.instructionsLabel')}
           </label>
-          <textarea rows={5} value={form.instructions ?? ''}
+          <textarea id="ex-instructions" rows={5} value={form.instructions ?? ''}
             onChange={(e) => set('instructions', e.target.value)}
             placeholder={t('exercises.instructionsPlaceholder')}
             className="form-input"
@@ -247,10 +271,10 @@ export default function ExerciseFormPage() {
 
         {/* Notas del creador */}
         <div>
-          <label className="form-label">
+          <label htmlFor="ex-notes" className="form-label">
             {t('exercises.creatorNotes')}
           </label>
-          <textarea rows={2} value={form.notes ?? ''}
+          <textarea id="ex-notes" rows={2} value={form.notes ?? ''}
             onChange={(e) => set('notes', e.target.value)}
             placeholder={t('exercises.creatorNotesPlaceholder')}
             className="form-input"
@@ -269,7 +293,7 @@ export default function ExerciseFormPage() {
                 onChange={(e) => set(key, e.target.checked)}
                 className="w-4 h-4 accent-accent"
               />
-              <span className="text-sm font-medium text-neutral-700">{t(labelKey)}</span>
+              <span className="text-sm font-medium text-neutral-200">{t(labelKey)}</span>
             </label>
           ))}
         </div>
@@ -277,25 +301,26 @@ export default function ExerciseFormPage() {
         {/* Equipamiento requerido */}
         {form.requires_equipment && (
           <div>
-            <label className="form-label">{t('exercises.requiredEquipment')}</label>
+            <label htmlFor="ex-equipment" className="form-label">{t('exercises.requiredEquipment')}</label>
             <div className="flex gap-2 mb-3">
-              <input type="text" value={equipmentInput}
+              <input id="ex-equipment" type="text" value={equipmentInput}
                 onChange={(e) => setEquipmentInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEquipment() } }}
                 placeholder={t('exercises.equipmentPlaceholder')}
                 className="flex-1 form-input"
               />
               <button type="button" onClick={addEquipment}
-                className="btn-secondary">
+                className="btn-ghost-dark">
                 {t('exercises.add')}
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {(form.equipment ?? []).map((eq) => (
-                <span key={eq} className="border border-accent/30 bg-accent/10 text-neutral-800 px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded-full">
+                <span key={eq} className="border border-accent/30 bg-accent/10 text-white px-3 py-1.5 text-xs font-bold flex items-center gap-1 rounded-full">
                   {eq}
                   <button type="button" onClick={() => removeEquipment(eq)}
-                    className="ml-1 text-neutral-500 hover:text-red-600 font-bold leading-none">×</button>
+                    aria-label={`${t('common.delete')} ${eq}`}
+                    className="ml-1 text-neutral-400 hover:text-red-400 font-bold leading-none">×</button>
                 </span>
               ))}
             </div>
@@ -309,11 +334,12 @@ export default function ExerciseFormPage() {
             {loading ? t('common.saving') : isEditing ? t('exercises.saveChanges') : t('exercises.createExercise')}
           </button>
           <button type="button" onClick={() => navigate('/exercises')}
-            className="btn-secondary">
+            className="btn-ghost-dark">
             {t('common.cancel')}
           </button>
         </div>
       </form>
+      </GlowCard>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import router from './router'
 import { useAuthInit } from './hooks/useAuth'
 import { AUTH_CONFIG_MISSING } from './config/authMode'
 import ErrorState from './components/ui/ErrorState'
+import ServerWakingBanner from './components/ui/ServerWakingBanner'
 
 export default function App() {
   const { t } = useTranslation()
@@ -17,5 +18,10 @@ export default function App() {
       </div>
     )
   }
-  return <RouterProvider router={router} />
+  return (
+    <>
+      <ServerWakingBanner />
+      <RouterProvider router={router} />
+    </>
+  )
 }

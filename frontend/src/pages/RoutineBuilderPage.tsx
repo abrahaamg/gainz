@@ -21,10 +21,12 @@ import { CSS } from '@dnd-kit/utilities'
 import { routineService } from '../services/routineService'
 import { exerciseService } from '../services/exerciseService'
 import { apiErrorMessage } from '../utils/apiError'
+import { label } from '../utils/labels'
 import { RoutineExerciseForm } from '../types/routine'
 import { Exercise } from '../types/exercise'
 import useDebounce from '../hooks/useDebounce'
 import GlowCard from '../components/ui/GlowCard'
+import PageHeader from '../components/ui/PageHeader'
 
 // ─── Estimated duration ───────────────────────────────────────
 function calcDuration(exercises: RoutineExerciseForm[]): number {
@@ -86,9 +88,9 @@ function SortableExerciseCard({
               <p className="font-bold text-white">{ex.exercise_name}</p>
               <div className="flex gap-2 mt-1">
                 <span className={`text-xs font-bold px-2 py-0.5 uppercase tracking-wider rounded-full ${CATEGORY_COLORS[ex.category] ?? 'bg-white/10 text-neutral-300'}`}>
-                  {ex.category}
+                  {label('categories', ex.category)}
                 </span>
-                <span className="text-xs font-medium text-neutral-400">{t(`muscles.${ex.muscle_group}`)}</span>
+                <span className="text-xs font-medium text-neutral-400">{label('muscles', ex.muscle_group)}</span>
               </div>
             </div>
             <button onClick={() => onRemove(ex.id)} className="text-red-400 hover:text-red-300 text-lg leading-none font-bold">×</button>
@@ -327,14 +329,15 @@ export default function RoutineBuilderPage() {
   const estimatedDuration = calcDuration(exercises)
 
   return (
-    <div>
-      <button onClick={() => navigate('/routines')} className="text-xs font-medium text-neutral-400 hover:text-neutral-900 mb-8 block transition-colors">
-        <i className="bi bi-arrow-left mr-1" />{t('nav.routines')}
-      </button>
-
-      <h1 className="page-title mb-8">
-        {isEdit ? t('routines.editRoutine') : t('routines.newRoutine')}
-      </h1>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        title={isEdit ? t('routines.editRoutine') : t('routines.newRoutine')}
+        actions={
+          <button type="button" onClick={() => navigate('/routines')} className="btn-ghost-dark">
+            <i aria-hidden="true" className="bi bi-arrow-left mr-1.5" />{t('nav.routines')}
+          </button>
+        }
+      />
 
       {/* ── Metadata ── */}
       <GlowCard className="mb-6">
@@ -441,7 +444,7 @@ export default function RoutineBuilderPage() {
                 >
                   <span>
                     <span className="font-bold text-white">{ex.name}</span>
-                    <span className="text-neutral-400 ml-2 text-xs">{t(`muscles.${ex.muscle_group}`)}</span>
+                    <span className="text-neutral-400 ml-2 text-xs">{label('muscles', ex.muscle_group)}</span>
                   </span>
                   <span className="text-accent font-bold text-xs">{t('exercises.add')}</span>
                 </button>
@@ -484,7 +487,7 @@ export default function RoutineBuilderPage() {
       )}
 
       {/* ── Footer ── */}
-      <GlowCard className="sticky bottom-4">
+      <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-4 z-10">
         <div className="p-4 flex items-center justify-between">
           <div className="text-sm text-neutral-400 font-medium">
             {exercises.length > 0 && (
@@ -496,7 +499,7 @@ export default function RoutineBuilderPage() {
             {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
             <button
               onClick={() => navigate('/routines')}
-              className="btn-secondary"
+              className="btn-ghost-dark"
             >
               {t('common.cancel')}
             </button>

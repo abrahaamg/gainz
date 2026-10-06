@@ -109,7 +109,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-3xl">
       <PageHeader
         leading={
           <div aria-hidden="true" className="w-14 h-14 shrink-0 rounded-full bg-accent/20 flex items-center justify-center text-xl font-bold text-accent ring-2 ring-accent/30">
@@ -324,7 +324,7 @@ export default function ProfilePage() {
         )}
 
         {/* Guardar */}
-        <div className="flex items-center gap-4 sticky bottom-6 z-10">
+        <div className="flex items-center gap-4 sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-6 z-10">
           <button
             type="submit"
             disabled={saving}

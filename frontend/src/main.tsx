@@ -7,6 +7,15 @@ import { applyStoredA11yPrefs } from './utils/a11yPrefs'
 
 applyStoredA11yPrefs()
 
+// Calentamiento del backend (Render gratuito se duerme): se despierta en paralelo al login.
+const apiUrl = import.meta.env.VITE_API_URL as string | undefined
+if (apiUrl) {
+  const healthUrl = apiUrl.replace(/\/api\/v1\/?$/, '') + '/health'
+  fetch(healthUrl, { method: 'GET', mode: 'cors' }).catch(() => {
+    /* silencioso: si falla, la app sigue */
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
