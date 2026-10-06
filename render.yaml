@@ -13,7 +13,8 @@ services:
     buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build
     # El plan free no admite preDeployCommand: las migraciones pendientes se
     # aplican en cada arranque, antes de levantar la API. Si fallan, no arranca.
-    startCommand: node dist/db/cli.js migrate && node dist/index.js
+    # setup = migraciones + seeds pendientes (registrados: cada uno corre una vez).
+    startCommand: node dist/db/cli.js setup && node dist/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
