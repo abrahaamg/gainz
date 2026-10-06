@@ -3,8 +3,6 @@
 -- Tabla para histórico de 1RM estimado y análisis de progreso
 -- ============================================================
 
-USE fitness_tracker;
-
 CREATE TABLE IF NOT EXISTS exercise_1rm_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,

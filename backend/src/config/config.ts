@@ -11,5 +11,9 @@ export const config = {
     name: process.env.DB_NAME ?? 'fitness_tracker',
     user: process.env.DB_USER ?? 'root',
     password: process.env.DB_PASSWORD ?? '',
+    // TiDB Cloud exige TLS; el MySQL local no lo necesita
+    ssl: process.env.DB_SSL === 'true',
+    // TiDB Starter limita las conexiones simultáneas: con 5 sobra para la API
+    poolLimit: parseInt(process.env.DB_POOL_LIMIT ?? '5', 10) || 5,
   },
 }

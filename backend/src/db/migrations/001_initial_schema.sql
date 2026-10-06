@@ -1,14 +1,12 @@
 -- ============================================================
 -- 001_initial_schema.sql
 -- TFG Gainz — Fitness Routine Manager
--- Ejecutar en MySQL Workbench: abre el archivo y pulsa el rayo (Execute)
+-- Se aplica con `pnpm db:migrate` sobre la BD de DB_NAME.
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS fitness_tracker
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE fitness_tracker;
+-- Las tablas heredan el juego de caracteres de la BD (en TiDB por defecto
+-- es utf8mb4_bin, que distingue mayúsculas en las comparaciones de texto)
+ALTER DATABASE CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ─────────────────────────────────────────────────────────────
 -- 1. USERS
@@ -20,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
   email         VARCHAR(255) NOT NULL UNIQUE,
   fitness_level VARCHAR(20)  DEFAULT 'beginner',
   -- beginner | intermediate | advanced
-  goals         JSON         DEFAULT ('[]'),
+  goals         JSON         DEFAULT (JSON_ARRAY()),
   weight_kg     DECIMAL(5,2),
   avatar_url    VARCHAR(500),
   created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
@@ -37,7 +35,7 @@ CREATE TABLE IF NOT EXISTS exercises (
   -- cardio | strength | flexibility | hiit | balance
   muscle_group       VARCHAR(100) NOT NULL,
   -- chest | back | legs | shoulders | arms | core | full_body
-  secondary_muscles  JSON         DEFAULT ('[]'),
+  secondary_muscles  JSON         DEFAULT (JSON_ARRAY()),
   description        TEXT,
   instructions       TEXT,
   difficulty         VARCHAR(10)  DEFAULT 'medium',
@@ -70,7 +68,7 @@ CREATE TABLE IF NOT EXISTS routines (
   cooldown_notes         TEXT,
   is_public              BOOLEAN      DEFAULT false,
   times_completed        INT          DEFAULT 0,
-  tags                   JSON         DEFAULT ('[]'),
+  tags                   JSON         DEFAULT (JSON_ARRAY()),
   created_at             DATETIME     DEFAULT CURRENT_TIMESTAMP,
   updated_at             DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

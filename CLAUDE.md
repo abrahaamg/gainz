@@ -4,7 +4,7 @@
 - Backend: Node.js + TypeScript + Express + MySQL (mysql2) — puerto 3001
 - Frontend: React 19 + TypeScript + Vite + Tailwind CSS — puerto 5173
 - Package manager: pnpm
-- BD: `fitness_tracker` (no `gainz`)
+- BD: `fitness_tracker` en local (no `gainz`); en producción (TiDB Cloud) la que diga `DB_NAME`
 - Usuario dev: id=1, sin auth real (Firebase vacío)
 
 ## Arquitectura backend
@@ -51,17 +51,24 @@ cd backend && pnpm dev
 cd frontend && pnpm dev
 ```
 
-## Migraciones pendientes de ejecutar
-Ejecutar en MySQL Workbench en este orden:
-1. `backend/src/db/migrations/002_profile_and_equipment_catalog.sql` — perfil ampliado + catálogo de equipo + seed exercise_equipment
-2. `backend/src/db/seeds/002_seed_routines.sql` — 5 rutinas oficiales de Gainz
-3. `backend/src/db/migrations/003_equipment_catalog_name.sql` — columna `catalog_name` en equipment para vincular equipo personalizado al catálogo
-4. `backend/src/db/migrations/004_1rm_history.sql` — tabla `exercise_1rm_history` para gráfica de proyección de 1RM
-5. `backend/src/db/migrations/005_birth_date.sql` — columna `birth_date` en users (reemplaza edad estática por fecha de nacimiento con cálculo automático)
-6. `backend/src/db/migrations/006_secondary_muscles.sql` — poblar `secondary_muscles` JSON para los 25 ejercicios del seed
-7. `backend/src/db/migrations/007_indices.sql` — índices para las consultas de sesiones, 1RM y progreso
-8. `backend/src/db/migrations/008_users_email_nullable.sql` — `users.email` admite NULL (cuentas de Firebase sin email)
-9. `backend/src/db/migrations/009_users_sex_length.sql` — `users.sex` pasa a VARCHAR(16) para admitir `unspecified`
+## Migraciones y seeds
+Se aplican con el runner de `backend/src/db/` (desde `backend/`, contra la BD de `DB_NAME`):
+- `pnpm db:migrate` — aplica en orden los `.sql` de `src/db/migrations/` que falten y los apunta en `schema_migrations` (nombre, aplicada_en)
+- `pnpm db:seed` — lo mismo con `src/db/seeds/`, apuntados en `schema_seeds`. Los seeds son además idempotentes: re-ejecutarlos no duplica nada
+- `pnpm db:setup` — migrate + seed. Es lo que se usa para montar una BD vacía (producción en TiDB, o una local nueva)
+- `--baseline` (`pnpm db:migrate --baseline`, `pnpm db:seed --baseline`) — registra como aplicados los ficheros pendientes **sin ejecutarlos**. Solo para una BD que ya los tenía aplicados a mano
+- La BD local `fitness_tracker` ya está registrada (001-009 con `--baseline`)
+
+Reglas para ficheros nuevos:
+- Migración nueva = fichero nuevo con el siguiente número (`010_...sql`). Nunca editar una ya aplicada
+- Sin `USE`, sin `DELIMITER` ni procedimientos almacenados (TiDB no los admite) y sin el nombre de la BD escrito: siempre `DATABASE()`
+- El fichero se manda entero en una sola llamada, así que puede llevar varias sentencias
+- Los datos de demo (`src/db/seeds/demo/003_seed_test_data.sql`) no los aplica `db:seed`: se cargan a mano solo en local
+
+## Tests
+- `pnpm test` — unitarios (mocks, sin BD)
+- `pnpm test:integration` — contra MySQL real, en la BD `fitness_tracker_test` (se borra y se monta con `db:setup` en cada ejecución; nunca toca `fitness_tracker`). Coge host/usuario/contraseña del `.env`. Si no hay MySQL, se saltan
+- En los de integración, la cabecera `x-test-user-id` elige el usuario sin Firebase. Solo funciona con `NODE_ENV=test`
 
 ## Flujo de onboarding
 - `/register` → crea cuenta (Firebase en producción, skip en DEV)

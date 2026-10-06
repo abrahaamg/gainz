@@ -1,2 +1,2 @@
 export { config } from './config'
-export { pool, checkDatabaseConnection } from './database'
+export { pool, checkDatabaseConnection, connectionOptions } from './database'

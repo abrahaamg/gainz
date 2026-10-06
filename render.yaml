@@ -1,0 +1,42 @@
+# Blueprint de Render para el backend de Gainz (ver DESPLIEGUE.md).
+# Los secretos no van aquí: se rellenan en el panel de Render (sync: false).
+services:
+  - type: web
+    name: gainz-backend
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    branch: main
+    # --prod=false: con NODE_ENV=production pnpm se saltaría las devDependencies
+    # y sin ellas no hay TypeScript para compilar
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build
+    # El plan free no admite preDeployCommand: las migraciones pendientes se
+    # aplican en cada arranque, antes de levantar la API. Si fallan, no arranca.
+    startCommand: node dist/db/cli.js migrate && node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_SSL
+        value: "true"
+      - key: DB_POOL_LIMIT
+        value: "5"
+      - key: DB_PORT
+        value: "4000"
+      - key: DB_HOST
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false

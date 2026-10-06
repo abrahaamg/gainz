@@ -28,7 +28,7 @@ Autenticación delegada en **Firebase Authentication** (con modo de desarrollo s
 | **Node.js** | 18 LTS o superior | [nodejs.org](https://nodejs.org) |
 | **pnpm** | 9+ | `npm install -g pnpm` |
 | **MySQL** | 8.0+ | [mysql.com](https://dev.mysql.com/downloads/) o XAMPP |
-| **MySQL Workbench** *(recomendado)* | — | Para ejecutar las migraciones cómodamente |
+| **MySQL Workbench** *(opcional)* | — | Para consultar la BD o cargar los datos de demo |
 | **Git** | 2.x | [git-scm.com](https://git-scm.com) |
 
 Sistema operativo: Windows 10/11, macOS o Linux. El proyecto se ha desarrollado y probado en Windows 11.
@@ -52,38 +52,29 @@ cd backend  && pnpm install
 cd ../frontend && pnpm install
 ```
 
-### 2. Crear la base de datos
+### 2. Configurar `backend/.env`
 
-Conéctate a MySQL (con MySQL Workbench, el cliente CLI o el panel de XAMPP/MAMP) y crea la base de datos:
+Primero rellena `backend/.env` como se explica en el paso 4 (al menos las variables `DB_*`): el paso 3 se conecta a MySQL con esos datos.
 
-```sql
-CREATE DATABASE fitness_tracker
-  DEFAULT CHARACTER SET utf8mb4
-  DEFAULT COLLATE utf8mb4_unicode_ci;
+### 3. Crear la base de datos y cargar los datos
+
+Con MySQL arrancado, desde `backend/`:
+
+```bash
+cd backend
+pnpm db:setup
 ```
 
-### 3. Ejecutar migraciones y seeds en el orden indicado
+Crea la base de datos de `DB_NAME` si no existe, aplica todas las migraciones (`src/db/migrations/`) y después los seeds (`src/db/seeds/`): usuario de desarrollo `id=1`, 155 ejercicios del catálogo con su equipo y músculos secundarios, catálogo de equipamiento y 5 rutinas oficiales. Lo aplicado queda apuntado en las tablas `schema_migrations` y `schema_seeds`, así que se puede repetir sin duplicar nada.
 
-> **IMPORTANTE.** Las migraciones y los seeds deben ejecutarse **intercalados** en el orden exacto que se indica abajo. Algunas migraciones (la 002 y la 006) actualizan datos de los ejercicios y, por tanto, requieren que el seed de ejercicios ya esté cargado. Ejecutar todas las migraciones primero y todos los seeds después dejaría la base de datos en un estado parcialmente vacío (`exercise_equipment` y `secondary_muscles` sin poblar).
+| Comando | Qué hace |
+|---|---|
+| `pnpm db:migrate` | Aplica solo las migraciones pendientes. |
+| `pnpm db:seed` | Aplica solo los seeds pendientes. |
+| `pnpm db:setup` | Las dos cosas, en ese orden. |
+| `pnpm db:migrate --baseline` | Apunta como aplicadas las migraciones pendientes **sin ejecutarlas**. Solo para una BD montada a mano antes de existir el runner. |
 
-En MySQL Workbench: `File → Open SQL Script…`, seleccionar el archivo y pulsar el rayo amarillo (*Execute*). Ejecuta los archivos en este orden:
-
-| Orden | Archivo | Tipo | Qué hace |
-|---|---|---|---|
-|  1 | `migrations/001_initial_schema.sql`               | mig.  | Crea las 11 tablas base. |
-|  2 | `seeds/000_dev_user.sql`                          | seed  | Crea el usuario de desarrollo `id=1`. |
-|  3 | `seeds/001_seed_exercises.sql`                    | seed  | Carga los 25 ejercicios oficiales del catálogo público. |
-|  4 | `migrations/002_profile_and_equipment_catalog.sql`| mig.  | Amplía `users` (sex, experience, goals, injuries…), crea `equipment_catalog` y rellena `exercise_equipment` para los 25 ejercicios. |
-|  5 | `migrations/003_equipment_catalog_name.sql`       | mig.  | Añade `catalog_name` a `equipment`. |
-|  6 | `migrations/004_1rm_history.sql`                  | mig.  | Crea `exercise_1rm_history` para la gráfica de proyección de 1RM. |
-|  7 | `migrations/005_birth_date.sql`                   | mig.  | Añade `birth_date` a `users`. |
-|  8 | `migrations/006_secondary_muscles.sql`            | mig.  | Pobla el campo JSON `secondary_muscles` de los 25 ejercicios. |
-|  9 | `seeds/002_seed_routines.sql`                     | seed  | Carga 5 rutinas oficiales públicas. |
-| 10 | `seeds/004_seed_extended_exercises.sql`           | seed  | *(opcional)* Catálogo extendido de ejercicios (130 ejercicios adicionales). |
-
-> El archivo `seeds/003_seed_test_data.sql` añade sesiones de prueba ya completadas para ver el *dashboard*, las gráficas de progreso y los logros desbloqueados sin tener que registrar tú mismo varias sesiones. **No es obligatorio** si quieres empezar la BD vacía y registrar tus propias sesiones.
->
-> El seed `004_seed_extended_exercises.sql` es idempotente: si se ejecuta más de una vez no duplica ejercicios.
+> El archivo `seeds/demo/003_seed_test_data.sql` añade sesiones de prueba ya completadas para ver el *dashboard*, las gráficas de progreso y los logros. `db:setup` **no** lo carga: si lo quieres, ejecútalo a mano en MySQL Workbench sobre la BD ya montada.
 
 ### 4. Configurar variables de entorno
 
@@ -284,8 +275,8 @@ Código propiedad del autor. Uso académico exclusivo.
 | Problema | Solución |
 |---|---|
 | `Error connecting to MySQL` al arrancar el backend | Verifica que MySQL esté arrancado y que `DB_USER` / `DB_PASSWORD` en `backend/.env` sean correctos. |
-| `Table 'users' doesn't exist` | Las migraciones no se han ejecutado o están incompletas. Ejecuta los 6 archivos de `backend/src/db/migrations/` en orden. |
-| No aparecen ejercicios en `/exercises` | Falta ejecutar los seeds. Carga `001_seed_exercises.sql` en MySQL. |
+| `Table 'users' doesn't exist` | Las migraciones no se han ejecutado. Ejecuta `pnpm db:migrate` desde `backend/`. |
+| No aparecen ejercicios en `/exercises` | Faltan los seeds. Ejecuta `pnpm db:seed` desde `backend/`. |
 | El *frontend* muestra error de Firebase al iniciar sesión | Modo DEV: deja las `VITE_FIREBASE_*` vacías. Modo PROD: rellena con la config de tu proyecto Firebase. |
 | `EADDRINUSE: address already in use 3001` | El puerto 3001 está ocupado. Cambia `PORT` en `backend/.env` o cierra el proceso que lo usa. |
 
