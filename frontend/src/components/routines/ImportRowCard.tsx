@@ -9,6 +9,7 @@ import { label } from '../../utils/labels'
 interface DayOption {
   key: string
   name: string
+  unassigned?: boolean
 }
 
 interface Props {
@@ -20,6 +21,7 @@ interface Props {
   onPlanChange: (plan: SetPlanEntry[]) => void
   onNotesChange: (notes: string) => void
   onPickExercise: () => void
+  onEditExercise: () => void
   onSwap: () => void
   onDismissWarning: (w: RowWarning) => void
   onMove: (delta: -1 | 1) => void
@@ -32,15 +34,16 @@ const iconBtn =
 
 /** Fila del paso "Revisar": ejercicio emparejado, series por serie, notas y avisos. */
 export default function ImportRowCard({
-  row, index, count, days, dayKey, onPlanChange, onNotesChange, onPickExercise, onSwap,
+  row, index, count, days, dayKey, onPlanChange, onNotesChange, onPickExercise, onEditExercise, onSwap,
   onDismissWarning, onMove, onMoveToDay, onRemove,
 }: Props) {
   const { t } = useTranslation()
   const resolved = row.exercise !== null
-  const otherDays = days.filter(d => d.key !== dayKey)
+  const unassigned = days.find(d => d.key === dayKey)?.unassigned === true
+  const dayOptions = days.filter(d => !d.unassigned || d.key === dayKey)
 
   return (
-    <GlowCard className={resolved ? undefined : '!border-amber-500/40'}>
+    <GlowCard className={resolved && !unassigned ? undefined : '!border-amber-500/40'}>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -91,6 +94,13 @@ export default function ImportRowCard({
           </span>
         </button>
 
+        {resolved && (
+          <button type="button" onClick={onEditExercise} className="btn-ghost-dark mt-2 px-3 py-1.5 text-xs">
+            <i aria-hidden="true" className="bi bi-pencil mr-1.5" />{t('routineImport.edit.button')}
+            <span className="sr-only"> {row.exercise!.name}</span>
+          </button>
+        )}
+
         {/* Avisos */}
         {row.warnings.length > 0 && (
           <ul className="mt-3 space-y-2">
@@ -135,17 +145,20 @@ export default function ImportRowCard({
           />
         </div>
 
-        {otherDays.length > 0 && (
+        {dayOptions.length > 1 && (
           <div className="mt-3">
-            <label htmlFor={`imp-day-${row.key}`} className="form-label">{t('routineImport.moveToDay')}</label>
+            <label htmlFor={`imp-day-${row.key}`} className="form-label">{t('routineImport.rowDay')}</label>
             <select
               id={`imp-day-${row.key}`}
-              value=""
-              onChange={e => e.target.value && onMoveToDay(e.target.value)}
+              value={dayKey}
+              onChange={e => e.target.value !== dayKey && onMoveToDay(e.target.value)}
               className="form-input form-input-dark"
             >
-              <option value="">{t('routineImport.keepInDay')}</option>
-              {otherDays.map(d => <option key={d.key} value={d.key}>{d.name || t('routineImport.unnamedDay')}</option>)}
+              {dayOptions.map(d => (
+                <option key={d.key} value={d.key}>
+                  {d.unassigned ? t('routineImport.unassigned') : d.name || t('routineImport.unnamedDay')}
+                </option>
+              ))}
             </select>
           </div>
         )}

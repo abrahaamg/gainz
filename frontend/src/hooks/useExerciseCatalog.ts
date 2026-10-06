@@ -23,5 +23,7 @@ export function useExerciseCatalog() {
     reload,
     /** Añade al catálogo local un ejercicio recién creado. */
     addToCatalog: (ex: Exercise) => setData(prev => [...(prev ?? []), ex]),
+    /** Sustituye en el catálogo local un ejercicio propio ya editado. */
+    replaceInCatalog: (ex: Exercise) => setData(prev => (prev ?? []).map(e => (e.id === ex.id ? ex : e))),
   }
 }

@@ -841,8 +841,45 @@
     "choose": "Elegir",
     "change": "Cambiar",
     "notes": "Notas",
-    "moveToDay": "Mover a otro día",
-    "keepInDay": "Dejar en este día",
+    "rowDay": "Día",
+    "unassigned": "Sin asignar",
+    "unassignedHint": "No he podido proponer día para estos ejercicios. Asigna cada uno a un día o quítalo para poder guardar.",
+    "dayRows": "{{count}} ejercicios",
+    "skipDay": "No importar este día",
+    "importDay": "Importar este día",
+    "skippedDay": "Este día no se importará: no se creará su rutina.",
+    "emptyPlanDay": "Sin ejercicios: no se creará rutina para este día.",
+    "mode": {
+      "label": "Cómo repartir lo importado",
+      "plan": "Plan por días",
+      "table": "Un día por tabla",
+      "planHelp": "Reparte los ejercicios en un plan semanal. La propuesta va por músculo y la puedes corregir en cada fila.",
+      "tableHelp": "Cada tabla pegada se convierte en una rutina."
+    },
+    "plan": {
+      "name": "Nombre del plan",
+      "days": "Número de días",
+      "proposalHint": "Propuesta: tirón en el día 1, empuje en el día 2 y pierna en el día 3."
+    },
+    "dup": {
+      "title": "Ya tienes rutinas con estos nombres",
+      "help": "Elige qué hacer con cada una antes de guardar.",
+      "skip": "Omitir este día (no se crea)",
+      "copy": "Guardar como copia: «{{name}}»",
+      "continue": "Continuar y guardar {{count}} rutinas",
+      "none": "No queda ninguna rutina por guardar.",
+      "checking": "Comprobando...",
+      "checkError": "No se pudieron comprobar tus rutinas existentes. Inténtalo de nuevo."
+    },
+    "edit": {
+      "button": "Editar ejercicio",
+      "title": "Editar ejercicio",
+      "catalogNote": "Este ejercicio es del catálogo y no se modifica: se guarda una copia propia con tus cambios y esta fila usará la copia.",
+      "ownNote": "Es un ejercicio tuyo: los cambios se guardan en él.",
+      "save": "Guardar cambios",
+      "saveAsOwn": "Guardar como ejercicio propio",
+      "error": "No se pudo guardar el ejercicio."
+    },
     "warnings": {
       "swapped": "Parece que reps y peso están intercambiados (reps muy altas y peso bajo).",
       "repsCount": "El nº de repeticiones no coincide con las series. Se ha completado con el último valor.",
@@ -857,6 +894,7 @@
     "createAndUse": "Crear y usar",
     "createError": "No se pudo crear el ejercicio.",
     "cannotSave": "Resuelve todas las filas (emparejar, crear o quitar) para guardar.",
+    "cannotSaveUnassigned": "Quedan {{count}} ejercicios sin asignar a un día. Asígnalos o quítalos para guardar.",
     "readyToSave": "Se crearán {{count}} rutinas.",
     "back": "Volver",
     "saveRoutines": "Guardar {{count}} rutinas",

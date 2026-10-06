@@ -9,6 +9,10 @@ import type { ParseResult, RowWarning } from './parse'
 export interface DraftExercise extends CatalogItem {
   category: string
   muscle_group: string
+  /** Dueño del ejercicio. null/ausente = catálogo público. */
+  created_by?: number | null
+  secondary_muscles?: string[]
+  difficulty?: string
 }
 
 export interface DraftRow {
@@ -21,12 +25,20 @@ export interface DraftRow {
   plan: SetPlanEntry[]
   notes: string
   warnings: RowWarning[]
+  /** Índice de la tabla pegada de la que viene (para volver al modo "un día por tabla"). */
+  source: number
+  /** true si el usuario ha elegido el día a mano: el reparto automático ya no lo toca. */
+  manual?: boolean
 }
 
 export interface DraftDay {
   key: string
   name: string
   rows: DraftRow[]
+  /** Plan semanal: día que no se importa. */
+  skipped?: boolean
+  /** Plan semanal: cajón "Sin asignar" (no es una rutina). */
+  unassigned?: boolean
 }
 
 export const IMPORT_DESCRIPTION = 'Importada'
@@ -36,7 +48,7 @@ const nextKey = (prefix: string) => `${prefix}-${++counter}`
 
 export function buildDraft(parsed: ParseResult, catalog: DraftExercise[], index?: MatchIndex<DraftExercise>): DraftDay[] {
   const idx = index ?? buildMatchIndex(catalog)
-  return parsed.days.map(day => ({
+  return parsed.days.map((day, source) => ({
     key: nextKey('day'),
     name: day.name,
     rows: day.rows.map(row => {
@@ -49,21 +61,32 @@ export function buildDraft(parsed: ParseResult, catalog: DraftExercise[], index?
         plan: buildPlan(row.sets, row.reps, row.weights),
         notes: row.notes,
         warnings: row.warnings,
+        source,
       }
     }),
   }))
 }
 
 export function summarize(days: DraftDay[]): { matched: number; pending: number; total: number } {
-  const rows = days.flatMap(d => d.rows)
+  const rows = days.filter(d => !d.skipped).flatMap(d => d.rows)
   const matched = rows.filter(r => r.exercise).length
   return { matched, pending: rows.length - matched, total: rows.length }
 }
 
-/** Se puede guardar si hay filas, todas resueltas, y cada día tiene nombre y al menos una fila. */
-export function canSave(days: DraftDay[]): boolean {
-  if (days.length === 0) return false
-  return days.every(d => d.name.trim() !== '' && d.rows.length > 0 && d.rows.every(r => r.exercise !== null))
+/** Días que se convertirán en rutina: sin los omitidos, sin el cajón "Sin asignar" y (opcional) sin los vacíos. */
+export function daysToSave(days: DraftDay[], dropEmpty = false): DraftDay[] {
+  return days.filter(d => !d.skipped && !d.unassigned && (!dropEmpty || d.rows.length > 0))
+}
+
+/**
+ * Se puede guardar si hay algo que guardar, nada queda "Sin asignar", todas las filas están
+ * resueltas y cada día tiene nombre (y filas, salvo que `dropEmpty` ignore los vacíos).
+ */
+export function canSave(days: DraftDay[], dropEmpty = false): boolean {
+  if (days.some(d => d.unassigned && d.rows.length > 0)) return false
+  const list = daysToSave(days, dropEmpty)
+  if (list.length === 0) return false
+  return list.every(d => d.name.trim() !== '' && d.rows.length > 0 && d.rows.every(r => r.exercise !== null))
 }
 
 export function swapRow(row: DraftRow): DraftRow {
