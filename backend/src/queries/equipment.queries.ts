@@ -11,6 +11,21 @@ export const findUserEquipment = async (userId: number): Promise<Equipment[]> =>
   return rows as Equipment[]
 }
 
+// El usuario ya tiene un equipo con ese nombre o vinculado al mismo item del catálogo
+export const userHasEquipment = async (
+  userId: number,
+  name: string,
+  catalogName: string | null
+): Promise<boolean> => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT 1 FROM equipment
+     WHERE user_id = ? AND (name = ? OR (? IS NOT NULL AND catalog_name = ?))
+     LIMIT 1`,
+    [userId, name, catalogName, catalogName]
+  )
+  return rows.length > 0
+}
+
 export const createEquipment = async (userId: number, data: CreateEquipmentDTO): Promise<Equipment> => {
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO equipment (user_id, name, catalog_name, category, quantity, weight_kg, location, notes)
