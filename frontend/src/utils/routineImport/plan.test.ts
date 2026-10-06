@@ -149,14 +149,14 @@ describe('días omitidos y días vacíos', () => {
   })
 
   it('si no queda ningún día con ejercicios no se puede guardar', () => {
-    const all = ['plan-day-1', 'plan-day-2', 'plan-day-3'].reduce((acc, k) => setDaySkipped(acc, k, true), resolvedPlan())
+    const all = ['plan-day-1', 'plan-day-2', 'plan-day-3'].reduce<DraftDay[]>((acc, k) => setDaySkipped(acc, k, true), resolvedPlan())
     expect(canSave(all, true)).toBe(false)
   })
 
   it('un día omitido con filas sin resolver no bloquea', () => {
     const base = plan().map(d => (d.unassigned ? { ...d, rows: [] } : d))
     expect(canSave(base, true)).toBe(false)
-    const skippedPending = ['plan-day-1', 'plan-day-2', 'plan-day-3'].reduce((acc, k) => setDaySkipped(acc, k, true), base)
+    const skippedPending = ['plan-day-1', 'plan-day-2', 'plan-day-3'].reduce<DraftDay[]>((acc, k) => setDaySkipped(acc, k, true), base)
     expect(canSave(skippedPending, true)).toBe(false)
   })
 })

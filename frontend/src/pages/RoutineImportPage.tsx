@@ -403,9 +403,9 @@ export default function RoutineImportPage() {
               return (
                 <section key={day.key} aria-labelledby={`day-title-${day.key}`} className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <h2 id={`day-title-${day.key}`} className="min-w-0 break-words text-base font-bold text-white">
+                    <h2 id={`day-title-${day.key}`} className="min-w-0 break-words text-base font-bold text-[color:var(--text)]">
                       {day.name}
-                      <span className="ml-2 text-xs font-normal text-neutral-400">
+                      <span className="ml-2 text-xs font-normal text-[color:var(--text-muted)]">
                         {t('routineImport.dayRows', { count: day.rows.length })}
                       </span>
                     </h2>
