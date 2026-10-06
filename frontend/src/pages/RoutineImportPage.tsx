@@ -11,10 +11,10 @@ import {
   type DraftDay, type DraftExercise, type DraftRow,
 } from '../utils/routineImport/draft'
 import {
-  DEFAULT_DAYS, MAX_DAYS, MIN_DAYS, assignRowToDay, buildPlanDays, clampDayCount, defaultPlanName,
-  findDuplicateDays, reclassifyRows, regroupByTable, renamePlan, resizePlan, resolveDuplicates, setDaySkipped,
-  type DuplicateChoice,
+  assignRowToDay, findDuplicateDays, resolveDuplicates, setDaySkipped, splitByMuscle, undoSplit,
+  type DuplicateChoice, type SplitOptions, type SplitUndo,
 } from '../utils/routineImport/plan'
+import { addDay, MAX_DAYS, moveDay, removeDay, renameDay, withPrefix } from '../utils/routineImport/days'
 import { applyExerciseEdit, type EditableExercise, type EditMode } from '../utils/routineImport/exerciseEdit'
 import { useAuthStore } from '../store/useAuthStore'
 import type { Exercise } from '../types/exercise'
@@ -26,10 +26,11 @@ import Spinner from '../components/ui/Spinner'
 import ExercisePickerModal from '../components/routines/ExercisePickerModal'
 import CreateOwnExercise from '../components/routines/CreateOwnExercise'
 import ImportRowCard from '../components/routines/ImportRowCard'
+import ImportDayHeader from '../components/routines/ImportDayHeader'
+import { RemoveDayModal, SplitModal } from '../components/routines/ImportDayModals'
 import ExerciseEditModal from '../components/routines/ExerciseEditModal'
 
 type Step = 'paste' | 'review' | 'save'
-type ImportMode = 'plan' | 'table'
 type DayStatus = 'pending' | 'saving' | 'done' | 'error'
 
 interface SaveState {
@@ -38,6 +39,8 @@ interface SaveState {
 }
 
 const STEPS: Step[] = ['paste', 'review', 'save']
+/** Nombres que se listan en el pie antes de resumir con "y N más". */
+const FOOTER_NAMES = 3
 
 function toTitle(name: string): string {
   const lower = name.toLowerCase()
@@ -57,12 +60,11 @@ export default function RoutineImportPage() {
   const [picker, setPicker] = useState<{ dayKey: string; rowKey: string } | null>(null)
   const [save, setSave] = useState<SaveState>({ statuses: {}, errors: {} })
   const [saving, setSaving] = useState(false)
-  const [mode, setMode] = useState<ImportMode>('plan')
-  const [planName, setPlanName] = useState(defaultPlanName(DEFAULT_DAYS))
-  const [nameTouched, setNameTouched] = useState(false)
-  const [dayCount, setDayCount] = useState(DEFAULT_DAYS)
-  const [keepEmpty, setKeepEmpty] = useState(true)
-  const [tableNames, setTableNames] = useState<string[]>([])
+  const [prefix, setPrefix] = useState('')
+  const [newDayKey, setNewDayKey] = useState<string | null>(null)
+  const [removing, setRemoving] = useState<string | null>(null)
+  const [splitOpen, setSplitOpen] = useState(false)
+  const [splitUndo, setSplitUndo] = useState<SplitUndo | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [saveList, setSaveList] = useState<DraftDay[]>([])
   const [checking, setChecking] = useState(false)
@@ -72,12 +74,14 @@ export default function RoutineImportPage() {
   const draftCatalog: DraftExercise[] = catalog
   const matchIndex = useMemo(() => buildMatchIndex(draftCatalog), [draftCatalog])
   const summary = summarize(days)
-  const planMode = mode === 'plan'
-  const toSave = daysToSave(days, planMode && !keepEmpty)
-  const savable = canSave(days, planMode && !keepEmpty, planMode && keepEmpty)
+  const toSave = withPrefix(daysToSave(days), prefix)
+  const savable = canSave(days)
   const pickerRow = picker ? days.find(d => d.key === picker.dayKey)?.rows.find(r => r.key === picker.rowKey) : undefined
   const editingRow = editing ? days.flatMap(d => d.rows).find(r => r.key === editing) : undefined
   const unassignedDay = days.find(d => d.unassigned)
+  const realDays = days.filter(d => !d.unassigned)
+  const removingDay = removing ? days.find(d => d.key === removing) : undefined
+  const canAddDay = realDays.length < MAX_DAYS
 
   // ── Paso 1: analizar
   const analyze = () => {
@@ -87,9 +91,9 @@ export default function RoutineImportPage() {
       return
     }
     setPasteError(null)
-    const draft = buildDraft(parsed, draftCatalog, matchIndex)
-    setTableNames(draft.map(d => d.name))
-    setDays(mode === 'plan' ? buildPlanDays(draft.flatMap(d => d.rows), planName, dayCount) : draft)
+    setDays(buildDraft(parsed, draftCatalog, matchIndex))
+    setSplitUndo(null)
+    setNewDayKey(null)
     setDup(null)
     setCheckError(false)
     setSave({ statuses: {}, errors: {} })
@@ -106,52 +110,53 @@ export default function RoutineImportPage() {
   const removeRow = (dayKey: string, rowKey: string) =>
     updateDay(dayKey, d => ({ ...d, rows: d.rows.filter(r => r.key !== rowKey) }))
 
-  const removeDay = (dayKey: string) => {
-    const day = days.find(d => d.key === dayKey)
-    if (day && day.rows.length > 0 && !confirm(t('routineImport.deleteDayConfirm', { name: day.name }))) return
-    setDays(prev => prev.filter(d => d.key !== dayKey))
-  }
-
   const moveToDay = (rowKey: string, toKey: string) => setDays(prev => assignRowToDay(prev, rowKey, toKey))
 
   const chooseExercise = (exercise: DraftExercise) => {
     if (picker) {
       const rowKey = picker.rowKey
-      setDays(prev => {
-        const next = prev.map(d => ({ ...d, rows: d.rows.map(r => (r.key === rowKey ? { ...r, exercise } : r)) }))
-        return planMode ? reclassifyRows(next, [rowKey]) : next
-      })
+      setDays(prev => prev.map(d => ({ ...d, rows: d.rows.map(r => (r.key === rowKey ? { ...r, exercise } : r)) })))
     }
     setPicker(null)
   }
 
-  // ── Plan semanal
-  const changeMode = (next: ImportMode) => {
-    if (next === mode) return
-    const rows = days.flatMap(d => d.rows)
-    setMode(next)
-    setDup(null)
-    setDays(next === 'plan' ? buildPlanDays(rows, planName, dayCount) : regroupByTable(days, tableNames))
+  // ── Días: añadir, quitar, repartir
+  const onAddDay = () => {
+    const next = addDay(days)
+    if (next === days) return
+    setDays(next)
+    setNewDayKey(next.filter(d => !d.unassigned).at(-1)!.key)
   }
 
-  const changePlanName = (value: string) => {
-    setPlanName(value)
-    setNameTouched(true)
-    setDays(prev => renamePlan(prev, value))
+  const requestRemoveDay = (dayKey: string) => {
+    const day = days.find(d => d.key === dayKey)
+    if (!day) return
+    if (day.rows.length === 0) setDays(prev => removeDay(prev, dayKey))
+    else setRemoving(dayKey)
   }
 
-  const changeDayCount = (value: number) => {
-    const count = clampDayCount(value)
-    const name = nameTouched ? planName : defaultPlanName(count)
-    setDayCount(count)
-    setPlanName(name)
-    setDays(prev => resizePlan(prev, name, count))
+  const confirmRemoveDay = (moveToKey: string | null) => {
+    if (removing) setDays(prev => removeDay(prev, removing, moveToKey))
+    setRemoving(null)
+  }
+
+  const applySplit = (options: SplitOptions) => {
+    const result = splitByMuscle(days, options)
+    setDays(result.days)
+    setSplitUndo(result.undo)
+    setSplitOpen(false)
+  }
+
+  const onUndoSplit = () => {
+    if (!splitUndo) return
+    setDays(prev => undoSplit(prev, splitUndo))
+    setSplitUndo(null)
   }
 
   const onExerciseEdited = ({ exercise, mode: editMode }: { exercise: Exercise; mode: EditMode }) => {
     if (editMode === 'update') replaceInCatalog(exercise)
     else addToCatalog(exercise)
-    if (editing) setDays(prev => applyExerciseEdit(prev, editing, { exercise, mode: editMode }, planMode))
+    if (editing) setDays(prev => applyExerciseEdit(prev, editing, { exercise, mode: editMode }))
     setEditing(null)
   }
 
@@ -208,6 +213,9 @@ export default function RoutineImportPage() {
 
   const doneCount = saveList.filter(d => save.statuses[d.key] === 'done').length
   const failed = saveList.some(d => save.statuses[d.key] === 'error')
+
+  const footerNames = toSave.slice(0, FOOTER_NAMES).map(d => d.name.trim() || t('routineImport.unnamedDay'))
+  const footerMore = toSave.length - footerNames.length
 
   return (
     <div className="mx-auto max-w-3xl pb-24 md:pb-8">
@@ -316,54 +324,33 @@ export default function RoutineImportPage() {
             </div>
           </GlowCard>
 
-          {/* Modo: plan semanal o un día por tabla */}
+          {/* Prefijo y acciones sobre la lista de días */}
           <GlowCard>
             <div className="space-y-4 p-4">
               <div>
-                <p id="import-mode-label" className="form-label">{t('routineImport.mode.label')}</p>
-                <div role="group" aria-labelledby="import-mode-label" className="flex flex-wrap gap-2">
-                  {(['plan', 'table'] as ImportMode[]).map(m => (
-                    <button
-                      key={m} type="button" aria-pressed={mode === m} onClick={() => changeMode(m)}
-                      className={`chip ${mode === m ? 'chip-active' : ''}`}
-                    >
-                      {t(`routineImport.mode.${m}`)}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs text-neutral-400">{t(`routineImport.mode.${mode}Help`)}</p>
+                <label htmlFor="import-prefix" className="form-label">{t('routineImport.prefix.label')}</label>
+                <input
+                  id="import-prefix" value={prefix} onChange={e => setPrefix(e.target.value)} maxLength={60}
+                  placeholder={t('routineImport.prefix.placeholder')} aria-describedby="import-prefix-help"
+                  className="form-input form-input-dark"
+                />
+                <p id="import-prefix-help" className="mt-1 text-xs text-neutral-400">{t('routineImport.prefix.help')}</p>
               </div>
 
-              {planMode && (
-                <div className="grid gap-3 sm:grid-cols-[1fr_9rem]">
-                  <div>
-                    <label htmlFor="plan-name" className="form-label">{t('routineImport.plan.name')}</label>
-                    <input
-                      id="plan-name" value={planName} onChange={e => changePlanName(e.target.value)} maxLength={120}
-                      className="form-input form-input-dark font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="plan-days" className="form-label">{t('routineImport.plan.days')}</label>
-                    <select
-                      id="plan-days" value={dayCount} onChange={e => changeDayCount(Number(e.target.value))}
-                      className="form-input form-input-dark"
-                    >
-                      {Array.from({ length: MAX_DAYS - MIN_DAYS + 1 }, (_, i) => MIN_DAYS + i).map(n => (
-                        <option key={n} value={n}>{n}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <label className="flex items-start gap-2 text-sm text-neutral-300 sm:col-span-2">
-                    <input
-                      type="checkbox" checked={keepEmpty} onChange={e => setKeepEmpty(e.target.checked)}
-                      className="mt-1 h-4 w-4 accent-[#F5C400]"
-                    />
-                    <span>{t('routineImport.plan.keepEmpty')}</span>
-                  </label>
-                  <p className="text-xs text-neutral-400 sm:col-span-2">{t('routineImport.plan.proposalHint')}</p>
-                </div>
-              )}
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={onAddDay} disabled={!canAddDay} className="btn-ghost-dark min-h-[44px] disabled:opacity-50">
+                  <i aria-hidden="true" className="bi bi-plus-lg mr-1.5" />{t('routineImport.addDay')}
+                </button>
+                <button type="button" onClick={() => setSplitOpen(true)} className="btn-ghost-dark min-h-[44px]">
+                  <i aria-hidden="true" className="bi bi-shuffle mr-1.5" />{t('routineImport.split')}
+                </button>
+                {splitUndo && (
+                  <button type="button" onClick={onUndoSplit} className="btn-ghost-dark min-h-[44px]">
+                    <i aria-hidden="true" className="bi bi-arrow-counterclockwise mr-1.5" />{t('routineImport.undoSplit')}
+                  </button>
+                )}
+              </div>
+              {!canAddDay && <p className="text-xs text-neutral-400">{t('routineImport.maxDays', { max: MAX_DAYS })}</p>}
             </div>
           </GlowCard>
 
@@ -407,71 +394,29 @@ export default function RoutineImportPage() {
               )
             }
 
-            if (planMode) {
-              return (
-                <section key={day.key} aria-labelledby={`day-title-${day.key}`} className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 id={`day-title-${day.key}`} className="min-w-0 break-words text-base font-bold text-[color:var(--text)]">
-                      {day.name}
-                      <span className="ml-2 text-xs font-normal text-[color:var(--text-muted)]">
-                        {t('routineImport.dayRows', { count: day.rows.length })}
-                      </span>
-                    </h2>
-                    {day.rows.length > 0 && (
-                      <button
-                        type="button"
-                        aria-pressed={Boolean(day.skipped)}
-                        onClick={() => setDays(prev => setDaySkipped(prev, day.key, !day.skipped))}
-                        className="btn-ghost-dark shrink-0 px-3 py-1.5 text-xs"
-                      >
-                        {day.skipped ? t('routineImport.importDay') : t('routineImport.skipDay')}
-                        <span className="sr-only"> {day.name}</span>
-                      </button>
-                    )}
-                  </div>
-                  {day.skipped ? (
-                    <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-300">
-                      <i aria-hidden="true" className="bi bi-slash-circle mr-2" />{t('routineImport.skippedDay')}
-                    </p>
-                  ) : day.rows.length === 0 ? (
-                    <p className="text-sm text-[color:var(--text-muted)]">{t('routineImport.emptyPlanDay')}</p>
-                  ) : (
-                    day.rows.map(rowCard)
-                  )}
-                </section>
-              )
-            }
-
+            const index = realDays.findIndex(d => d.key === day.key)
             return (
-              <section key={day.key} aria-labelledby={`day-title-${day.key}`} className="space-y-3">
-                <div className="flex items-end gap-2">
-                  <div className="min-w-0 flex-1">
-                    <label id={`day-title-${day.key}`} htmlFor={`day-name-${day.key}`} className="form-label">
-                      {t('routineImport.dayName')}
-                    </label>
-                    <input
-                      id={`day-name-${day.key}`}
-                      value={day.name}
-                      onChange={e => updateDay(day.key, d => ({ ...d, name: e.target.value }))}
-                      maxLength={150}
-                      className="form-input font-bold"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeDay(day.key)}
-                    aria-label={t('routineImport.deleteDay', { name: day.name })}
-                    className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-neutral-900 text-red-400 transition-colors hover:bg-neutral-800 hover:text-red-300"
-                  >
-                    <i aria-hidden="true" className="bi bi-trash3" />
-                  </button>
-                </div>
-
-                {day.rows.length === 0 && (
-                  <p className="text-sm text-[color:var(--text-muted)]">{t('routineImport.emptyDay')}</p>
+              <section key={day.key} aria-label={day.name || t('routineImport.unnamedDay')} className="space-y-3">
+                <ImportDayHeader
+                  dayKey={day.key}
+                  name={day.name}
+                  rowCount={day.rows.length}
+                  skipped={Boolean(day.skipped)}
+                  isFirst={index === 0}
+                  isLast={index === realDays.length - 1}
+                  autoFocus={day.key === newDayKey}
+                  onRename={name => setDays(prev => renameDay(prev, day.key, name))}
+                  onMove={delta => setDays(prev => moveDay(prev, day.key, delta))}
+                  onToggleSkip={() => setDays(prev => setDaySkipped(prev, day.key, !day.skipped))}
+                  onRemove={() => requestRemoveDay(day.key)}
+                />
+                {day.skipped ? (
+                  <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-300">
+                    <i aria-hidden="true" className="bi bi-slash-circle mr-2" />{t('routineImport.skippedDay')}
+                  </p>
+                ) : (
+                  day.rows.map(rowCard)
                 )}
-
-                {day.rows.map(rowCard)}
               </section>
             )
           })}
@@ -522,22 +467,32 @@ export default function RoutineImportPage() {
           )}
 
           <GlowCard className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 md:bottom-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <p className="min-w-0 text-xs font-medium text-neutral-400" aria-live="polite">
-                {checkError
-                  ? t('routineImport.dup.checkError')
-                  : savable
-                    ? t('routineImport.readyToSave', { count: toSave.length })
-                    : unassignedDay && unassignedDay.rows.length > 0
-                      ? t('routineImport.cannotSaveUnassigned', { count: unassignedDay.rows.length })
-                      : t('routineImport.cannotSave')}
-              </p>
-              <div className="flex gap-2">
+            <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1 text-xs font-medium text-neutral-400" aria-live="polite">
+                {checkError ? (
+                  <p>{t('routineImport.dup.checkError')}</p>
+                ) : savable ? (
+                  <>
+                    <p className="font-semibold text-neutral-200">
+                      {t(toSave.length === 1 ? 'routineImport.willCreateOne' : 'routineImport.willCreate', { count: toSave.length })}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 break-words">
+                      {footerNames.join(', ')}
+                      {footerMore > 0 && ` ${t('routineImport.andMore', { count: footerMore })}`}
+                    </p>
+                  </>
+                ) : unassignedDay && unassignedDay.rows.length > 0 ? (
+                  <p>{t('routineImport.cannotSaveUnassigned', { count: unassignedDay.rows.length })}</p>
+                ) : (
+                  <p>{t('routineImport.cannotSave')}</p>
+                )}
+              </div>
+              <div className="flex gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
                 <button type="button" onClick={() => setStep('paste')} className="btn-ghost-dark">
                   {t('routineImport.back')}
                 </button>
                 <button type="button" onClick={requestSave} disabled={!savable || checking || dup !== null} className="btn-primary disabled:opacity-50">
-                  {checking ? t('routineImport.dup.checking') : t('routineImport.saveRoutines', { count: toSave.length })}
+                  {checking ? t('routineImport.dup.checking') : t(toSave.length === 1 ? 'routineImport.saveRoutineOne' : 'routineImport.saveRoutines', { count: toSave.length })}
                 </button>
               </div>
             </div>
@@ -610,6 +565,20 @@ export default function RoutineImportPage() {
         userId={userId}
         onClose={() => setEditing(null)}
         onSaved={onExerciseEdited}
+      />
+
+      <RemoveDayModal
+        day={removingDay ? { key: removingDay.key, name: removingDay.name, rowCount: removingDay.rows.length } : null}
+        others={days.filter(d => d.key !== removing && !(d.unassigned && d.rows.length === 0))}
+        onClose={() => setRemoving(null)}
+        onConfirm={confirmRemoveDay}
+      />
+
+      <SplitModal
+        open={splitOpen}
+        currentDays={realDays.length}
+        onClose={() => setSplitOpen(false)}
+        onConfirm={applySplit}
       />
 
       <ExercisePickerModal
