@@ -9,6 +9,9 @@ import { label } from '../utils/labels'
 import GlowCard from '../components/ui/GlowCard'
 import PageHeader from '../components/ui/PageHeader'
 import Modal from '../components/ui/Modal'
+import EmptyState from '../components/ui/EmptyState'
+import ErrorState from '../components/ui/ErrorState'
+import Skeleton from '../components/ui/Skeleton'
 
 const LOCATION_KEYS = ['home', 'gym', 'outdoor'] as const
 
@@ -28,6 +31,8 @@ export default function EquipmentPage() {
   const [showModal, setShowModal]       = useState(false)
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState<string | null>(null)
+  const [loadError, setLoadError]       = useState(false)
+  const [actionError, setActionError]   = useState<string | null>(null)
 
   // Modal state
   const [selectedCatalogId, setSelectedCatalogId] = useState<number | null>(null)
@@ -41,6 +46,7 @@ export default function EquipmentPage() {
 
   const load = async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const [eqData, cat] = await Promise.all([
         equipmentService.getAll(),
@@ -50,6 +56,8 @@ export default function EquipmentPage() {
       setAccessible(eqData.accessible_exercises)
       setBodyweight(eqData.bodyweight_exercises)
       setCatalog(cat)
+    } catch {
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -106,8 +114,49 @@ export default function EquipmentPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm(t('equipment.deleteConfirm'))) return
-    await equipmentService.delete(id)
+    setActionError(null)
+    try {
+      await equipmentService.delete(id)
+    } catch (err: unknown) {
+      setActionError(apiErrorMessage(err, t('equipment.deleteError')))
+      return
+    }
     await load()
+  }
+
+  const toggleBodyweightList = async () => {
+    if (showBodyweightList || bodyweightExercises.length > 0) {
+      setShowBodyweightList(v => !v)
+      return
+    }
+    setActionError(null)
+    setLoadingBW(true)
+    try {
+      const res = await exerciseService.getAll({ requires_equipment: false, limit: 50 })
+      setBodyweightExercises(res.data)
+      setShowBodyweightList(true)
+    } catch (err: unknown) {
+      setActionError(apiErrorMessage(err, t('equipment.listError')))
+    } finally {
+      setLoadingBW(false)
+    }
+  }
+
+  const toggleEquipmentList = async () => {
+    if (showEquipmentList || equipmentExercises.length > 0) {
+      setShowEquipmentList(v => !v)
+      return
+    }
+    setActionError(null)
+    setLoadingEQ(true)
+    try {
+      setEquipmentExercises(await equipmentService.getAccessibleExercises())
+      setShowEquipmentList(true)
+    } catch (err: unknown) {
+      setActionError(apiErrorMessage(err, t('equipment.listError')))
+    } finally {
+      setLoadingEQ(false)
+    }
   }
 
   const grouped = items.reduce<Record<string, Equipment[]>>((acc, item) => {
@@ -123,26 +172,24 @@ export default function EquipmentPage() {
         title={t('equipment.title')}
         subtitle={`${items.length} ${t('equipment.elements')}`}
         actions={
-          <button onClick={openCreate} className="btn-primary">
+          <button type="button" onClick={openCreate} className="btn-primary">
             {t('equipment.addNew')}
           </button>
         }
       />
 
-      {!loading && (
+      {actionError && (
+        <p role="alert" className="mb-4 text-sm font-semibold text-red-400">{actionError}</p>
+      )}
+
+      {!loading && !loadError && (
         <div className="flex flex-col sm:flex-row items-start gap-3 mb-8">
           {/* Peso corporal */}
           <GlowCard className="flex-1 w-full">
             <button
-              onClick={async () => {
-                if (!showBodyweightList && bodyweightExercises.length === 0) {
-                  setLoadingBW(true)
-                  const res = await exerciseService.getAll({ requires_equipment: false, limit: 50 })
-                  setBodyweightExercises(res.data)
-                  setLoadingBW(false)
-                }
-                setShowBodyweightList(v => !v)
-              }}
+              type="button"
+              aria-expanded={showBodyweightList}
+              onClick={toggleBodyweightList}
               className="w-full px-4 py-3 flex items-center gap-3 text-left"
             >
               <span className="text-xs font-bold text-white flex-1">
@@ -174,15 +221,9 @@ export default function EquipmentPage() {
           {items.length > 0 && (
             <GlowCard className="flex-1 w-full">
               <button
-                onClick={async () => {
-                  if (!showEquipmentList && equipmentExercises.length === 0) {
-                    setLoadingEQ(true)
-                    const exs = await equipmentService.getAccessibleExercises()
-                    setEquipmentExercises(exs)
-                    setLoadingEQ(false)
-                  }
-                  setShowEquipmentList(v => !v)
-                }}
+                type="button"
+                aria-expanded={showEquipmentList}
+                onClick={toggleEquipmentList}
                 className="w-full px-4 py-3 flex items-center gap-3 text-left"
               >
                 <span className="text-xs font-bold text-white flex-1">
@@ -214,14 +255,17 @@ export default function EquipmentPage() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <div role="status" aria-busy="true" className="space-y-2">
+          {[0, 1, 2].map(i => <Skeleton key={i} tone="dark" className="h-16 rounded-apple" />)}
         </div>
+      ) : loadError ? (
+        <ErrorState message={t('common.loadError')} onRetry={load} />
       ) : items.length === 0 ? (
-        <div className="text-center py-16 card border-dashed">
-          <p className="text-neutral-400 text-sm font-medium mb-1">{t('equipment.noEquipment')}</p>
-          <p className="text-neutral-300 text-xs font-semibold">{t('equipment.noEquipmentHint')}</p>
-        </div>
+        <EmptyState
+          icon="bi-bag-plus"
+          title={t('equipment.noEquipment')}
+          description={t('equipment.noEquipmentHint')}
+        />
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([cat, catItems]) => {
@@ -241,7 +285,7 @@ export default function EquipmentPage() {
                             {item.weight_kg && <span>{item.weight_kg} kg</span>}
                           </div>
                         </div>
-                        <button onClick={() => handleDelete(item.id)} className="btn-danger py-1.5 px-3">{t('common.delete')}</button>
+                        <button type="button" onClick={() => handleDelete(item.id)} aria-label={`${t('common.delete')} ${item.name}`} className="btn-danger-dark py-1.5 px-3">{t('common.delete')}</button>
                       </div>
                     </GlowCard>
                   ))}
@@ -270,6 +314,8 @@ export default function EquipmentPage() {
                       {catItems.map(item => (
                         <button
                           key={item.id}
+                          type="button"
+                          aria-pressed={selectedCatalogId === item.id}
                           onClick={() => setSelectedCatalogId(prev => prev === item.id ? null : item.id)}
                           className={`chip text-left ${selectedCatalogId === item.id ? 'chip-accent' : ''}`}
                         >
@@ -290,6 +336,7 @@ export default function EquipmentPage() {
 
             {/* Custom toggle */}
             <button
+              type="button"
               onClick={() => { setIsCustom(v => !v); setSelectedCatalogId(null) }}
               className="text-xs font-medium text-neutral-400 hover:text-accent transition-colors mb-4"
             >
@@ -311,6 +358,8 @@ export default function EquipmentPage() {
                   <label className="form-label">{t('equipment.catalogLink')}</label>
                   <div className="flex flex-wrap gap-1.5">
                     <button
+                      type="button"
+                      aria-pressed={catalogLink === null}
                       onClick={() => setCatalogLink(null)}
                       className={`chip text-xs py-1.5 ${catalogLink === null ? 'chip-active' : ''}`}
                     >
@@ -319,6 +368,8 @@ export default function EquipmentPage() {
                     {catalog.map(c => (
                       <button
                         key={c.id}
+                        type="button"
+                        aria-pressed={catalogLink === c.name}
                         onClick={() => setCatalogLink(c.name)}
                         className={`chip text-xs py-1.5 ${catalogLink === c.name ? 'chip-accent' : ''}`}
                       >
@@ -379,12 +430,14 @@ export default function EquipmentPage() {
 
             <div className="flex gap-3 mt-6">
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
-                className="flex-1 border border-white/15 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs px-6 py-2.5 rounded-full transition-all"
+                className="flex-1 btn-ghost-dark"
               >
                 {t('common.cancel')}
               </button>
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving}
                 className="flex-1 btn-primary py-2.5 disabled:opacity-50"

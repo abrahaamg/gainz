@@ -285,6 +285,8 @@
     "writeNameError": "Escribe un nombre",
     "selectEquipError": "Selecciona un equipo",
     "saveError": "Error al guardar",
+    "deleteError": "No se pudo eliminar el equipo",
+    "listError": "No se pudo cargar la lista de ejercicios",
     "noCategory": "sin categoría",
     "customNamePlaceholder": "ej. \"Disco de 2.5kg\""
   },
