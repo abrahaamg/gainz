@@ -816,7 +816,7 @@
       "save": "Guardar"
     },
     "pasteTitle": "Pega tu rutina",
-    "pasteHelp": "Copia la tabla de Google Docs (o de Sheets, Excel o Word) y pégala aquí. Cada tabla se convierte en un día.",
+    "pasteHelp": "Copia la tabla de Google Docs (o de Sheets, Excel o Word) y pégala aquí. Cada tabla empieza como un día; luego puedes añadir, renombrar, quitar y repartir días a tu gusto.",
     "textLabel": "Texto de la rutina",
     "textPlaceholder": "EJERCICIO\nSERIES\nREPS\nPESO\n...",
     "analyze": "Analizar",
@@ -832,9 +832,6 @@
     "noDays": "No queda ningún día. Vuelve atrás para pegar de nuevo.",
     "dayName": "Nombre del día (será el nombre de la rutina)",
     "unnamedDay": "Sin nombre",
-    "deleteDay": "Eliminar {{name}}",
-    "deleteDayConfirm": "¿Eliminar «{{name}}» con todos sus ejercicios?",
-    "emptyDay": "Este día no tiene ejercicios. Se ignorará al guardar si lo eliminas.",
     "original": "Original",
     "unmatched": "Sin emparejar",
     "unmatchedHint": "Elige un ejercicio o crea uno propio",
@@ -848,20 +845,6 @@
     "skipDay": "No importar este día",
     "importDay": "Importar este día",
     "skippedDay": "Este día no se importará: no se creará su rutina.",
-    "emptyPlanDay": "Sin ejercicios: no se creará rutina para este día.",
-    "mode": {
-      "label": "Cómo repartir lo importado",
-      "plan": "Plan por días",
-      "table": "Un día por tabla",
-      "planHelp": "Reparte los ejercicios en un plan semanal. La propuesta va por músculo y la puedes corregir en cada fila.",
-      "tableHelp": "Cada tabla pegada se convierte en una rutina."
-    },
-    "plan": {
-      "name": "Nombre del plan",
-      "days": "Número de días",
-      "keepEmpty": "Crear también los días vacíos, para rellenarlos después",
-      "proposalHint": "Propuesta: tirón en el día 1, empuje en el día 2 y pierna en el día 3."
-    },
     "dup": {
       "title": "Ya tienes rutinas con estos nombres",
       "help": "Elige qué hacer con cada una antes de guardar.",
@@ -896,7 +879,6 @@
     "createError": "No se pudo crear el ejercicio.",
     "cannotSave": "Resuelve todas las filas (emparejar, crear o quitar) para guardar.",
     "cannotSaveUnassigned": "Quedan {{count}} ejercicios sin asignar a un día. Asígnalos o quítalos para guardar.",
-    "readyToSave": "Se crearán {{count}} rutinas.",
     "back": "Volver",
     "saveRoutines": "Guardar {{count}} rutinas",
     "progressLabel": "Rutinas guardadas",
@@ -910,6 +892,47 @@
       "saving": "Guardando...",
       "done": "Guardada · {{count}} ejercicios",
       "error": "Error al guardar"
-    }
+    },
+    "dayActions": "Acciones de {{name}}",
+    "moveDayUp": "Subir día",
+    "moveDayDown": "Bajar día",
+    "removeDay": "Quitar día",
+    "willBeEmpty": "Se creará vacía",
+    "addDay": "Añadir día",
+    "maxDays": "Máximo {{max}} días.",
+    "split": "Repartir por músculo",
+    "undoSplit": "Deshacer reparto",
+    "prefix": {
+      "label": "Prefijo del nombre (opcional)",
+      "placeholder": "Ej.: 5 días",
+      "help": "Si lo rellenas, cada rutina se guarda como «prefijo · nombre del día»."
+    },
+    "removeModal": {
+      "title": "Quitar «{{name}}»",
+      "help": "Este día tiene {{count}} ejercicios. ¿Qué hacemos con ellos?",
+      "legend": "Qué hacer con los ejercicios del día",
+      "move": "Moverlos a otro día",
+      "target": "Día de destino",
+      "discard": "Descartarlos",
+      "confirm": "Quitar día"
+    },
+    "splitModal": {
+      "title": "Repartir por músculo",
+      "help": "Propone en qué día va cada ejercicio según su músculo. Después lo puedes corregir fila a fila.",
+      "days": "Cuántos días usar",
+      "willCreate": "Se crearán {{count}} días nuevos.",
+      "groups": {
+        "pull": "Tirón (espalda, bíceps)",
+        "push": "Empuje (pecho, hombro, tríceps)",
+        "legs": "Pierna"
+      },
+      "dayN": "Día {{n}}",
+      "note": "Solo se mueven los ejercicios que no hayas colocado tú. Lo que no se pueda clasificar queda en «Sin asignar».",
+      "confirm": "Repartir"
+    },
+    "willCreate": "Se crearán {{count}} rutinas",
+    "willCreateOne": "Se creará 1 rutina",
+    "andMore": "y {{count}} más",
+    "saveRoutineOne": "Guardar 1 rutina"
   }
 }

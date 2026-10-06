@@ -13,7 +13,7 @@ const catalog: DraftExercise[] = CATALOG_FIXTURE.map(([name, category, muscle_gr
   id: i + 1, name, category, muscle_group, created_by: null,
 }))
 const tables = () => buildDraft(parseRoutineText(ejemplo), catalog)
-const resolve = (days: DraftDay[]) =>
+const resolve = (days: DraftDay[]): DraftDay[] =>
   days.map(d => ({ ...d, rows: d.rows.map(r => ({ ...r, exercise: r.exercise ?? catalog[0] })) }))
 
 /** Nombres originales (rawName) por día, en orden. Las dos PECK DECK se distinguen por su posición. */

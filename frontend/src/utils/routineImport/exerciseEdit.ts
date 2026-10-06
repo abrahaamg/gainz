@@ -3,7 +3,6 @@
 
 import type { CreateExerciseDTO, Difficulty, Exercise, ExerciseCategory } from '../../types/exercise'
 import type { DraftDay, DraftExercise } from './draft'
-import { reclassifyRows } from './plan'
 
 export interface ExerciseChanges {
   name: string

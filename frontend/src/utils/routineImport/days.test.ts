@@ -9,7 +9,7 @@ import ejemplo from './rutina-ejemplo.fixture.txt?raw'
 const catalog: DraftExercise[] = CATALOG_FIXTURE.map(([name, category, muscle_group], i) => ({
   id: i + 1, name, category, muscle_group, created_by: null,
 }))
-const resolve = (days: DraftDay[]) =>
+const resolve = (days: DraftDay[]): DraftDay[] =>
   days.map(d => ({ ...d, rows: d.rows.map(r => ({ ...r, exercise: r.exercise ?? catalog[0] })) }))
 const tables = () => buildDraft(parseRoutineText(ejemplo), catalog)
 
