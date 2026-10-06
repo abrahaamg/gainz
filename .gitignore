@@ -37,3 +37,6 @@ presentacion-tfg/
 _memorias_ref/
 gainz-codigo-fuente.zip
 *.zip
+
+# Credenciales de despliegue (NUNCA subir)
+credenciales-*.txt
