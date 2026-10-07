@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { CATEGORIES, DIFFICULTY_LEVELS } from '../constants'
-import { limitQuery, optionalText, positiveInt } from './common'
+import { limitQuery, optionalText, positiveInt, flexBool } from './common'
 
 export const createExerciseBody = z.object({
   name: z.string().trim().min(1).max(150),
@@ -12,10 +12,10 @@ export const createExerciseBody = z.object({
   difficulty: z.enum(DIFFICULTY_LEVELS).optional(),
   video_url: optionalText(500),
   image_url: optionalText(500),
-  requires_equipment: z.boolean().optional(),
-  is_unilateral: z.boolean().optional(),
+  requires_equipment: flexBool().optional(),
+  is_unilateral: flexBool().optional(),
   notes: optionalText(),
-  is_public: z.boolean().optional(),
+  is_public: flexBool().optional(),
   equipment: z.array(z.string().trim().min(1).max(100)).optional(),
 })
 

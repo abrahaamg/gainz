@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { cap } from '../../lib/utils'
 import type { SetPlanEntry } from '../../types/routine'
 import { MAX_SETS, addSet, copyPreviousSet, removeSet, updateSet } from '../../utils/setPlan'
 
@@ -27,7 +28,7 @@ export default function SetPlanEditor({ plan, onChange, idPrefix, className }: P
     <div className={className}>
       <div className="mb-1 grid grid-cols-[2rem_1fr_1fr_5.25rem] items-end gap-2 text-center text-xs font-medium text-neutral-400">
         <span>{t('routines.setShort')}</span>
-        <span className="capitalize">{t('common.reps')}</span>
+        <span>{cap(t('common.reps'))}</span>
         <span>{t('routines.weight')}</span>
         <span aria-hidden="true" />
       </div>

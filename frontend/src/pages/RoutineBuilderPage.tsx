@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { cap } from '../lib/utils'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -171,7 +172,7 @@ function SortableExerciseCard({
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor={`sets-${ex.id}`} className="form-label">{t('common.sets')}</label>
+                  <label htmlFor={`sets-${ex.id}`} className="form-label">{cap(t('common.sets'))}</label>
                   <input
                     id={`sets-${ex.id}`}
                     type="number" min={1} max={20} inputMode="numeric"
@@ -279,7 +280,7 @@ export default function RoutineBuilderPage() {
       setDifficulty(r.difficulty)
       setWarmupNotes(r.warmup_notes ?? '')
       setCooldownNotes(r.cooldown_notes ?? '')
-      setIsPublic(r.is_public)
+      setIsPublic(Boolean(r.is_public))
       setExercises(
         (r.exercises ?? []).map(ex => ({
           id: String(ex.re_id),
@@ -556,7 +557,7 @@ export default function RoutineBuilderPage() {
         <section className="mb-6">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-sm font-bold text-neutral-400">
-              {t('common.exercises')} ({exercises.length})
+              {cap(t('common.exercises'))} ({exercises.length})
             </h2>
             <button
               type="button"

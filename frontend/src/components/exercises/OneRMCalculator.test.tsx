@@ -11,8 +11,8 @@ describe('OneRMCalculator', () => {
 
   it('tiene inputs de peso y repeticiones', () => {
     render(<OneRMCalculator />)
-    expect(screen.getByPlaceholderText('ej. 80')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('ej. 8')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Ej. 80')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Ej. 8')).toBeInTheDocument()
   })
 
   it('no muestra resultado sin datos', () => {
@@ -24,8 +24,8 @@ describe('OneRMCalculator', () => {
     const user = userEvent.setup()
     render(<OneRMCalculator />)
 
-    await user.type(screen.getByPlaceholderText('ej. 80'), '80')
-    await user.type(screen.getByPlaceholderText('ej. 8'), '5')
+    await user.type(screen.getByPlaceholderText('Ej. 80'), '80')
+    await user.type(screen.getByPlaceholderText('Ej. 8'), '5')
 
     // 80 * (1 + 5/30) = 93.3 — aparece en el resultado y en la tabla
     expect(screen.getByText('1RM estimado')).toBeInTheDocument()
@@ -36,8 +36,8 @@ describe('OneRMCalculator', () => {
     const user = userEvent.setup()
     render(<OneRMCalculator />)
 
-    await user.type(screen.getByPlaceholderText('ej. 80'), '100')
-    await user.type(screen.getByPlaceholderText('ej. 8'), '1')
+    await user.type(screen.getByPlaceholderText('Ej. 80'), '100')
+    await user.type(screen.getByPlaceholderText('Ej. 8'), '1')
 
     // Con 1RM = 100, debería mostrar las filas de porcentaje
     expect(screen.getByText('100%')).toBeInTheDocument()
@@ -49,8 +49,8 @@ describe('OneRMCalculator', () => {
     const user = userEvent.setup()
     render(<OneRMCalculator />)
 
-    await user.type(screen.getByPlaceholderText('ej. 80'), '0')
-    await user.type(screen.getByPlaceholderText('ej. 8'), '0')
+    await user.type(screen.getByPlaceholderText('Ej. 80'), '0')
+    await user.type(screen.getByPlaceholderText('Ej. 8'), '0')
 
     expect(screen.getByText(/valores inválidos/i)).toBeInTheDocument()
   })

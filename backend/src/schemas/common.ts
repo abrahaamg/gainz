@@ -18,3 +18,10 @@ export const limitQuery = numeric(z.number().int().min(1).max(DEFAULTS.MAX_LIMIT
 // Texto opcional que admite null
 export const optionalText = (max?: number) =>
   (max ? z.string().max(max) : z.string()).nullable().optional()
+
+/**
+ * Booleano que acepta también 0/1: MySQL guarda los booleanos como TINYINT y el
+ * frontend a veces reenvía el valor tal como lo leyó.
+ */
+export const flexBool = () =>
+  z.union([z.boolean(), z.literal(0), z.literal(1)]).transform(v => Boolean(v))

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { numeric, optionalText, positiveInt } from './common'
+import { numeric, optionalText, positiveInt, flexBool } from './common'
 
 const optionalInt = (min = 0) => numeric(z.number().int().min(min).nullable()).optional()
 
@@ -32,7 +32,7 @@ export const createRoutineBody = z.object({
   estimated_duration_min: optionalInt(),
   warmup_notes: optionalText(),
   cooldown_notes: optionalText(),
-  is_public: z.boolean().optional(),
+  is_public: flexBool().optional(),
   tags: z.array(z.string().max(50)).optional(),
   exercises: z.array(routineExercise).optional(),
 })

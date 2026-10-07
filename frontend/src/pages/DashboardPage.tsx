@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { cap } from '../lib/utils'
 import { useTranslation } from 'react-i18next'
 import { routineService } from '../services/routineService'
 import { progressService } from '../services/progressService'
@@ -224,7 +225,7 @@ export default function DashboardPage() {
                     <YAxis allowDecimals={false} width={24} {...AXIS_PROPS} />
                     <Tooltip
                       labelFormatter={d => d}
-                      formatter={(v) => [String(v ?? 0), t('common.sessions')]}
+                      formatter={(v) => [String(v ?? 0), cap(t('common.sessions'))]}
                       contentStyle={CHART_THEME.tooltip}
                     />
                     <Bar dataKey="sessions" fill={CHART_THEME.accent} radius={[4, 4, 0, 0]} />

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { cap } from '../lib/utils'
 import { useTranslation } from 'react-i18next'
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
@@ -176,7 +177,7 @@ export default function ProgressPage() {
                       <CartesianGrid strokeDasharray={CHART_THEME.gridDash} stroke={CHART_THEME.grid} />
                       <XAxis dataKey="date" {...AXIS_PROPS} tickFormatter={d => d.slice(5)} />
                       <YAxis allowDecimals={false} {...AXIS_PROPS} />
-                      <Tooltip contentStyle={CHART_THEME.tooltip} labelFormatter={d => d} formatter={(v) => [String(v ?? 0), t('common.sessions')]} />
+                      <Tooltip contentStyle={CHART_THEME.tooltip} labelFormatter={d => d} formatter={(v) => [String(v ?? 0), cap(t('common.sessions'))]} />
                       <Bar dataKey="sessions" fill={CHART_THEME.accent} radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -239,7 +240,7 @@ export default function ProgressPage() {
                       <PolarGrid stroke={CHART_THEME.polarGrid} />
                       <PolarAngleAxis dataKey="muscle_label" tick={CHART_THEME.tick} />
                       <Radar dataKey="sets" stroke={CHART_THEME.accent} fill={CHART_THEME.accent} fillOpacity={0.25} />
-                      <Tooltip contentStyle={CHART_THEME.tooltip} formatter={(v) => [String(v ?? 0), t('common.sets')]} />
+                      <Tooltip contentStyle={CHART_THEME.tooltip} formatter={(v) => [String(v ?? 0), cap(t('common.sets'))]} />
                     </RadarChart>
                   </ResponsiveContainer>
                 )}

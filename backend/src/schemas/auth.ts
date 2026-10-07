@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { numeric, optionalText } from './common'
+import { numeric, optionalText, flexBool } from './common'
 
 const optionalNumber = (min: number, max: number) =>
   numeric(z.number().min(min).max(max).nullable()).optional()
@@ -20,6 +20,6 @@ export const updateMeBody = z.object({
   available_days: optionalStringList,
   session_duration_min: numeric(z.number().int().min(0).max(1440).nullable()).optional(),
   injuries: optionalStringList,
-  onboarding_done: z.boolean().optional(),
+  onboarding_done: flexBool().optional(),
   avatar_url: optionalText(500),
 })

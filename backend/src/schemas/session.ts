@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { limitQuery, numeric, optionalText, positiveInt } from './common'
+import { limitQuery, numeric, optionalText, positiveInt, flexBool } from './common'
 
 export const createSessionBody = z.object({
   routine_id: positiveInt,
@@ -17,7 +17,7 @@ export const addSetBody = z.object({
   duration_done_sec: numeric(z.number().int().min(0).nullable()).optional(),
   rpe: numeric(z.number().min(1).max(10).nullable()).optional(),
   notes: optionalText(),
-  completed: z.boolean().optional(),
+  completed: flexBool().optional(),
 })
 
 export const finishSessionBody = z.object({

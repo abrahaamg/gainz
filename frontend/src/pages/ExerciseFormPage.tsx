@@ -76,9 +76,9 @@ export default function ExerciseFormPage() {
           description: exercise.description ?? '',
           instructions: exercise.instructions ?? '',
           notes: exercise.notes ?? '',
-          requires_equipment: exercise.requires_equipment,
-          is_unilateral: exercise.is_unilateral,
-          is_public: exercise.is_public,
+          requires_equipment: Boolean(exercise.requires_equipment),
+          is_unilateral: Boolean(exercise.is_unilateral),
+          is_public: Boolean(exercise.is_public),
           equipment: exercise.equipment ?? [],
         })
       } catch {

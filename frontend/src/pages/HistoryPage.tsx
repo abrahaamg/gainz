@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { cap } from '../lib/utils'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { sessionService } from '../services/sessionService'
@@ -89,7 +90,7 @@ export default function HistoryPage() {
       {/* Stats resumen */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {[
-          { label: t('common.sessions'), value: completedSessions.length },
+          { label: cap(t('common.sessions')), value: completedSessions.length },
           { label: t('history.minutes'), value: Math.round(totalMinutes) },
           { label: t('history.calories'), value: totalCalories.toLocaleString() },
           { label: t('history.avgRating'), value: avgRating },

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { cap } from '../../lib/utils'
 import { useTranslation } from 'react-i18next'
 import { calculateOneRM, getPercentageTable } from '../../utils/oneRM'
 
@@ -65,7 +66,7 @@ export default function OneRMCalculator() {
                 <tr>
                   <th className="text-center px-3 py-2">%</th>
                   <th className="text-right px-3 py-2">{t('exercises.weightLabel')}</th>
-                  <th className="text-center px-3 py-2">{t('common.reps')}</th>
+                  <th className="text-center px-3 py-2">{cap(t('common.reps'))}</th>
                   <th className="text-left px-3 py-2 hidden sm:table-cell">{t('exercises.goalColumn')}</th>
                 </tr>
               </thead>
