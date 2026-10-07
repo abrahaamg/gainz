@@ -25,16 +25,16 @@ export default function SetPlanEditor({ plan, onChange, idPrefix, className }: P
 
   return (
     <div className={className}>
-      <div className="mb-1 grid grid-cols-[2.5rem_1fr_1fr_auto] items-end gap-2 text-xs font-medium text-neutral-400">
+      <div className="mb-1 grid grid-cols-[2rem_1fr_1fr_5.25rem] items-end gap-2 text-center text-xs font-medium text-neutral-400">
         <span>{t('routines.setShort')}</span>
-        <span>{t('common.reps')}</span>
+        <span className="capitalize">{t('common.reps')}</span>
         <span>{t('routines.weight')}</span>
-        <span className="w-[5.25rem]" />
+        <span aria-hidden="true" />
       </div>
       <ul className="space-y-2">
         {plan.map((s, i) => (
-          <li key={i} className="grid grid-cols-[2.5rem_1fr_1fr_auto] items-center gap-2">
-            <span className="text-sm font-bold tabular-nums text-accent">{i + 1}</span>
+          <li key={i} className="grid grid-cols-[2rem_1fr_1fr_5.25rem] items-center gap-2">
+            <span className="text-center text-sm font-bold tabular-nums text-accent">{i + 1}</span>
             <input
               type="number" min={1} max={999} inputMode="numeric"
               aria-label={t('routines.setReps', { n: i + 1 })}
@@ -42,7 +42,7 @@ export default function SetPlanEditor({ plan, onChange, idPrefix, className }: P
               value={s.reps ?? ''}
               onChange={e => onChange(updateSet(plan, i, { reps: toNum(e.target.value) }))}
               placeholder="—"
-              className="form-input form-input-dark text-center !py-2"
+              className="form-input form-input-dark min-w-0 text-center tabular-nums !py-2"
             />
             <input
               type="number" min={0} max={1000} step={0.5} inputMode="decimal"
@@ -51,9 +51,9 @@ export default function SetPlanEditor({ plan, onChange, idPrefix, className }: P
               value={s.weight_kg ?? ''}
               onChange={e => onChange(updateSet(plan, i, { weight_kg: toNum(e.target.value) }))}
               placeholder="—"
-              className="form-input form-input-dark text-center !py-2"
+              className="form-input form-input-dark min-w-0 text-center tabular-nums !py-2"
             />
-            <div className="flex gap-1">
+            <div className="flex justify-end gap-1">
               <button
                 type="button"
                 onClick={() => onChange(copyPreviousSet(plan, i))}

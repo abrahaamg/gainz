@@ -263,7 +263,14 @@
     "duplicateToEdit": "Esta rutina no es tuya: duplícala para editarla o cambiar el orden de sus ejercicios.",
     "routineNoteLabel": "Nota de la rutina",
     "exerciseNoteLabel": "Nota del ejercicio",
-    "moreActions": "Más acciones"
+    "moreActions": "Más acciones",
+    "moveUpShort": "Subir",
+    "moveDownShort": "Bajar",
+    "changeShort": "Cambiar",
+    "removeShort": "Quitar",
+    "noteShort": "Nota",
+    "expandAll": "Desplegar todo",
+    "collapseAll": "Plegar todo"
   },
   "progress": {
     "title": "Progreso",

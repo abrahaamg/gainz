@@ -37,7 +37,10 @@ export function exercisesReorderPayload(exercises: RoutineExercise[]): CreateRou
  * Línea corta de un ejercicio: "4 series · 10-9-8-7", "3 series · 12" si todas
  * las series piden lo mismo, o "3 series · 30 s" si es por tiempo.
  */
-export function exerciseSummary(ex: RoutineExercise, setsWord: string): string {
+export function exerciseSummary(
+  ex: Pick<RoutineExercise, 'sets' | 'reps' | 'weight_suggestion' | 'duration_seconds' | 'set_plan'>,
+  setsWord: string,
+): string {
   const sets = `${ex.sets} ${setsWord}`
   if (ex.duration_seconds !== null) return `${sets} · ${ex.duration_seconds} s`
   const reps = planFromExercise(ex).map(s => s.reps)
