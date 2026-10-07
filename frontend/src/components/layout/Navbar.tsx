@@ -87,7 +87,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav aria-label={t('nav.main')} className="bg-neutral-900 sticky top-0 z-50 border-b border-neutral-800">
+      <nav aria-label={t('nav.main')} className="bg-neutral-900 sticky top-0 z-50 border-b border-neutral-800 pt-[env(safe-area-inset-top)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-center h-12 gap-8">
           <NavLink to="/" className={`font-display italic tracking-tight text-xl transition-colors mr-auto ${isHome ? 'text-accent' : 'text-white hover:text-accent'}`}>
             Gainz

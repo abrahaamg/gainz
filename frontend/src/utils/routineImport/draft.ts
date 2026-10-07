@@ -25,9 +25,9 @@ export interface DraftRow {
   plan: SetPlanEntry[]
   notes: string
   warnings: RowWarning[]
-  /** Índice de la tabla pegada de la que viene (para volver al modo "un día por tabla"). */
+  /** Índice de la tabla pegada de la que viene. */
   source: number
-  /** true si el usuario ha elegido el día a mano: el reparto automático ya no lo toca. */
+  /** true si el usuario ha elegido el día a mano: el reparto por músculo ya no lo toca. */
   manual?: boolean
 }
 
@@ -35,9 +35,9 @@ export interface DraftDay {
   key: string
   name: string
   rows: DraftRow[]
-  /** Plan semanal: día que no se importa. */
+  /** Día que no se importa. */
   skipped?: boolean
-  /** Plan semanal: cajón "Sin asignar" (no es una rutina). */
+  /** Cajón "Sin asignar" tras un reparto por músculo (no es una rutina). */
   unassigned?: boolean
 }
 
@@ -73,21 +73,20 @@ export function summarize(days: DraftDay[]): { matched: number; pending: number;
   return { matched, pending: rows.length - matched, total: rows.length }
 }
 
-/** Días que se convertirán en rutina: sin los omitidos, sin el cajón "Sin asignar" y (opcional) sin los vacíos. */
-export function daysToSave(days: DraftDay[], dropEmpty = false): DraftDay[] {
-  return days.filter(d => !d.skipped && !d.unassigned && (!dropEmpty || d.rows.length > 0))
+/** Días que se convertirán en rutina: sin los omitidos y sin el cajón "Sin asignar". Los vacíos sí se crean. */
+export function daysToSave(days: DraftDay[]): DraftDay[] {
+  return days.filter(d => !d.skipped && !d.unassigned)
 }
 
 /**
- * Se puede guardar si hay algo que guardar, nada queda "Sin asignar", todas las filas están
- * resueltas y cada día tiene nombre (y filas, salvo que `dropEmpty` ignore los vacíos o `allowEmpty`
- * deje crear rutinas vacías para rellenarlas después).
+ * Se puede guardar si hay algo que guardar, nada queda "Sin asignar", todas las filas están resueltas
+ * y cada día tiene nombre. Un día sin ejercicios es válido: se crea la rutina vacía.
  */
-export function canSave(days: DraftDay[], dropEmpty = false, allowEmpty = false): boolean {
+export function canSave(days: DraftDay[]): boolean {
   if (days.some(d => d.unassigned && d.rows.length > 0)) return false
-  const list = daysToSave(days, dropEmpty)
+  const list = daysToSave(days)
   if (list.length === 0) return false
-  return list.every(d => d.name.trim() !== '' && (allowEmpty || d.rows.length > 0) && d.rows.every(r => r.exercise !== null))
+  return list.every(d => d.name.trim() !== '' && d.rows.every(r => r.exercise !== null))
 }
 
 export function swapRow(row: DraftRow): DraftRow {
